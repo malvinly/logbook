@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
@@ -18,6 +19,7 @@ using Logbook.App.Theme;
 using Logbook.App.Tray;
 using Logbook.Core;
 using Logbook.Core.Export;
+using Logbook.Core.Locking;
 using Logbook.Core.Query;
 using Logbook.Core.Storage;
 
@@ -25,7 +27,7 @@ namespace Logbook.App;
 
 /// <summary>
 /// Startup and the tray lifetime: single instance, settings and first run, tray icon, hotkeys, lock state, and the
-/// 30-second retry of pending writes and the reminder check (DESIGN.md sections 8, 9, 10 and 12). Windows are created on demand and never own the process.
+/// 30-second retry of pending writes, the reminder check and idle auto-lock (DESIGN.md sections 8, 9, 10 and 12). Windows are created on demand and never own the process.
 /// </summary>
 public sealed partial class App : Application, IDisposable
 {
@@ -39,6 +41,7 @@ public sealed partial class App : Application, IDisposable
     private Timer? _retryTimer;
     private readonly DispatcherTimer _reminderTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly HashSet<Reminders.Shown> _remindersShown = []; // since the last unlock; dropped on lock with the log
+    private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromMinutes(1) }; // runs only while unlocked
     private CaptureWindow? _capture;
     private MainWindow? _main;
     private UnlockWindow? _unlockPrompt;
@@ -93,6 +96,7 @@ public sealed partial class App : Application, IDisposable
 
         _retryTimer = new Timer(_ => RetryPending(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         _reminderTimer.Tick += (_, _) => ShowDueReminder();
+        _idleTimer.Tick += (_, _) => LockIfIdle();
 
         if (_placeholderSeen)
         {
@@ -105,6 +109,7 @@ public sealed partial class App : Application, IDisposable
         {
             _tray.SetLocked(false);
             StartReminders();
+            _idleTimer.Start();
         }
         else
         {
@@ -406,6 +411,7 @@ public sealed partial class App : Application, IDisposable
                 Log = opened;
                 _tray?.SetLocked(false);
                 StartReminders();
+                _idleTimer.Start();
                 Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
                 return true;
             }
@@ -441,6 +447,46 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
+        Lock("Locked from the tray");
+    }
+
+    /// <summary>
+    /// Idle auto-lock (DESIGN.md section 9), checked once a minute while unlocked. "Idle" is no input to the Windows
+    /// session at all, so typing in other apps keeps the log open and the hotkey stays one keystroke away. When due it
+    /// takes the same path as Lock now. A tick never shows a dialog: while anything is unsaved it skips and tries again
+    /// next minute (the tray icon already shows the pending count), and while one of the app's modal dialogs is open it
+    /// waits too, so a half-made decision there is not closed under the user.
+    /// </summary>
+    private void LockIfIdle()
+    {
+        if (Log is not { } log)
+        {
+            return;
+        }
+
+        DateTimeOffset now = DateTimeOffset.Now;
+        if (LastInput.Before(now) is not { } lastInput || !IdleLock.IsDue(lastInput, now, _settings.IdleLockMinutes))
+        {
+            return;
+        }
+
+        if (ComponentDispatcher.IsThreadModal)
+        {
+            return;
+        }
+
+        if (WriteInProgress(log))
+        {
+            Diag.Log("Idle lock postponed: an entry is not on disk yet");
+            return;
+        }
+
+        Lock($"Locked after {_settings.IdleLockMinutes} minutes without input");
+    }
+
+    // Drops the open log and everything that shows it. Callers have already checked that nothing is unsaved.
+    private void Lock(string reason)
+    {
         // Every window that shows or edits entries goes; toasts only hold an id and will prompt when clicked.
         foreach (Window window in Windows.OfType<Window>().ToList())
         {
@@ -460,9 +506,10 @@ public sealed partial class App : Application, IDisposable
         _suggestionsFor = null;
         Log = null;
         _reminderTimer.Stop();
+        _idleTimer.Stop();
         _remindersShown.Clear();
         _tray?.SetLocked(true);
-        Diag.Log("Locked from the tray");
+        Diag.Log(reason);
     }
 
     /// <summary>

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Logbook.App.Interop;
 
-/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, foreground focus, and DWM backdrops.</summary>
+/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, foreground focus, idle time, and DWM backdrops.</summary>
 internal static class NativeMethods
 {
     public const int WmHotkey = 0x0312;
@@ -74,6 +74,20 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetMonitorInfoW(IntPtr monitor, ref MonitorInfo info);
+
+    // Idle auto-lock needs the time of the last input to the whole Windows session, in any app, because the point is
+    // that the user walked away from the machine; WPF only sees input to Logbook's own windows. GetLastInputInfo
+    // answers exactly that, as a GetTickCount value (milliseconds since boot, 32 bits).
+    [StructLayout(LayoutKind.Sequential)]
+    public struct LastInputInfo
+    {
+        public int Size;
+        public uint Time;
+    }
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetLastInputInfo(ref LastInputInfo info);
 
     // DWM window attributes for the borderless capture box. WPF has no API for Mica, acrylic or rounded corners on a
     // window it does not frame itself, so the window asks the compositor directly. Each attribute is ignored or
