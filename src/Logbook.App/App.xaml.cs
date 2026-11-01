@@ -528,7 +528,7 @@ public sealed partial class App : Application, IDisposable
 
         if (_main is null)
         {
-            _main = new MainWindow(Log!, BuildSuggestions);
+            _main = new MainWindow(Log!, BuildSuggestions, _settings.SavedQueries, SaveSettings);
             _main.SettingsRequested += ShowSettings;
             _main.CopyTimelineRequested += ShowExportPanel;
             _main.ExportDecryptedRequested += ShowExportDecrypted;

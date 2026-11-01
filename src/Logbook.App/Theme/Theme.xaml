@@ -97,7 +97,8 @@
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
   </Style>
 
-  <!-- A text-only button (the capture box's "More"); Fluent has no hyperlink button for WPF. -->
+  <!-- A text-only button (the capture box's "More", the main window's "Save filter as button"); Fluent has no hyperlink
+       button for WPF. -->
   <Style x:Key="LinkButton" TargetType="Button">
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Background" Value="Transparent" />
@@ -113,6 +114,9 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>

@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Diagnostics;
 using Logbook.App.Dialogs;
+using Logbook.App.Settings;
 using Logbook.Core;
 using Logbook.Core.Export;
 using Logbook.Core.Grammar;
@@ -22,17 +23,25 @@ public sealed partial class MainWindow : Window
 {
     private readonly LogFile _log;
     private readonly Func<Suggestions> _suggestions;
+    private readonly List<SavedQuery> _savedQueries;
+    private readonly Action _saveSettings;
     private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private IReadOnlyList<Entry> _filtered = [];
     private EntryEditor? _editor;
     private bool _updatingRange;
     private bool _closingForLock;
 
-    public MainWindow(LogFile log, Func<Suggestions> suggestions)
+    /// <param name="log">The open log.</param>
+    /// <param name="suggestions">Autocomplete source for the filter bar and the detail pane.</param>
+    /// <param name="savedQueries">The settings' saved queries; edited in place, then <paramref name="saveSettings"/> writes them.</param>
+    /// <param name="saveSettings">Writes the settings file.</param>
+    public MainWindow(LogFile log, Func<Suggestions> suggestions, List<SavedQuery> savedQueries, Action saveSettings)
     {
         InitializeComponent();
         _log = log;
         _suggestions = suggestions;
+        _savedQueries = savedQueries;
+        _saveSettings = saveSettings;
         _debounce.Tick += (_, _) =>
         {
             _debounce.Stop();
@@ -42,6 +51,7 @@ public sealed partial class MainWindow : Window
         SuggestionPopup.Attach(TagsBox, suggestions);
         SuggestionPopup.Attach(PeopleBox, suggestions);
         Loaded += (_, _) => Filter.Focus();
+        ShowSavedQueries();
         Refresh();
     }
 
@@ -65,6 +75,7 @@ public sealed partial class MainWindow : Window
     {
         string? selectedId = (Results.SelectedItem as EntryRow)?.Id;
         FilterPlaceholder.Visibility = Filter.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        SaveQueryButton.IsEnabled = !string.IsNullOrWhiteSpace(Filter.Text);
 
         QueryLine query = LineParser.ParseQuery(Filter.Text, DateOnly.FromDateTime(DateTime.Now));
         SyncRangePickers(query);
@@ -240,6 +251,67 @@ public sealed partial class MainWindow : Window
             Diag.Log("Revision could not be written; it is pending");
             AppDialog.Inform(this, "Not saved yet", "The change is kept in memory but could not be written to the file yet. It will be retried every 30 seconds.", DialogTone.Warning);
         }
+    }
+
+    // The list is a plain List from the settings file, so the buttons are rebuilt from a copy after every change.
+    private void ShowSavedQueries() => SavedQueryButtons.ItemsSource = _savedQueries.ToList();
+
+    private void OnSavedQueryClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not SavedQuery query)
+        {
+            return;
+        }
+
+        // Exactly as if typed, so the count header and the export follow; refreshed now rather than after the debounce.
+        Filter.Text = query.Filter;
+        Filter.CaretIndex = Filter.Text.Length;
+        Filter.Focus();
+        _debounce.Stop();
+        Refresh();
+    }
+
+    private void OnSaveQueryClick(object sender, RoutedEventArgs e)
+    {
+        string filter = Filter.Text.Trim();
+        if (filter.Length == 0)
+        {
+            return;
+        }
+
+        SaveQueryWindow window = new(filter) { Owner = this };
+        if (window.ShowDialog() != true)
+        {
+            return;
+        }
+
+        // A name already in use is replaced in place, so a button keeps its position when its filter is updated.
+        SavedQuery? existing = _savedQueries.FirstOrDefault(q => string.Equals(q.Name, window.QueryName, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            _savedQueries.Add(new SavedQuery { Name = window.QueryName, Filter = filter });
+        }
+        else
+        {
+            existing.Name = window.QueryName;
+            existing.Filter = filter;
+        }
+
+        _saveSettings();
+        ShowSavedQueries();
+    }
+
+    private void OnRemoveSavedQueryClick(object sender, RoutedEventArgs e)
+    {
+        // The context menu inherits the button's data context, which is the saved query.
+        if ((sender as FrameworkElement)?.DataContext is not SavedQuery query)
+        {
+            return;
+        }
+
+        _savedQueries.Remove(query);
+        _saveSettings();
+        ShowSavedQueries();
     }
 
     private void OnCopyTimelineClick(object sender, RoutedEventArgs e) => CopyTimelineRequested?.Invoke(Filter.Text, _filtered);
