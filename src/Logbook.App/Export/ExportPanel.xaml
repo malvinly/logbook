@@ -10,8 +10,9 @@
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        <TextBlock x:Name="Copied" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+        <TextBlock x:Name="Copied" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
         <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button Content="Save as CSV…" Style="{StaticResource FooterButton}" Click="OnSaveCsvClick" Margin="0,0,8,0" />
           <Button Content="Copy to clipboard" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnCopyClick" />
           <Button Content="Close" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
         </StackPanel>
@@ -21,6 +22,7 @@
       <TextBlock Style="{StaticResource TitleText}" Text="Copy as timeline" />
       <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap"
                  Text="Oldest first, copied as plain text and as HTML for mail clients. Tags and people index for you, not for the reader, so they are left out unless you include them." />
+      <TextBlock x:Name="CsvWhy" Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap" />
       <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
         <CheckBox x:Name="ShowGaps" Content="Show gaps" Margin="0,0,24,0" Checked="OnToggle" Unchecked="OnToggle" />
         <CheckBox x:Name="GroupByMonth" Content="Group by month" Margin="0,0,24,0" Checked="OnToggle" Unchecked="OnToggle" />

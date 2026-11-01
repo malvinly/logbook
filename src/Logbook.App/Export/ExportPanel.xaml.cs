@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -5,12 +6,14 @@ using Logbook.App.Diagnostics;
 using Logbook.App.Settings;
 using Logbook.Core;
 using Logbook.Core.Export;
+using Microsoft.Win32;
 
 namespace Logbook.App.Export;
 
 /// <summary>
-/// The "Copy as timeline" panel (DESIGN.md section 11): the four toggles, a preview, and one button that puts the
-/// plain text and the same timeline as HTML on the clipboard. Toggles are read from and written back to settings so they are remembered.
+/// The "Copy as timeline" panel (DESIGN.md section 11): the four toggles, a preview, one button that puts the plain
+/// text and the same timeline as HTML on the clipboard, and one that saves the same entries as a CSV file. Toggles are
+/// read from and written back to settings so they are remembered.
 /// </summary>
 public sealed partial class ExportPanel : Window
 {
@@ -18,15 +21,20 @@ public sealed partial class ExportPanel : Window
     private readonly IReadOnlyList<Entry> _entries;
     private readonly ExportSettings _settings;
     private readonly Action _saveSettings;
+    private readonly string _dataFilePath;
+    private readonly IReadOnlyList<string> _syncRoots;
     private bool _loading = true;
 
-    public ExportPanel(string filterText, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings)
+    public ExportPanel(string filterText, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings, string dataFilePath, IReadOnlyList<string> syncRoots)
     {
         InitializeComponent();
         _filterText = filterText;
         _entries = entries;
         _settings = settings;
         _saveSettings = saveSettings;
+        _dataFilePath = dataFilePath;
+        _syncRoots = syncRoots;
+        CsvWhy.Text = "Save as CSV writes the entries listed here with every field. " + PlaintextTarget.Why;
         ShowGaps.IsChecked = settings.ShowGaps;
         GroupByMonth.IsChecked = settings.GroupByMonth;
         Compact.IsChecked = settings.Compact;
@@ -55,7 +63,7 @@ public sealed partial class ExportPanel : Window
     private void Render()
     {
         Preview.Text = TimelineExport.Render(_filterText, _entries, Options);
-        Copied.Text = "";
+        Report("", danger: false);
     }
 
     private void OnCopyClick(object sender, RoutedEventArgs e)
@@ -77,13 +85,72 @@ public sealed partial class ExportPanel : Window
         try
         {
             Clipboard.SetDataObject(data, copy: true);
-            Copied.Text = $"Copied {RangeText.Count(_entries.Count)}.";
+            Report($"Copied {RangeText.Count(_entries.Count)}.", danger: false);
         }
         catch (COMException ex)
         {
             // Another process holds the clipboard open; common with clipboard managers and remote desktops.
             Diag.Log("Clipboard was busy", ex);
-            Copied.Text = "The clipboard is busy; try again in a moment.";
+            Report("The clipboard is busy; try again in a moment.", danger: false);
         }
+    }
+
+    // The same rules as Export decrypted, since this is a plaintext copy too: a default folder outside every synced
+    // folder, a warning before writing into one, never over the log, and the folder remembered on this profile only.
+    private void OnSaveCsvClick(object sender, RoutedEventArgs e)
+    {
+        SaveFileDialog dialog = new()
+        {
+            Title = "Save as CSV",
+            FileName = DateTime.Now.ToString("'logbook-export-'yyyy-MM-dd'.csv'", CultureInfo.InvariantCulture),
+            InitialDirectory = PlaintextTarget.DefaultFolder(_syncRoots),
+            Filter = "CSV (*.csv)|*.csv|All files (*.*)|*.*",
+            DefaultExt = ".csv",
+            OverwritePrompt = true,
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        string fullPath = Path.GetFullPath(dialog.FileName);
+        if (PlaintextTarget.Problem(fullPath, _dataFilePath) is { } problem)
+        {
+            Report(problem, danger: true);
+            return;
+        }
+
+        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots))
+        {
+            return;
+        }
+
+        try
+        {
+            File.WriteAllBytes(fullPath, CsvExport.FileBytes(_entries));
+            PlaintextTarget.RememberFolder(fullPath);
+            Diag.Log($"Exported {_entries.Count} entries as CSV");
+            Report($"Wrote {RangeText.Count(_entries.Count)} to {fullPath}. Delete it when you are done with it.", danger: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Diag.Log("CSV export failed", ex);
+            Report("Could not write the file: " + ex.Message, danger: true);
+        }
+    }
+
+    private void Report(string message, bool danger)
+    {
+        // A resource reference rather than the brush itself, so the text repaints if the theme changes while it shows.
+        if (danger)
+        {
+            Copied.SetResourceReference(ForegroundProperty, "DangerBrush");
+        }
+        else
+        {
+            Copied.ClearValue(ForegroundProperty);
+        }
+
+        Copied.Text = message;
     }
 }

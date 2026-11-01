@@ -645,7 +645,7 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowExportPanel(string filterText, IReadOnlyList<Entry> entries)
     {
-        ExportPanel panel = new(filterText, entries, _settings.Export, SaveSettings) { Owner = VisibleMain };
+        ExportPanel panel = new(filterText, entries, _settings.Export, SaveSettings, _dataFilePath, SyncRoots()) { Owner = VisibleMain };
         panel.ShowDialog();
     }
 
