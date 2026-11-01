@@ -17,7 +17,7 @@ namespace Logbook.App.Export;
 /// </summary>
 public sealed partial class ExportPanel : Window
 {
-    private readonly string _filterText;
+    private readonly string _title; // the filter as typed, or a saved query's name (ExportTitle)
     private readonly IReadOnlyList<Entry> _entries;
     private readonly ExportSettings _settings;
     private readonly Action _saveSettings;
@@ -25,10 +25,10 @@ public sealed partial class ExportPanel : Window
     private readonly IReadOnlyList<string> _syncRoots;
     private bool _loading = true;
 
-    public ExportPanel(string filterText, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings, string dataFilePath, IReadOnlyList<string> syncRoots)
+    public ExportPanel(string title, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings, string dataFilePath, IReadOnlyList<string> syncRoots)
     {
         InitializeComponent();
-        _filterText = filterText;
+        _title = title;
         _entries = entries;
         _settings = settings;
         _saveSettings = saveSettings;
@@ -62,7 +62,7 @@ public sealed partial class ExportPanel : Window
 
     private void Render()
     {
-        Preview.Text = TimelineExport.Render(_filterText, _entries, Options);
+        Preview.Text = TimelineExport.Render(_title, _entries, Options);
         Report("", danger: false);
     }
 
@@ -74,7 +74,7 @@ public sealed partial class ExportPanel : Window
 
         // The same timeline as HTML beside the text, so mail clients paste bold dates and a real list; plain-text
         // targets keep taking the text. WPF puts an HTML string on the clipboard as UTF-8, which the offsets count.
-        data.SetData(DataFormats.Html, ClipboardHtml.Wrap(TimelineHtml.Render(_filterText, _entries, Options)));
+        data.SetData(DataFormats.Html, ClipboardHtml.Wrap(TimelineHtml.Render(_title, _entries, Options)));
 
         // Ask clipboard history and cross-device clipboard sync to leave this out: it is decrypted entry text.
         byte[] no = [0, 0, 0, 0];

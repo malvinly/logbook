@@ -32,6 +32,11 @@ public sealed partial class MainWindow : Window
     private bool _refreshing; // true while Refresh swaps the rows; it decides about the detail pane itself
     private bool _closingForLock;
 
+    // The saved-query button that last put its filter into the box, as it was when clicked. The export header takes
+    // its name while the box still holds exactly that filter (DESIGN.md section 11); see ExportTitle.
+    private string? _clickedQueryName;
+    private string? _clickedQueryFilter;
+
     /// <param name="log">The open log.</param>
     /// <param name="suggestions">Autocomplete source for the filter bar and the detail pane.</param>
     /// <param name="savedQueries">The settings' saved queries; edited in place, then <paramref name="saveSettings"/> writes them.</param>
@@ -59,7 +64,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Raised when the user asks for the settings window.</summary>
     public event Action? SettingsRequested;
 
-    /// <summary>Raised when the user asks to copy the current set as a timeline; the app owns the export panel.</summary>
+    /// <summary>Raised when the user asks to copy the current set as a timeline, with the header's title (the filter, or a saved query's name); the app owns the export panel.</summary>
     public event Action<string, IReadOnlyList<Entry>>? CopyTimelineRequested;
 
     /// <summary>Raised for Tools → Export decrypted.</summary>
@@ -339,6 +344,8 @@ public sealed partial class MainWindow : Window
         }
 
         // Exactly as if typed, so the count header and the export follow; refreshed now rather than after the debounce.
+        _clickedQueryName = query.Name;
+        _clickedQueryFilter = query.Filter;
         Filter.Text = query.Filter;
         Filter.CaretIndex = Filter.Text.Length;
         Filter.Focus();
@@ -389,7 +396,8 @@ public sealed partial class MainWindow : Window
         ShowSavedQueries();
     }
 
-    private void OnCopyTimelineClick(object sender, RoutedEventArgs e) => CopyTimelineRequested?.Invoke(Filter.Text, _filtered);
+    private void OnCopyTimelineClick(object sender, RoutedEventArgs e)
+        => CopyTimelineRequested?.Invoke(ExportTitle.For(Filter.Text, _clickedQueryName, _clickedQueryFilter), _filtered);
 
     private void OnExportDecryptedClick(object sender, RoutedEventArgs e) => ExportDecryptedRequested?.Invoke();
 
