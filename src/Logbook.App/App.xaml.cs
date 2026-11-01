@@ -843,12 +843,22 @@ public sealed partial class App : Application, IDisposable
 
         try
         {
+            // A capture or save being written right now writes the queue first and reports its own outcome; retrying
+            // alongside it would only wait for that write and then announce it as this retry's work.
+            if (Dispatcher.Invoke(WriteInFlight))
+            {
+                return;
+            }
+
+            // Announce only what this call wrote: the queue can also empty under it by a capture started meanwhile.
+            int before = log.PendingCount;
             bool drained = log.RetryPending();
+            bool wroteHere = drained && log.PendingCount < before;
             Diag.Log(drained ? "Pending writes flushed" : $"Pending writes still failing: {log.PendingCount} waiting");
             Dispatcher.BeginInvoke(() =>
             {
                 _tray?.SetPending(log.PendingCount);
-                if (drained)
+                if (wroteHere)
                 {
                     _tray?.ShowBalloon("Saved", "The entries that were waiting have been written to the file.", warning: false);
                     if (_main is { IsVisible: true })
