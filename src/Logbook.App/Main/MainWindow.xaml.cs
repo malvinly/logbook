@@ -116,7 +116,7 @@ public sealed partial class MainWindow : Window
         // The same stored entry keeps its editor and with it any unsaved edit; a new revision underneath rebuilds it.
         if (row is not null && _editor is not null && ReferenceEquals(row.Entry, _editor.Current))
         {
-            FollowsUp.ItemsSource = row.Entry.RelatedTo.Select(LinkTo).ToList(); // an original may have been deleted
+            FollowsUp.ItemsSource = Links(row.Entry); // an original may have been deleted, a follow-up captured
         }
         else
         {
@@ -235,12 +235,21 @@ public sealed partial class MainWindow : Window
         Entry? previous = history.Count > 0 ? history[^1] : null;
         _editor = new EntryEditor(row.Entry, previous);
         Detail.DataContext = _editor;
-        FollowsUp.ItemsSource = row.Entry.RelatedTo.Select(LinkTo).ToList();
+        FollowsUp.ItemsSource = Links(row.Entry);
         Revisions.ItemsSource = history.AsEnumerable().Reverse().Select(r => new RevisionRow(r)).ToList();
         NoRevisions.Visibility = history.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
         Detail.Visibility = Visibility.Visible;
         NoSelection.Visibility = Visibility.Collapsed;
     }
+
+    // "Follows up on" lines for the originals this entry names, then "Followed up by" lines for the entries naming it.
+    private List<RelatedLink> Links(Entry entry)
+        =>
+        [
+            .. entry.RelatedTo.Select(LinkTo),
+            .. EntryQuery.FollowUpsOf(entry.Id, _log.Live)
+                .Select(f => new RelatedLink(f.Id, $"Followed up by: {Format.DateTime(f.OccurredAt)} — {f.Summary}", Exists: true)),
+        ];
 
     private RelatedLink LinkTo(string id)
     {

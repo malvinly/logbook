@@ -155,7 +155,7 @@
           <DockPanel x:Name="Detail" Visibility="Collapsed">
             <StackPanel DockPanel.Dock="Top" Margin="20,16,20,8">
               <TextBlock Text="{Binding RevisionText}" Style="{StaticResource CaptionText}" />
-              <!-- relatedTo: one line per original this entry follows up on; a click selects the original. -->
+              <!-- relatedTo: one line per original this entry follows up on, then one per entry following up on it; a click selects that entry. -->
               <ItemsControl x:Name="FollowsUp" Focusable="False">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate DataType="{x:Type main:RelatedLink}">
