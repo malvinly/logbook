@@ -31,7 +31,7 @@
             <TextBlock Style="{StaticResource SectionText}" Text="There is still no recovery." />
             <TextBlock Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="After the change only the new passphrase opens the log; the old one stops working. If you lose the new one, the log is lost. Nobody can reset it, including you. Write it down somewhere physical before you press Change." />
-            <CheckBox x:Name="Understood" Margin="0,12,0,0" Content="I have written the new passphrase down and I understand there is no recovery." />
+            <CheckBox x:Name="Understood" Margin="0,12,0,0" Content="I have written it down and I understand there is no recovery." />
           </StackPanel>
         </Grid>
       </Border>
