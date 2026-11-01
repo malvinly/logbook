@@ -4,4 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- HeaderLine is internal; its read-back failure path can only be reached from a test by passing the check in. -->
+    <InternalsVisibleTo Include="Logbook.Tests" />
+  </ItemGroup>
+
 </Project>
