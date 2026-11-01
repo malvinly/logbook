@@ -11,7 +11,7 @@ Logbook is a personal Windows tray app for logging decisions and events with a h
 - If a decision in section 16 turns out to be wrong in practice, say so and propose the change; do not quietly work around it.
 - The author intends to understand every line. Prefer the boring, explicit implementation over the clever one. No framework-style indirection, no DI container, no reflection tricks. A non-obvious block gets a short comment explaining why.
 - No new NuGet packages in `Logbook.Core` or `Logbook.App`. The test project has only xUnit and the test SDK.
-- WPF is plain code-behind with a hand-written `INotifyPropertyChanged` base. No MVVM framework, no behaviors package, no third-party controls. Theme values live in one `ResourceDictionary`; never hardcode a color or font size in a view.
+- WPF is plain code-behind with a hand-written `INotifyPropertyChanged` base. No MVVM framework, no behaviors package, no third-party controls. Theme values live in the `Theme` folder's dictionaries only: `Theme.xaml` for fonts, sizes, radii and styles, `Theme.Light.xaml` and `Theme.Dark.xaml` for colours; never hardcode a color or font size in a view.
 
 ## Conventions
 
@@ -30,7 +30,7 @@ Logbook is a personal Windows tray app for logging decisions and events with a h
 ## Things that are easy to get wrong
 
 - Timestamps are `DateTimeOffset` with the captured offset preserved end to end. Never convert to UTC or to the current machine zone for storage or rendering.
-- The data file is append-only. Nothing in the app may truncate, rewrite, or reorder it. Edits and deletes are new lines.
+- The data file is append-only. Nothing in the app may truncate, rewrite, or reorder it. Edits and deletes are new lines. The one exception is line 1 on a passphrase change, written over itself at the same byte length (DESIGN.md §8); nothing else may write anywhere but the end.
 - A capture that fails to persist must be visible to the user and retried. Silent loss is the one unforgivable bug.
-- `#` and `@` start a token only after whitespace and only before a letter. `ticket #12345`, `C#`, and `name@example.com` are plain text.
+- `#` and `@` start a token only at the start of the line, after whitespace or after an opening `(` or `"`, and only before a letter. `ticket #12345`, `C#`, and `name@example.com` are plain text.
 - Export text is plain text with Unicode bullets and fixed US-style dates. No markdown.
