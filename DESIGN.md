@@ -261,6 +261,8 @@ Everything above.
 - CSV export.
 - Dark theme — a second `ResourceDictionary`, switched from settings or following the OS.
 - Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
+- Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
+- Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
 
 ### Not building
 
