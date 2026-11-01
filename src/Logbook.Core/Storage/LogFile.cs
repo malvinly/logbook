@@ -471,7 +471,12 @@ public sealed class LogFile
                 throw new InvalidDataException("The header's salt has the wrong length.");
             }
 
-            Convert.FromBase64String(header.WrappedKey);
+            // Checked here so a short or padded wrapped key is a bad header, not a FormatException or a "wrong passphrase"
+            // from the unwrap.
+            if (Convert.FromBase64String(header.WrappedKey).Length != LineCipher.Overhead + LineCipher.KeySize)
+            {
+                throw new InvalidDataException("The header's wrapped key has the wrong length.");
+            }
         }
         catch (FormatException e)
         {

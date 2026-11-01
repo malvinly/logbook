@@ -352,6 +352,26 @@ public sealed class LogFileTests : IDisposable
         Assert.Throws<InvalidDataException>(() => Open());
     }
 
+    [Theory]
+    [InlineData("AA==")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")] // 30 bytes: room for a nonce and a tag, but no key
+    public void WrappedKeyOfTheWrongLengthIsRefusedAsInvalidData(string wrappedKey)
+    {
+        FileHeader header = Create().Header;
+        File.WriteAllText(_file.Path, LogbookJson.Serialize(header with { WrappedKey = wrappedKey }) + "\n");
+        Assert.Throws<InvalidDataException>(() => Open());
+    }
+
+    [Fact]
+    public void WrappedKeyWithOneByteChangedReadsAsAWrongPassphrase()
+    {
+        FileHeader header = Create().Header;
+        byte[] wrapped = Convert.FromBase64String(header.WrappedKey);
+        wrapped[20] ^= 0x01;
+        File.WriteAllText(_file.Path, LogbookJson.Serialize(header with { WrappedKey = Convert.ToBase64String(wrapped) }) + "\n");
+        Assert.ThrowsAny<CryptographicException>(() => Open());
+    }
+
     [Fact]
     public void ReadOnlyFileLeavesTheLinePendingInsteadOfThrowing()
     {

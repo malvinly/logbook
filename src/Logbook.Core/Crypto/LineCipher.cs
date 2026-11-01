@@ -14,6 +14,9 @@ public static class LineCipher
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
+    /// <summary>The bytes a line holds besides its ciphertext: the nonce and the tag.</summary>
+    internal const int Overhead = NonceSize + TagSize;
+
     public static string Encrypt(byte[] key, ReadOnlySpan<byte> plaintext)
     {
         ArgumentNullException.ThrowIfNull(key);
