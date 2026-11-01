@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using Logbook.App.Diagnostics;
+using Logbook.App.Startup;
 using Logbook.Core;
 using Logbook.Core.Storage;
 using Microsoft.Win32;
@@ -19,17 +20,16 @@ public sealed partial class ExportDecryptedWindow : Window
     private readonly LogFile _log;
     private readonly string _dataFilePath;
     private readonly IReadOnlyList<string> _syncRoots;
-    private readonly Settings.Settings _settings;
-    private readonly Action _saveSettings;
+    // The folder is remembered per Windows profile, never in the synced settings file: it is an absolute local path
+    // that would point a reader of that file at the one plaintext copy.
+    private const string FolderMarker = "export-folder";
 
-    public ExportDecryptedWindow(LogFile log, string dataFilePath, IReadOnlyList<string> syncRoots, Settings.Settings settings, Action saveSettings)
+    public ExportDecryptedWindow(LogFile log, string dataFilePath, IReadOnlyList<string> syncRoots)
     {
         InitializeComponent();
         _log = log;
         _dataFilePath = dataFilePath;
         _syncRoots = syncRoots;
-        _settings = settings;
-        _saveSettings = saveSettings;
         PathBox.Text = Path.Combine(DefaultFolder(), FileName());
     }
 
@@ -40,7 +40,7 @@ public sealed partial class ExportDecryptedWindow : Window
     {
         string?[] candidates =
         [
-            _settings.LastExportFolder,
+            LocalMarker.Read(FolderMarker),
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         ];
@@ -132,8 +132,7 @@ public sealed partial class ExportDecryptedWindow : Window
             }
 
             File.WriteAllText(fullPath, text.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            _settings.LastExportFolder = Path.GetDirectoryName(fullPath);
-            _saveSettings();
+            LocalMarker.Set(FolderMarker, Path.GetDirectoryName(fullPath));
             Diag.Log($"Exported {count} records decrypted (history: {history})");
             Report(FormattableString.Invariant($"Wrote {count} records to {fullPath}. Delete it when you are done with it."), danger: false);
             ExportButton.IsEnabled = false;

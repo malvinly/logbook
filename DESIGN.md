@@ -219,7 +219,7 @@ The save dialog defaults to a folder **outside** the synced root and explains wh
 
 ## 12. Settings, startup, and the moving user profile
 
-- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, export toggles, last export folder.
+- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, export toggles. The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
 - On launch, if the app is not registered to start with Windows for the current user, it offers once to register (a shortcut in the Startup folder). A login change wipes that shortcut; the offer is how it comes back.
 - Single instance: a named mutex. A second launch activates the first instance's main window and exits.
 - `RegisterHotKey` failure is surfaced immediately with a balloon naming the hotkey and offering Settings. A silently dead hotkey means a week of nothing logged.

@@ -35,8 +35,6 @@ public sealed class Settings
     public string AutocompleteRanking { get; set; } = "recent";
 
     public ExportSettings Export { get; set; } = new();
-
-    public string? LastExportFolder { get; set; }
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]

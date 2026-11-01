@@ -519,7 +519,7 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowExportDecrypted()
     {
-        ExportDecryptedWindow window = new(Log!, _dataFilePath, SyncRoots(), _settings, SaveSettings) { Owner = VisibleMain };
+        ExportDecryptedWindow window = new(Log!, _dataFilePath, SyncRoots()) { Owner = VisibleMain };
         window.ShowDialog();
     }
 
