@@ -494,7 +494,8 @@ public sealed partial class App : Application, IDisposable
     /// session at all, so typing in other apps keeps the log open and the hotkey stays one keystroke away. When due it
     /// takes the same path as Lock now. A tick never shows a dialog: while anything is unsaved it skips and tries again
     /// next minute (the tray icon already shows the pending count), and while one of the app's modal dialogs is open it
-    /// waits too, so a half-made decision there is not closed under the user.
+    /// waits too, so a half-made decision there is not closed under the user, until twice the limit has passed; then
+    /// the lock closes the dialog along with every other window.
     /// </summary>
     private void LockIfIdle()
     {
@@ -504,23 +505,27 @@ public sealed partial class App : Application, IDisposable
         }
 
         DateTimeOffset now = DateTimeOffset.Now;
-        if (LastInput.Before(now) is not { } lastInput || !IdleLock.IsDue(lastInput, now, _settings.IdleLockMinutes))
+        if (LastInput.Before(now) is not { } lastInput)
         {
             return;
         }
 
-        if (ComponentDispatcher.IsThreadModal)
+        bool dialogOpen = ComponentDispatcher.IsThreadModal;
+        if (IdleLock.Decide(lastInput, now, _settings.IdleLockMinutes, dialogOpen) != IdleDecision.Lock)
         {
             return;
         }
 
+        // Unsaved captures win over everything, the open dialog included: a lock never drops them.
         if (WriteInProgress(log))
         {
             Diag.Log("Idle lock postponed: an entry is not on disk yet");
             return;
         }
 
-        Lock($"Locked after {_settings.IdleLockMinutes} minutes without input");
+        Lock(dialogOpen
+            ? $"Locked after twice the {_settings.IdleLockMinutes}-minute idle limit without input; the open dialog was closed"
+            : $"Locked after {_settings.IdleLockMinutes} minutes without input");
     }
 
     // Drops the open log and everything that shows it. Callers have already checked that nothing is unsaved.
