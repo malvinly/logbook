@@ -272,6 +272,17 @@ public sealed class TimelineExportTests
     }
 
     [Fact]
+    public void GapAcrossOffsetsIsNeverNegative()
+    {
+        // In instant order the Tokyo entry comes first, yet its stored date is the later one; the gap is clamped at zero.
+        Entry central = SampleEntries.Make("01K000000000000000000000Y4", new DateTimeOffset(2026, 10, 6, 23, 30, 0, TimeSpan.FromHours(-5)), "a", null, [], [], []);
+        Entry tokyo = SampleEntries.Make("01K000000000000000000000Y5", new DateTimeOffset(2026, 10, 7, 1, 0, 0, TimeSpan.FromHours(9)), "b", null, [], [], []);
+        string[] lines = Render([central, tokyo], Gaps).Split('\n');
+        Assert.Equal("• Wed Oct 7, 2026 1:00 AM — b", lines[2]);
+        Assert.Equal("• Tue Oct 6, 2026 11:30 PM (same day) — a", lines[3]);
+    }
+
+    [Fact]
     public void TimesRenderInTheEntryOwnOffset()
     {
         string[] lines = Render([SampleEntries.TokyoMidnight], ExportOptions.None).Split('\n');

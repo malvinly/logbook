@@ -110,10 +110,12 @@ public static class TimelineExport
         return string.Join("\n", lines);
     }
 
-    // Gaps are whole calendar days, so Oct 15 2:30 PM to Oct 20 9:02 AM is 5 days, as in the design sample.
+    // Gaps are whole calendar days, so Oct 15 2:30 PM to Oct 20 9:02 AM is 5 days, as in the design sample. The set is
+    // ordered by instant but the days come from each entry's stored date, so across offsets the later entry can carry
+    // the earlier date; that gap is clamped to "same day" rather than shown as negative.
     internal static string GapText(int days) => days switch
     {
-        0 => "same day",
+        <= 0 => "same day",
         1 => "1 day later",
         _ => FormattableString.Invariant($"{days} days later"),
     };
