@@ -266,6 +266,7 @@ Everything above.
 - Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
 - Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
 - Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
+- Design pass over the whole app. Phase 1 restyled only the basics (text boxes, buttons, chips, list rows) and left the rest on WPF's default look, which reads as dated: the menu bar, date pickers, combo boxes, scroll bars, checkboxes, message boxes, and the window chrome of the main window and dialogs. The pass should set a real visual direction (spacing, type scale, colour, iconography, how the capture box and toast sit on screen) and template every control the app uses, so nothing falls through to the stock theme. Everything still goes through the one `ResourceDictionary` so the dark theme stays a second dictionary. Section 16's rule stands: no third-party control suite.
 
 ### Not building
 
