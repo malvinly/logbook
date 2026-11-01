@@ -308,6 +308,7 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 3. Dark theme override in settings. Phase 2 already follows the Windows light or dark setting with a second token dictionary (`Theme.Dark.xaml`); what is left is a setting to force one or the other.
 4. Grammar polish: a token that fills a whole parenthetical leaves `()` in the summary (`done (#asked)` stores `done ()`), and in a filter the leftover punctuation becomes words, so `(#asked)` or `@j-doe,` in the filter bar also requires a literal `(` or `,`. Drop punctuation-only leftovers in both.
 5. A window and taskbar icon drawn from the tray icon's "L" badge; the windows still show WPF's default icon in their title bars.
+6. Export header from a saved query: when the filter came from a saved-query button, title the timeline with the button's name, so a weekly digest reads `This week — 2 entries` rather than `last:7d — 2 entries`.
 
 ### Not building
 
