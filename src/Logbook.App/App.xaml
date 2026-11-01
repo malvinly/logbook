@@ -5,10 +5,10 @@
   <Application.Resources>
     <ResourceDictionary>
       <!-- WPF's built-in Fluent theme styles every stock control; merging its dictionary is the documented way to apply it
-           without the Application.ThemeMode API, which .NET 10 still marks experimental (WPF0001). AppTheme replaces the
-           first two entries with their dark twins when Windows is in dark mode; the order matters (see AppTheme). -->
+           without the Application.ThemeMode API, which .NET 10 still marks experimental (WPF0001). Fluent.xaml follows the
+           Windows light or dark setting by itself; AppTheme swaps the second entry, Logbook's tokens, to match. -->
       <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.Light.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Logbook;component/Theme/Theme.Light.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Logbook;component/Theme/Theme.xaml" />
       </ResourceDictionary.MergedDictionaries>

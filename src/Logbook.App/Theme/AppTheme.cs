@@ -5,40 +5,37 @@ using Microsoft.Win32;
 namespace Logbook.App.Theme;
 
 /// <summary>
-/// Light or dark, following the Windows "app mode" setting. Two dictionaries change together: WPF's Fluent theme
-/// (which styles the stock controls) and Logbook's own color tokens (Theme.Light.xaml or Theme.Dark.xaml). They are
-/// chosen here rather than by Fluent's "follow the system" mode, so both always agree and the switch is one code path.
+/// Light or dark, following the Windows "app mode" setting. WPF's Fluent theme follows that setting by itself (App.xaml
+/// merges its "system" dictionary, and WPF swaps its light and dark resources when Windows changes). This class does
+/// the same for Logbook's own color tokens, Theme.Light.xaml or Theme.Dark.xaml, reading the same registry value, so
+/// the two always agree. It never touches the Fluent dictionary: two owners replacing it raced and crashed WPF.
 /// </summary>
 internal static class AppTheme
 {
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
-    private static readonly Uri FluentLight = new("pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.Light.xaml");
-    private static readonly Uri FluentDark = new("pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.Dark.xaml");
     private static readonly Uri TokensLight = new("pack://application:,,,/Logbook;component/Theme/Theme.Light.xaml");
     private static readonly Uri TokensDark = new("pack://application:,,,/Logbook;component/Theme/Theme.Dark.xaml");
 
-    /// <summary>True when the dark dictionaries are in use.</summary>
+    /// <summary>True when the dark tokens are in use.</summary>
     public static bool IsDark { get; private set; }
 
     /// <summary>
-    /// Reads the Windows setting and swaps the two dictionaries if it changed. Called at startup and again whenever
-    /// Windows broadcasts a color-set change, so open windows repaint (views use DynamicResource for brushes). App.xaml merges the light pair first
-    /// and Theme.xaml after them; only the first two entries are ever replaced, so Theme.xaml's styles stay put.
+    /// Reads the Windows setting and swaps the token dictionary if it changed. Called at startup and again whenever
+    /// Windows broadcasts a color-set change, so open windows repaint (views use DynamicResource for brushes).
+    /// App.xaml merges Fluent first, the light tokens second and Theme.xaml third; only the second entry is replaced.
     /// </summary>
     public static void FollowWindows(Application app)
     {
         ArgumentNullException.ThrowIfNull(app);
         bool dark = WindowsUsesDarkApps();
+        Uri wanted = dark ? TokensDark : TokensLight;
         Collection<ResourceDictionary> merged = app.Resources.MergedDictionaries;
-        if (merged.Count >= 2 && merged[0].Source == (dark ? FluentDark : FluentLight) && merged[1].Source == (dark ? TokensDark : TokensLight))
+        if (merged[1].Source != wanted)
         {
-            IsDark = dark;
-            return;
+            merged[1] = new ResourceDictionary { Source = wanted };
         }
 
-        merged[0] = new ResourceDictionary { Source = dark ? FluentDark : FluentLight };
-        merged[1] = new ResourceDictionary { Source = dark ? TokensDark : TokensLight };
         IsDark = dark;
     }
 

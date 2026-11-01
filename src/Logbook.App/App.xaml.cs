@@ -673,7 +673,8 @@ public sealed partial class App : Application, IDisposable
         else if (msg == NativeMethods.WmSettingChange && lParam != IntPtr.Zero && Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")
         {
             // Windows broadcasts this when light or dark mode (or the accent) changes; follow it without a restart.
-            Dispatcher.BeginInvoke(() => AppTheme.FollowWindows(this));
+            // WPF handles the same message to swap its Fluent resources, so the tokens follow once that work is done.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () => AppTheme.FollowWindows(this));
         }
 
         return IntPtr.Zero;
@@ -682,8 +683,14 @@ public sealed partial class App : Application, IDisposable
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Diag.Log("Unhandled exception", e.Exception);
-        AppDialog.Inform(null, "Something went wrong", "Details were written to the diagnostics log:\n" + Diag.LogFolder, DialogTone.Error);
         e.Handled = true;
+        if (_exiting)
+        {
+            // The app is shutting down and can no longer load a window; the log has the details.
+            return;
+        }
+
+        AppDialog.Inform(null, "Something went wrong", "Details were written to the diagnostics log:\n" + Diag.LogFolder, DialogTone.Error);
         if (_tray is null)
         {
             // Startup never finished, so there is no tray icon to exit from; a silent zombie process would be worse.
