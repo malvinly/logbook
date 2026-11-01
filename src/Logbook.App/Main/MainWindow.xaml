@@ -147,11 +147,12 @@
       <GridSplitter Grid.Column="1" Width="12" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
       <Border Grid.Column="2" Style="{StaticResource Card}">
-        <!-- Not a tab stop: the fields inside take focus, and a focused viewer would draw a focus ring around the whole card. -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-          <Grid>
-            <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource CardPadding}" />
-            <StackPanel x:Name="Detail" Margin="20,16,20,20" Visibility="Collapsed">
+        <Grid>
+          <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource CardPadding}" />
+          <!-- The caption, the follows-up line and the actions stay put; only the fields and the revisions scroll, so the
+               buttons are always in reach whatever the window height. -->
+          <DockPanel x:Name="Detail" Visibility="Collapsed">
+            <StackPanel DockPanel.Dock="Top" Margin="20,16,20,8">
               <TextBlock Text="{Binding RevisionText}" Style="{StaticResource CaptionText}" />
               <!-- relatedTo: one line per original this entry follows up on; a click selects the original. -->
               <ItemsControl x:Name="FollowsUp" Focusable="False">
@@ -164,90 +165,99 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="12" />
-                  <ColumnDefinition Width="120" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                  <Label Content="Date" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
-                  <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,4,20,16">
+              <StackPanel>
+                <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,4,0,0" />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                  <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
+                  <Button Content="Follow up" Style="{StaticResource FooterButton}" Margin="8,0,0,0" Click="OnFollowUpClick"
+                          ToolTip="A new entry with these tags and people, linked to this one" />
+                  <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
                 </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <Label Content="Time" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
-                  <TextBox Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-              </Grid>
-              <StackPanel Style="{StaticResource Field}">
-                <Label Content="Summary" Style="{StaticResource ChangedLabel}" Tag="{Binding SummaryChanged}" />
-                <TextBox Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="False" />
               </StackPanel>
-              <StackPanel Style="{StaticResource Field}">
-                <Label Content="Reason" Style="{StaticResource ChangedLabel}" Tag="{Binding ReasonChanged}" />
-                <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
-              </StackPanel>
-              <Grid Margin="0,12,0,0">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="12" />
-                  <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                  <Label Content="Tags" Style="{StaticResource ChangedLabel}" Tag="{Binding TagsChanged}" />
-                  <TextBox x:Name="TagsBox" Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <Label Content="People" Style="{StaticResource ChangedLabel}" Tag="{Binding PeopleChanged}" />
-                  <TextBox x:Name="PeopleBox" Text="{Binding People, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-              </Grid>
-              <StackPanel Style="{StaticResource Field}">
-                <Label Content="Refs (one per line)" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
-                <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" />
-              </StackPanel>
-              <StackPanel Style="{StaticResource Field}">
-                <Label Content="Reminder" Style="{StaticResource ChangedLabel}" Tag="{Binding RemindAtChanged}" />
-                <Grid>
+            </Border>
+            <!-- Not a tab stop: the fields inside take focus, and a focused viewer would draw a focus ring around the whole card. -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+              <StackPanel Margin="20,0,20,12">
+                <Grid Margin="0,8,0,0">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <DatePicker SelectedDate="{Binding RemindDate, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder date" />
-                  <TextBox Grid.Column="2" Text="{Binding RemindTime, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder time, like 9:00 AM" />
-                  <Button Grid.Column="3" Content="Clear" Margin="8,0,0,0" Click="OnClearReminderClick" ToolTip="Remove the reminder; save to keep the change" />
+                  <StackPanel>
+                    <Label Content="Date" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
+                    <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <Label Content="Time" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
+                    <TextBox Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}" />
+                  </StackPanel>
                 </Grid>
-                <TextBlock Text="This reminder has passed. Clear it and save to stop the tray balloon." Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                           Margin="0,4,0,0" Visibility="{Binding ReminderPassed, Converter={StaticResource BoolToVisibility}}" />
-              </StackPanel>
-              <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,8,0,0" />
-              <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
-                <Button Content="Follow up" Style="{StaticResource FooterButton}" Margin="8,0,0,0" Click="OnFollowUpClick"
-                        ToolTip="A new entry with these tags and people, linked to this one" />
-                <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
-              </StackPanel>
+                <StackPanel Style="{StaticResource Field}">
+                  <Label Content="Summary" Style="{StaticResource ChangedLabel}" Tag="{Binding SummaryChanged}" />
+                  <TextBox Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="False" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource Field}">
+                  <Label Content="Reason" Style="{StaticResource ChangedLabel}" Tag="{Binding ReasonChanged}" />
+                  <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+                </StackPanel>
+                <Grid Margin="0,12,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <Label Content="Tags" Style="{StaticResource ChangedLabel}" Tag="{Binding TagsChanged}" />
+                    <TextBox x:Name="TagsBox" Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <Label Content="People" Style="{StaticResource ChangedLabel}" Tag="{Binding PeopleChanged}" />
+                    <TextBox x:Name="PeopleBox" Text="{Binding People, UpdateSourceTrigger=PropertyChanged}" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Style="{StaticResource Field}">
+                  <Label Content="Refs (one per line)" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
+                  <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource Field}">
+                  <Label Content="Reminder" Style="{StaticResource ChangedLabel}" Tag="{Binding RemindAtChanged}" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="12" />
+                      <ColumnDefinition Width="120" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <DatePicker SelectedDate="{Binding RemindDate, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder date" />
+                    <TextBox Grid.Column="2" Text="{Binding RemindTime, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder time, like 9:00 AM" />
+                    <Button Grid.Column="3" Content="Clear" Margin="8,0,0,0" Click="OnClearReminderClick" ToolTip="Remove the reminder; save to keep the change" />
+                  </Grid>
+                  <TextBlock Text="This reminder has passed. Clear it and save to stop the tray balloon." Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                             Margin="0,4,0,0" Visibility="{Binding ReminderPassed, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
 
-              <TextBlock Text="Revisions" Style="{StaticResource SectionText}" Margin="0,28,0,8" />
-              <TextBlock x:Name="NoRevisions" Text="This entry has never been edited." Style="{StaticResource CaptionText}" />
-              <ItemsControl x:Name="Revisions">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate DataType="{x:Type main:RevisionRow}">
-                    <Border Style="{StaticResource Card}" Padding="12,10" Margin="0,0,0,6">
-                      <StackPanel>
-                        <TextBlock Text="{Binding Heading}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                        <TextBlock Text="{Binding Detail}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </Grid>
-        </ScrollViewer>
+                <TextBlock Text="Revisions" Style="{StaticResource SectionText}" Margin="0,28,0,8" />
+                <TextBlock x:Name="NoRevisions" Text="This entry has never been edited." Style="{StaticResource CaptionText}" />
+                <ItemsControl x:Name="Revisions">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type main:RevisionRow}">
+                      <Border Style="{StaticResource Card}" Padding="12,10" Margin="0,0,0,6">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Heading}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                          <TextBlock Text="{Binding Detail}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Grid>
       </Border>
     </Grid>
   </DockPanel>
