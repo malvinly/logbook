@@ -103,7 +103,7 @@ public sealed class ChangePassphraseTests : IDisposable
         // System.Text.Json writes '+' in the base64 values as \u002B, so the old header's length depends on its random
         // values. The new one must come out exactly as long whatever the old one held.
         LogFile.Create(_file.Path, OldPassphrase, Now, NoDelays).Append(NewEntry("first"));
-        RewriteHeader(OldPassphrase, KeyDerivation.DefaultIterations, line => CountOf(line, EscapedPlus) == plusSigns);
+        RewriteHeader(OldPassphrase, KeyDerivation.DefaultIterations, saltPlusSigns: 0, line => CountOf(line, EscapedPlus) == plusSigns);
         byte[] before = File.ReadAllBytes(_file.Path);
         LogFile log = Open(OldPassphrase);
 
@@ -116,12 +116,56 @@ public sealed class ChangePassphraseTests : IDisposable
         Assert.Equal("first", Assert.Single(Open(NewPassphrase).Live).Summary);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void OldSaltWithEscapedPlusSignsIsReplacedAtTheSameLength(int saltPlusSigns)
+    {
+        // The new salt is drawn without '+', so the wrapped key has to make up the old salt's escapes.
+        LogFile.Create(_file.Path, OldPassphrase, Now, NoDelays).Append(NewEntry("first"));
+        RewriteHeader(OldPassphrase, KeyDerivation.DefaultIterations, saltPlusSigns, _ => true);
+        Assert.Equal(saltPlusSigns, LogFile.ReadHeader(_file.Path).Kdf.Salt.Count(c => c == '+'));
+        byte[] before = File.ReadAllBytes(_file.Path);
+        LogFile log = Open(OldPassphrase);
+
+        log.ChangePassphrase(OldPassphrase, NewPassphrase);
+
+        byte[] after = File.ReadAllBytes(_file.Path);
+        Assert.Equal(before.Length, after.Length);
+        Assert.Equal(HeaderEnd(before), HeaderEnd(after));
+        Assert.Equal(before[HeaderEnd(before)..], after[HeaderEnd(after)..]);
+        Assert.Equal("first", Assert.Single(Open(NewPassphrase).Live).Summary);
+    }
+
+    [Fact]
+    public void CreatedAtWithAnotherOffsetAndFractionalSecondsIsKeptAtTheSameLength()
+    {
+        DateTimeOffset tokyo = new DateTimeOffset(2026, 10, 6, 23, 30, 15, 123, TimeSpan.FromHours(9)).AddTicks(4567);
+        LogFile created = LogFile.Create(_file.Path, OldPassphrase, tokyo, NoDelays);
+        created.Append(NewEntry("first"));
+        created.Append(NewEntry("second"));
+        Assert.Contains("\"createdAt\":\"2026-10-06T23:30:15.1234567+09:00\"", File.ReadAllText(_file.Path), StringComparison.Ordinal);
+        byte[] before = File.ReadAllBytes(_file.Path);
+        LogFile log = Open(OldPassphrase);
+
+        log.ChangePassphrase(OldPassphrase, NewPassphrase);
+
+        byte[] after = File.ReadAllBytes(_file.Path);
+        Assert.Equal(before.Length, after.Length);
+        Assert.Equal(HeaderEnd(before), HeaderEnd(after));
+        Assert.Equal(before[HeaderEnd(before)..], after[HeaderEnd(after)..]);
+        FileHeader header = LogFile.ReadHeader(_file.Path);
+        Assert.Equal(tokyo, header.CreatedAt);
+        Assert.Equal(TimeSpan.FromHours(9), header.CreatedAt.Offset);
+        Assert.Equal(["first", "second"], Open(NewPassphrase).Revisions.Select(e => e.Summary));
+    }
+
     [Fact]
     public void KeepsTheIterationCountTheFileAlreadyHas()
     {
         // A file written with a different count (an older default, say) keeps it: the change touches only salt and wrap.
         LogFile.Create(_file.Path, OldPassphrase, Now, NoDelays).Append(NewEntry("first"));
-        RewriteHeader(OldPassphrase, 600_001, _ => true);
+        RewriteHeader(OldPassphrase, 600_001, saltPlusSigns: 0, _ => true);
         LogFile log = Open(OldPassphrase);
 
         log.ChangePassphrase(OldPassphrase, NewPassphrase);
@@ -266,29 +310,31 @@ public sealed class ChangePassphraseTests : IDisposable
 
     private static int CountOf(string text, string part) => (text.Length - text.Replace(part, "", StringComparison.Ordinal).Length) / part.Length;
 
-    // Writes a fresh header with the given iteration count over line 1, keeping the data key and the records. The key is
-    // wrapped again until the serialized line satisfies the condition.
-    private void RewriteHeader(string passphrase, int iterations, Func<string, bool> accept)
+    // Writes a fresh header with the given iteration count over line 1, keeping the data key and the records. Salts are
+    // drawn until one holds exactly saltPlusSigns '+' (cheap: no key derivation until one fits), then the key is wrapped
+    // again until the serialized line satisfies the condition. Both searches are bounded so a bad condition fails the
+    // test instead of hanging it.
+    private void RewriteHeader(string passphrase, int iterations, int saltPlusSigns, Func<string, bool> accept)
     {
         byte[] original = File.ReadAllBytes(_file.Path);
         int headerEnd = HeaderEnd(original);
         FileHeader header = LogFile.ReadHeader(_file.Path);
         byte[] kek = KeyDerivation.Derive(passphrase, Convert.FromBase64String(header.Kdf.Salt), header.Kdf.Iterations);
         byte[] dataKey = DataKey.Unwrap(header.WrappedKey, kek);
-        while (true)
+        for (int saltAttempt = 0; saltAttempt < 100_000; saltAttempt++)
         {
-            byte[] salt = KeyDerivation.NewSalt();
-            if (Convert.ToBase64String(salt).Contains('+', StringComparison.Ordinal))
+            string salt = Convert.ToBase64String(KeyDerivation.NewSalt());
+            if (salt.Count(c => c == '+') != saltPlusSigns)
             {
-                continue; // keep the count of '+' to the wrapped key, which is cheap to draw again
+                continue;
             }
 
-            byte[] newKek = KeyDerivation.Derive(passphrase, salt, iterations);
+            byte[] newKek = KeyDerivation.Derive(passphrase, Convert.FromBase64String(salt), iterations);
             for (int attempt = 0; attempt < 100_000; attempt++)
             {
                 FileHeader changed = header with
                 {
-                    Kdf = header.Kdf with { Salt = Convert.ToBase64String(salt), Iterations = iterations },
+                    Kdf = header.Kdf with { Salt = salt, Iterations = iterations },
                     WrappedKey = DataKey.Wrap(dataKey, newKek),
                 };
                 string line = LogbookJson.Serialize(changed);
@@ -298,6 +344,10 @@ public sealed class ChangePassphraseTests : IDisposable
                     return;
                 }
             }
+
+            Assert.Fail("No wrapped key satisfied the condition in 100,000 draws.");
         }
+
+        Assert.Fail($"No salt with {saltPlusSigns} '+' came out in 100,000 draws.");
     }
 }
