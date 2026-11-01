@@ -70,10 +70,16 @@ public sealed partial class UnlockWindow : Window
             Diag.Log("Refused to open the data file", e);
             ShowError("This is not a Logbook file, or it is from a newer version: " + e.Message);
         }
-        catch (IOException e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Diag.Log("Could not read the data file", e);
             ShowError("Could not read the file: " + e.Message);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // The task is not awaited by anyone else, so an unexpected failure must land here or vanish.
+            Diag.Log("Unexpected failure while opening the data file", e);
+            ShowError("Unexpected error while opening the file; see the diagnostics log. " + e.Message);
         }
         finally
         {

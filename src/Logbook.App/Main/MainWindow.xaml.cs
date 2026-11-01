@@ -56,6 +56,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Raised for Help → Grammar cheat sheet.</summary>
     public event Action? CheatSheetRequested;
 
+    /// <summary>Raised after an edit or delete was appended, so caches built from the live set can be dropped.</summary>
+    public event Action? Changed;
+
     /// <summary>Re-runs the filter against the log, keeping the selection where possible.</summary>
     public void Refresh()
     {
@@ -174,12 +177,13 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        IReadOnlyList<Entry> history = _log.RevisionsOf(row.Id);
-        Entry? previous = history.Count > 1 ? history[^2] : null;
+        // Every revision but the live one is history; the one just before the live one is "previous" for highlighting.
+        List<Entry> history = [.. _log.RevisionsOf(row.Id).Where(r => !ReferenceEquals(r, row.Entry))];
+        Entry? previous = history.Count > 0 ? history[^1] : null;
         _editor = new EntryEditor(row.Entry, previous);
         Detail.DataContext = _editor;
-        Revisions.ItemsSource = history.Take(history.Count - 1).Reverse().Select(r => new RevisionRow(r)).ToList();
-        NoRevisions.Visibility = history.Count > 1 ? Visibility.Collapsed : Visibility.Visible;
+        Revisions.ItemsSource = history.AsEnumerable().Reverse().Select(r => new RevisionRow(r)).ToList();
+        NoRevisions.Visibility = history.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
         Detail.Visibility = Visibility.Visible;
         NoSelection.Visibility = Visibility.Collapsed;
     }
@@ -214,10 +218,29 @@ public sealed partial class MainWindow : Window
         Refresh();
     }
 
+    // The buttons are disabled while the write runs so a second click cannot append a second revision with the same number.
     private async Task AppendAsync(Entry revision)
     {
         LogFile log = _log;
-        bool saved = await Task.Run(() => log.Append(revision)).ConfigureAwait(true);
+        SaveButton.IsEnabled = false;
+        DeleteButton.IsEnabled = false;
+        bool saved;
+        try
+        {
+            saved = await Task.Run(() => log.Append(revision)).ConfigureAwait(true);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Diag.Log("Revision write failed unexpectedly", e);
+            saved = false;
+        }
+        finally
+        {
+            SaveButton.IsEnabled = true;
+            DeleteButton.IsEnabled = true;
+        }
+
+        Changed?.Invoke();
         if (!saved)
         {
             Diag.Log("Revision could not be written; it is pending");

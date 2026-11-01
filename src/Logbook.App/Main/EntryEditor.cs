@@ -1,5 +1,6 @@
 using System.Globalization;
 using Logbook.Core;
+using Logbook.Core.Export;
 using Logbook.Core.Grammar;
 
 namespace Logbook.App.Main;
@@ -26,7 +27,7 @@ public sealed class EntryEditor : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(current);
         _current = current;
-        _date = current.OccurredAt.Date;
+        _date = RangeText.StoredDate(current).ToDateTime(TimeOnly.MinValue);
         _time = Format.Time(current.OccurredAt);
         _summary = current.Summary;
         _reason = current.Reason ?? "";
@@ -133,6 +134,13 @@ public sealed class EntryEditor : ObservableObject
             return null;
         }
 
+        // The box shows minutes only; when the user left the time alone, keep the stored seconds so nothing looks edited.
+        TimeOnly stored = TimeOnly.FromDateTime(_current.OccurredAt.DateTime);
+        if (time.Hour == stored.Hour && time.Minute == stored.Minute)
+        {
+            time = stored;
+        }
+
         Problem = "";
         return _current with
         {
@@ -141,8 +149,8 @@ public sealed class EntryEditor : ObservableObject
             RecordedAt = now,
             Summary = summary,
             Reason = string.IsNullOrWhiteSpace(_reason) ? null : _reason.Replace("\r\n", "\n", StringComparison.Ordinal).Trim(),
-            Tags = Names(_tags),
-            People = Names(_people),
+            Tags = TokenNormalizer.NormalizeList(_tags),
+            People = TokenNormalizer.NormalizeList(_people),
             Refs = [.. _refs.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
             Deleted = false,
         };
@@ -150,19 +158,4 @@ public sealed class EntryEditor : ObservableObject
 
     /// <summary>A tombstone revision: the same fields, marked deleted.</summary>
     public Entry ToTombstone(DateTimeOffset now) => _current with { Rev = _current.Rev + 1, RecordedAt = now, Deleted = true };
-
-    private static List<string> Names(string text)
-    {
-        List<string> names = [];
-        foreach (string raw in text.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            string name = TokenNormalizer.Normalize(raw.TrimStart('#', '@'));
-            if (name.Length > 0 && !names.Contains(name))
-            {
-                names.Add(name);
-            }
-        }
-
-        return names;
-    }
 }
