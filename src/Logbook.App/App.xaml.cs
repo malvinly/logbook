@@ -18,23 +18,27 @@ using Logbook.App.Theme;
 using Logbook.App.Tray;
 using Logbook.Core;
 using Logbook.Core.Export;
+using Logbook.Core.Query;
 using Logbook.Core.Storage;
 
 namespace Logbook.App;
 
 /// <summary>
 /// Startup and the tray lifetime: single instance, settings and first run, tray icon, hotkeys, lock state, and the
-/// 30-second retry of pending writes (DESIGN.md sections 8, 9 and 12). Windows are created on demand and never own the process.
+/// 30-second retry of pending writes and the reminder check (DESIGN.md sections 8, 9, 10 and 12). Windows are created on demand and never own the process.
 /// </summary>
 public sealed partial class App : Application, IDisposable
 {
     private const string StartupOfferMarker = "startup-offered";
+    private const int BalloonSummaryLength = 120; // the balloon's text is capped by Windows at 255 characters
 
     private SingleInstance? _instance;
     private MessageWindow? _messageWindow;
     private HotkeyManager? _hotkeys;
     private TrayIcon? _tray;
     private Timer? _retryTimer;
+    private readonly DispatcherTimer _reminderTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private readonly HashSet<Reminders.Shown> _remindersShown = []; // since the last unlock; dropped on lock with the log
     private CaptureWindow? _capture;
     private MainWindow? _main;
     private UnlockWindow? _unlockPrompt;
@@ -88,6 +92,7 @@ public sealed partial class App : Application, IDisposable
         RegisterHotkeys();
 
         _retryTimer = new Timer(_ => RetryPending(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        _reminderTimer.Tick += (_, _) => ShowDueReminder();
 
         if (_placeholderSeen)
         {
@@ -99,6 +104,7 @@ public sealed partial class App : Application, IDisposable
         if (Log is not null)
         {
             _tray.SetLocked(false);
+            StartReminders();
         }
         else
         {
@@ -399,6 +405,7 @@ public sealed partial class App : Application, IDisposable
             {
                 Log = opened;
                 _tray?.SetLocked(false);
+                StartReminders();
                 Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
                 return true;
             }
@@ -452,6 +459,8 @@ public sealed partial class App : Application, IDisposable
         _suggestions = null;
         _suggestionsFor = null;
         Log = null;
+        _reminderTimer.Stop();
+        _remindersShown.Clear();
         _tray?.SetLocked(true);
         Diag.Log("Locked from the tray");
     }
@@ -634,6 +643,36 @@ public sealed partial class App : Application, IDisposable
             Diag.Log("Could not save settings", e);
             _tray?.ShowBalloon("Settings not saved", "The settings file could not be written: " + e.Message, warning: true);
         }
+    }
+
+    // Reminders can only be read while unlocked, since the entries are encrypted at rest: checked at unlock and every
+    // 30 seconds after, stopped on lock. The set of shown reminders starts empty at each unlock, so a passed reminder
+    // that was never cleared shows once more after an unlock or a restart; clearing it (a new revision) ends it.
+    private void StartReminders()
+    {
+        _remindersShown.Clear();
+        _reminderTimer.Start();
+        ShowDueReminder();
+    }
+
+    // One balloon per check, earliest first, so several due at once arrive 30 seconds apart and each click opens its own entry.
+    private void ShowDueReminder()
+    {
+        if (Log is not { } log || _tray is null)
+        {
+            return;
+        }
+
+        if (Reminders.NextDue(log.Live, DateTimeOffset.Now, _remindersShown) is not { } due)
+        {
+            return;
+        }
+
+        _remindersShown.Add(Reminders.Shown.Of(due));
+        string summary = due.Summary.Length > BalloonSummaryLength ? due.Summary[..BalloonSummaryLength] + "…" : due.Summary;
+        string id = due.Id;
+        _tray.ShowBalloon("Reminder", $"{summary}\nDue {Format.DateTime(due.RemindAt!.Value)}. Click to open it; clear the reminder there to stop it.", warning: false, () => ShowMainWindow(id));
+        Diag.Log("Reminder balloon shown");
     }
 
     // Timer thread. Nothing here may throw: an exception on a thread-pool thread would end the process and its queue.
