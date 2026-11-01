@@ -147,6 +147,17 @@
             <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource CardPadding}" />
             <StackPanel x:Name="Detail" Margin="20,16,20,20" Visibility="Collapsed">
               <TextBlock Text="{Binding RevisionText}" Style="{StaticResource CaptionText}" />
+              <!-- relatedTo: one line per original this entry follows up on; a click selects the original. -->
+              <ItemsControl x:Name="FollowsUp" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="{x:Type main:RelatedLink}">
+                    <Button Style="{StaticResource LinkButton}" Padding="0,2" Margin="0,4,0,0" HorizontalAlignment="Left" IsEnabled="{Binding Exists}"
+                            Click="OnFollowsUpClick">
+                      <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
               <Grid Margin="0,8,0,0">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />

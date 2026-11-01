@@ -188,10 +188,27 @@ public sealed partial class MainWindow : Window
         Entry? previous = history.Count > 0 ? history[^1] : null;
         _editor = new EntryEditor(row.Entry, previous);
         Detail.DataContext = _editor;
+        FollowsUp.ItemsSource = row.Entry.RelatedTo.Select(LinkTo).ToList();
         Revisions.ItemsSource = history.AsEnumerable().Reverse().Select(r => new RevisionRow(r)).ToList();
         NoRevisions.Visibility = history.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
         Detail.Visibility = Visibility.Visible;
         NoSelection.Visibility = Visibility.Collapsed;
+    }
+
+    private RelatedLink LinkTo(string id)
+    {
+        Entry? original = _log.Live.FirstOrDefault(e => e.Id == id);
+        return original is null
+            ? new RelatedLink(id, "Follows up on an entry that has since been deleted", Exists: false)
+            : new RelatedLink(id, $"Follows up on: {Format.DateTime(original.OccurredAt)} — {original.Summary}", Exists: true);
+    }
+
+    private void OnFollowsUpClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is RelatedLink { Exists: true } link)
+        {
+            Select(link.Id);
+        }
     }
 
     private async void OnSaveClick(object sender, RoutedEventArgs e)
