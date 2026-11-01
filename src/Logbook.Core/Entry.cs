@@ -13,6 +13,7 @@ namespace Logbook.Core;
 /// <param name="Tags">Normalised tag names (lowercase kebab-case). May be empty.</param>
 /// <param name="People">Normalised person names (lowercase kebab-case). May be empty.</param>
 /// <param name="Refs">Free-form references: ticket numbers, URLs, paths, links. Rendered verbatim.</param>
+/// <param name="RelatedTo">Ids of the entries this one follows up on. Empty for most entries and for lines written before the field existed.</param>
 /// <param name="Deleted">True on a tombstone revision. Tombstoned ids are hidden everywhere except the revision view.</param>
 public sealed record Entry(
     string Id,
@@ -24,4 +25,5 @@ public sealed record Entry(
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> People,
     IReadOnlyList<string> Refs,
+    IReadOnlyList<string> RelatedTo,
     bool Deleted);

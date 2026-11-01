@@ -27,6 +27,7 @@ public sealed class LogFileTests : IDisposable
         ["asked"],
         ["j-doe"],
         [],
+        [],
         deleted);
 
     private LogFile Create() => LogFile.Create(_file.Path, Passphrase, Now, NoDelays);

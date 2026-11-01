@@ -20,13 +20,15 @@ public static class LogbookJson
     public static Entry DeserializeEntry(string json)
     {
         Entry entry = JsonSerializer.Deserialize(json, LogbookJsonContext.Default.Entry) ?? throw new JsonException("Record is null.");
-        // A tombstone may omit every field but id, rev and deleted; a missing property arrives as null.
+        // A tombstone may omit every field but id, rev and deleted, and a line written before a field existed lacks it;
+        // either way a missing property arrives as null.
         return entry with
         {
             Summary = entry.Summary ?? "",
             Tags = entry.Tags ?? [],
             People = entry.People ?? [],
             Refs = entry.Refs ?? [],
+            RelatedTo = entry.RelatedTo ?? [],
         };
     }
 

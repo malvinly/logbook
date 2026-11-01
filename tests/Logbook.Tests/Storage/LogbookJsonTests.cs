@@ -17,13 +17,14 @@ public sealed class LogbookJsonTests
         ["asked", "staging-access"],
         ["j-doe"],
         [],
+        [],
         false);
 
     // The section 7 sample, minified.
     private const string SampleEntryJson =
         "{\"id\":\"01JBK3Q9W6X2Y8Z4V5T7R1N0M3\",\"rev\":1,\"occurredAt\":\"2026-10-06T10:14:03-05:00\",\"recordedAt\":\"2026-10-06T10:14:09-05:00\"," +
         "\"summary\":\"Asked for access to the staging environment; told it would be looked into\",\"reason\":null," +
-        "\"tags\":[\"asked\",\"staging-access\"],\"people\":[\"j-doe\"],\"refs\":[],\"deleted\":false}";
+        "\"tags\":[\"asked\",\"staging-access\"],\"people\":[\"j-doe\"],\"refs\":[],\"relatedTo\":[],\"deleted\":false}";
 
     // Record equality compares the list properties by reference, so round trips are checked field by field.
     private static void AssertSameEntry(Entry expected, Entry actual)
@@ -37,6 +38,7 @@ public sealed class LogbookJsonTests
         Assert.Equal(expected.Tags, actual.Tags);
         Assert.Equal(expected.People, actual.People);
         Assert.Equal(expected.Refs, actual.Refs);
+        Assert.Equal(expected.RelatedTo, actual.RelatedTo);
         Assert.Equal(expected.Deleted, actual.Deleted);
     }
 
@@ -72,7 +74,7 @@ public sealed class LogbookJsonTests
     [Fact]
     public void UnknownPropertiesAreIgnored()
     {
-        string json = SampleEntryJson.Replace("\"rev\":1,", "\"rev\":1,\"relatedTo\":[\"x\"],\"remindAt\":null,", StringComparison.Ordinal);
+        string json = SampleEntryJson.Replace("\"rev\":1,", "\"rev\":1,\"laterField\":[\"x\"],\"anotherLaterField\":null,", StringComparison.Ordinal);
         AssertSameEntry(SampleEntry, LogbookJson.DeserializeEntry(json));
     }
 
@@ -87,6 +89,7 @@ public sealed class LogbookJsonTests
         Assert.Empty(entry.Tags);
         Assert.Empty(entry.People);
         Assert.Empty(entry.Refs);
+        Assert.Empty(entry.RelatedTo);
     }
 
     [Theory]
