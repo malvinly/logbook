@@ -229,6 +229,17 @@ Toggles in the export panel, remembered between uses:
 
 "Copy to clipboard" puts two formats on the clipboard in one go (Phase 6): the plain text above, unchanged, and the same timeline as HTML, so mail clients paste bold dates and real bullets while plain-text targets keep taking the text. The HTML follows the same toggles and says the same words: the header line (and the month counts after a `<br>` when Group by month is on) as one paragraph, then a `<ul>` with one `<li>` per entry, its date part in `<b>`, then the gap, the em dash, the summary, refs, tags and people exactly as in the text; the reason is a `<div>` inside its item, `Reason: ` first and a `<br>` per line break. All text is HTML-escaped; there are no classes, no styles and no external resources. An empty set is the header paragraph alone. The HTML goes on the clipboard as UTF-8 in the CF_HTML envelope Windows requires (a `Version:0.9` header with byte offsets and `<!--StartFragment-->` / `<!--EndFragment-->` markers). The preview in the panel stays plain text.
 
+### CSV export
+
+"Save as CSV…" in the export panel (Phase 6) writes the same current filtered set as a CSV file, one row per entry, oldest first, for a spreadsheet.
+
+- Columns, in this order, under a header row with these names: `occurredAt`, `recordedAt`, `summary`, `reason`, `tags`, `people`, `refs`, `relatedTo`, `remindAt`, `id`.
+- Timestamps are the ISO-8601 round-trip form (`"O"`) with the stored offset, never converted: `2026-10-06T10:14:00.0000000-05:00`. A null `reason` or `remindAt` is an empty field.
+- Lists are joined by a single space (`tags`, `people`, `relatedTo`, none of which can hold a space), except `refs`, which may contain spaces and are joined by `; `.
+- RFC 4180: comma separated, CRLF after every row including the last, a field enclosed in double quotes when it holds a comma, a double quote, CR or LF, with its double quotes doubled; line breaks inside a reason are kept as stored. An empty set is the header row alone.
+- Encoding is UTF-8 with a byte order mark, so spreadsheet apps detect it.
+- The file is plaintext, so it follows the Export decrypted rules: the save dialog defaults to a folder outside every synced root, the panel says why in one sentence, choosing a synced folder asks first, the log itself and `logbook*.jsonl` names are refused, and the folder is remembered in the same `%LOCALAPPDATA%` marker as the decrypted export. The file name is `logbook-export-YYYY-MM-DD.csv`.
+
 ### Export decrypted
 
 Tools → Export decrypted. Writes a plaintext JSONL file (one record per line, latest revision per id, tombstoned ids excluded) to a location you choose. A checkbox includes the full revision history, in which case every line in the file, tombstones included, is written in original order.
