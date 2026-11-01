@@ -160,6 +160,37 @@ public sealed class TimelineExportTests
     }
 
     [Fact]
+    public void EveryToggleTogetherIsPinned()
+    {
+        // Pinned before the HTML clipboard format was added beside it: the plain text must stay byte-identical.
+        const string compact =
+            "All entries — 9 entries, Jul 14 – Oct 20, 2026\n" +
+            "Jul (1) · Aug (3) · Sep (1) · Oct (4)\n" +
+            "\n" +
+            "• Jul 14, 2026 — Reported the printer outage to facilities [INC0040001] #reported #printer @a-smith\n" +
+            "• Aug 3, 2026 (20 days later) — Asked for staging access #asked #staging-access @j-doe\n" +
+            "• Aug 20, 2026 (17 days later) — Told a-smith the outage count so far #told #printer @a-smith\n" +
+            "      Reason: They asked for Numbers before the budget meeting\n" +
+            "• Aug 28, 2026 (8 days later) — Decided to escalate the printer issue #decided #escalated #printer\n" +
+            "• Sep 9, 2026 (12 days later) — Followed up on staging access #asked #staging-access @j-doe\n" +
+            "• Oct 1, 2026 (22 days later) — Late night note from the Tokyo trip #travel\n" +
+            "• Oct 6, 2026 (5 days later) — Asked for access to the staging environment; told it would be looked into. #asked #staging-access @j-doe\n" +
+            "• Oct 15, 2026 (9 days later) — Followed up; no response to the first ask. #asked #staging-access @j-doe\n" +
+            "• Oct 20, 2026 (5 days later) — Asked again in standup; told it would be this week. #asked #staging-access @j-doe\n" +
+            "      Reason: wanted it on record before the release freeze.";
+        const string full =
+            "#staging-access — 3 entries, Oct 6 – Oct 20, 2026\n" +
+            "Oct (3)\n" +
+            "\n" +
+            "• Tue Oct 6, 2026 10:14 AM — Asked for access to the staging environment; told it would be looked into. #asked #staging-access @j-doe\n" +
+            "• Thu Oct 15, 2026 2:30 PM (9 days later) — Followed up; no response to the first ask. #asked #staging-access @j-doe\n" +
+            "• Tue Oct 20, 2026 9:02 AM (5 days later) — Asked again in standup; told it would be this week. #asked #staging-access @j-doe\n" +
+            "      Reason: wanted it on record before the release freeze.";
+        Assert.Equal(compact, Render(SampleEntries.All, Everything with { TagsAndPeople = true }, filter: ""));
+        Assert.Equal(full, Render(SampleEntries.Sample, Everything with { Compact = false, TagsAndPeople = true }));
+    }
+
+    [Fact]
     public void TagsAndPeopleAppendsTagsThenPeopleToEachLine()
     {
         const string expected =
