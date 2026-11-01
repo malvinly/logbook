@@ -1,8 +1,10 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using Logbook.App.Interop;
 using Logbook.Core.Export;
+using Logbook.Core.Notifications;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using MenuItem = System.Windows.Controls.MenuItem;
 using Separator = System.Windows.Controls.Separator;
@@ -16,6 +18,8 @@ namespace Logbook.App.Tray;
 /// </summary>
 internal sealed class TrayIcon : IDisposable
 {
+    private const int BalloonTimeoutMilliseconds = 10_000;
+
     private readonly NotifyIcon _icon;
     private readonly ContextMenu _menu;
     private readonly IntPtr _focusHandle;
@@ -24,7 +28,8 @@ internal sealed class TrayIcon : IDisposable
     private readonly Icon _pendingIcon;
     private bool _locked = true;
     private int _pending;
-    private Action? _balloonAction;
+    private readonly BalloonOrder<Balloon> _balloons = new();
+    private readonly DispatcherTimer _balloonFallback;
     private readonly MenuItem _lockItem;
 
     public TrayIcon(IntPtr focusHandle, Color accent, Color muted, Color danger)
@@ -49,8 +54,15 @@ internal sealed class TrayIcon : IDisposable
         _icon.DoubleClick += (_, _) => OpenRequested?.Invoke();
         // The action stays until the next balloon replaces it, not only while the balloon is up: Windows may time a balloon
         // out at once (do not disturb) or let it be clicked later from the notification list, and a reminder's click
-        // must still open its entry then.
-        _icon.BalloonTipClicked += (_, _) => _balloonAction?.Invoke();
+        // must still open its entry then. A click does not release the queue: Windows may follow it with a close of the
+        // same balloon, and releasing twice would put the next balloon up and take it down at once.
+        _icon.BalloonTipClicked += (_, _) => _balloons.LastShown?.OnClick?.Invoke();
+        _icon.BalloonTipClosed += (_, _) => BalloonClosed();
+
+        // Windows may never report a close for a balloon it did not show (notifications off, do not disturb), and the
+        // queue would then wait forever. If no close has come by the balloon's timeout plus a margin, take it as closed.
+        _balloonFallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(BalloonTimeoutMilliseconds + 5_000) };
+        _balloonFallback.Tick += (_, _) => BalloonClosed();
         Redraw();
     }
 
@@ -77,12 +89,35 @@ internal sealed class TrayIcon : IDisposable
         Redraw();
     }
 
-    /// <summary>A balloon from the tray. Each caller decides what a click does; nothing when onClick is null.</summary>
+    /// <summary>
+    /// A balloon from the tray. Each caller decides what a click does; nothing when onClick is null. Balloons show one at
+    /// a time (DESIGN.md section 12): this one shows now, or once those before it have closed.
+    /// </summary>
     public void ShowBalloon(string title, string text, bool warning, Action? onClick = null)
     {
-        _balloonAction = onClick;
-        _icon.ShowBalloonTip(10_000, title, text, warning ? ToolTipIcon.Warning : ToolTipIcon.Info);
+        if (_balloons.Enqueue(new Balloon(title, text, warning, onClick)) is { } now)
+        {
+            Display(now);
+        }
     }
+
+    private void Display(Balloon balloon)
+    {
+        _balloonFallback.Stop();
+        _icon.ShowBalloonTip(BalloonTimeoutMilliseconds, balloon.Title, balloon.Text, balloon.Warning ? ToolTipIcon.Warning : ToolTipIcon.Info);
+        _balloonFallback.Start();
+    }
+
+    private void BalloonClosed()
+    {
+        _balloonFallback.Stop();
+        if (_balloons.Closed() is { } next)
+        {
+            Display(next);
+        }
+    }
+
+    private sealed record Balloon(string Title, string Text, bool Warning, Action? OnClick);
 
     private void Redraw()
     {
@@ -194,6 +229,7 @@ internal sealed class TrayIcon : IDisposable
 
     public void Dispose()
     {
+        _balloonFallback.Stop();
         _icon.Visible = false;
         _icon.Dispose();
         _unlockedIcon.Dispose();
