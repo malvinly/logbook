@@ -29,6 +29,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<Entry> _filtered = [];
     private EntryEditor? _editor;
     private bool _updatingRange;
+    private bool _refreshing; // true while Refresh swaps the rows; it decides about the detail pane itself
     private bool _closingForLock;
 
     /// <param name="log">The open log.</param>
@@ -89,15 +90,38 @@ public sealed partial class MainWindow : Window
 
         ListCollectionView view = new(_filtered.Select(e => new EntryRow(e)).ToList());
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(EntryRow.DayHeader)));
-        Results.ItemsSource = view;
+
+        // Replacing the rows clears the selection and re-selecting builds a fresh editor, which would throw away
+        // whatever is typed in the pane. So the selection events are ignored here and the pane is decided below.
+        EntryRow? row;
+        _refreshing = true;
+        try
+        {
+            Results.ItemsSource = view;
+
+            // Keep the same entry selected if the new filter still shows it; otherwise the pane simply closes.
+            row = selectedId is null ? null : RowFor(selectedId);
+            Results.SelectedItem = row;
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+
+        // The same stored entry keeps its editor and with it any unsaved edit; a new revision underneath rebuilds it.
+        if (row is not null && _editor is not null && ReferenceEquals(row.Entry, _editor.Current))
+        {
+            FollowsUp.ItemsSource = row.Entry.RelatedTo.Select(LinkTo).ToList(); // an original may have been deleted
+        }
+        else
+        {
+            ShowDetail(row);
+        }
 
         // "How many times" is a driving question, so the count is always in view (DESIGN.md section 10).
         string range = RangeText.Range(_filtered);
         Header.Text = range.Length == 0 ? RangeText.Count(_filtered.Count) : $"{RangeText.Count(_filtered.Count)} · {range}";
         ShowWarnings();
-
-        // Keep the same entry selected if the new filter still shows it; otherwise the pane simply closes.
-        Results.SelectedItem = selectedId is null ? null : RowFor(selectedId);
     }
 
     /// <summary>Selects the entry with this id, clearing the filter if the filter hides it (the toast's click).</summary>
@@ -177,7 +201,16 @@ public sealed partial class MainWindow : Window
 
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (Results.SelectedItem is not EntryRow row)
+        if (!_refreshing)
+        {
+            ShowDetail(Results.SelectedItem as EntryRow);
+        }
+    }
+
+    // Builds the detail pane for this row, or closes it for none.
+    private void ShowDetail(EntryRow? row)
+    {
+        if (row is null)
         {
             _editor = null;
             Detail.DataContext = null;
