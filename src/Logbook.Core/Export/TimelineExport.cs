@@ -48,7 +48,7 @@ public static class TimelineExport
         DateOnly? previousDate = null;
         foreach (Entry entry in ordered)
         {
-            DateOnly date = RangeText.LocalDate(entry);
+            DateOnly date = RangeText.StoredDate(entry);
             StringBuilder line = new("• ");
             line.Append(entry.OccurredAt.ToString(options.Compact ? CompactPattern : FullPattern, CultureInfo.InvariantCulture));
             if (options.ShowGaps && previousDate is { } previous)
@@ -92,7 +92,7 @@ public static class TimelineExport
     private static string MonthCounts(List<Entry> ordered)
     {
         var groups = ordered
-            .GroupBy(e => (RangeText.LocalDate(e).Year, RangeText.LocalDate(e).Month))
+            .GroupBy(e => (RangeText.StoredDate(e).Year, RangeText.StoredDate(e).Month))
             .OrderBy(g => g.Key)
             .ToList();
         bool multipleYears = groups.Select(g => g.Key.Year).Distinct().Count() > 1;

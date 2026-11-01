@@ -1,3 +1,4 @@
+using Logbook.Core.Export;
 using Logbook.Core.Grammar;
 
 namespace Logbook.Core.Query;
@@ -27,7 +28,7 @@ public static class EntryQuery
         }
 
         // Bounds are calendar dates, compared against the date the entry carries in its own stored offset.
-        DateOnly date = DateOnly.FromDateTime(entry.OccurredAt.DateTime);
+        DateOnly date = RangeText.StoredDate(entry);
         if ((query.Since is { } since && date < since) || (query.Until is { } until && date > until))
         {
             return false;

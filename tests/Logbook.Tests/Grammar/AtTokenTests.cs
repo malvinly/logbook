@@ -95,6 +95,7 @@ public sealed class AtTokenTests
     [InlineData("at:25:00")]
     [InlineData("at:2026-10-06,")]
     [InlineData("at:mon,")]
+    [InlineData("at:9999-12-31,23:00")] // past the last representable instant once the negative offset is applied
     public void UnparseableValueStaysInSummary(string token)
     {
         CaptureLine line = LineParser.ParseCapture($"thing {token} here", Now);

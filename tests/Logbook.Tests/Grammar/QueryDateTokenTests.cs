@@ -74,6 +74,9 @@ public sealed class QueryDateTokenTests
     [InlineData("last:d")]
     [InlineData("last:-3d")]
     [InlineData("until:")]
+    [InlineData("last:999999999d")] // before year 1
+    [InlineData("last:400000000w")] // 7 * count overflows int
+    [InlineData("last:99999m")]
     public void UnparseableValueBecomesAWord(string token)
     {
         QueryLine line = LineParser.ParseQuery(token, Today);

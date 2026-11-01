@@ -21,27 +21,41 @@ internal static class DateValues
     {
         DateOnly today = DateOnly.FromDateTime(now.Date);
         int comma = value.IndexOf(',', StringComparison.Ordinal);
+        DateOnly date;
+        TimeOnly time;
         if (comma >= 0)
         {
-            if (TryParseCaptureDate(value[..comma], today, out DateOnly date) && TryParseTime(value[(comma + 1)..], out TimeOnly time))
+            if (!TryParseCaptureDate(value[..comma], today, out date) || !TryParseTime(value[(comma + 1)..], out time))
             {
-                result = new DateTimeOffset(date, time, now.Offset);
-                return true;
+                result = default;
+                return false;
             }
         }
-        else if (TryParseCaptureDate(value, today, out DateOnly date))
+        else if (TryParseCaptureDate(value, today, out date))
         {
-            result = new DateTimeOffset(date, new TimeOnly(12, 0), now.Offset);
-            return true;
+            time = new TimeOnly(12, 0);
         }
-        else if (TryParseTime(value, out TimeOnly time))
+        else if (TryParseTime(value, out time))
         {
-            result = new DateTimeOffset(today, time, now.Offset);
-            return true;
+            date = today;
+        }
+        else
+        {
+            result = default;
+            return false;
         }
 
-        result = default;
-        return false;
+        // The first and last days of the calendar cannot carry every offset; treat those as text rather than crash.
+        try
+        {
+            result = new DateTimeOffset(date, time, now.Offset);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            result = default;
+            return false;
+        }
     }
 
     /// <summary><c>since:</c> / <c>until:</c> value: ISO date, <c>today</c> or <c>yesterday</c>.</summary>
@@ -69,19 +83,27 @@ internal static class DateValues
             return false;
         }
 
-        switch (value[^1])
+        // A count that reaches before year 1 is text, not a crash; the filter runs on every keystroke.
+        try
         {
-            case 'd':
-                since = today.AddDays(-count);
-                return true;
-            case 'w':
-                since = today.AddDays(-7 * count);
-                return true;
-            case 'm':
-                since = today.AddMonths(-count);
-                return true;
-            default:
-                return false;
+            switch (value[^1])
+            {
+                case 'd':
+                    since = today.AddDays(-count);
+                    return true;
+                case 'w':
+                    since = today.AddDays(checked(-7 * count));
+                    return true;
+                case 'm':
+                    since = today.AddMonths(-count);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        catch (Exception e) when (e is ArgumentOutOfRangeException or OverflowException)
+        {
+            return false;
         }
     }
 

@@ -14,7 +14,7 @@ public static class RangeText
     public static string Range(IEnumerable<Entry> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        List<DateOnly> dates = [.. entries.Select(LocalDate)];
+        List<DateOnly> dates = [.. entries.Select(StoredDate)];
         if (dates.Count == 0)
         {
             return "";
@@ -32,8 +32,8 @@ public static class RangeText
             : $"{MonthDayYear(first)} – {MonthDayYear(last)}";
     }
 
-    /// <summary>The calendar date an entry carries in its stored offset.</summary>
-    public static DateOnly LocalDate(Entry entry)
+    /// <summary>The calendar date an entry carries in its own stored offset, never the machine zone (CLAUDE.md).</summary>
+    public static DateOnly StoredDate(Entry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
         return DateOnly.FromDateTime(entry.OccurredAt.DateTime);

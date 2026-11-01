@@ -57,6 +57,21 @@ public sealed class TagAndPersonTokenTests
     }
 
     [Fact]
+    public void NormalizeListSplitsTrimsSigilsNormalisesAndDeduplicates()
+    {
+        Assert.Equal(["asked", "staging-access", "j-doe"], TokenNormalizer.NormalizeList(" #Asked, staging_access;@J-Doe  asked "));
+        Assert.Equal(["asked", "followup"], TokenNormalizer.NormalizeList("followup #asked", existing: ["asked"]));
+        Assert.Empty(TokenNormalizer.NormalizeList("  , ; # @ "));
+    }
+
+    [Fact]
+    public void NormalizeHandlesLongNamesWithoutStackPressure()
+    {
+        string name = new('A', 10_000);
+        Assert.Equal(new string('a', 10_000), TokenNormalizer.Normalize(name));
+    }
+
+    [Fact]
     public void RepeatedTagOrPersonIsKeptOnce()
     {
         CaptureLine line = LineParser.ParseCapture("#asked #Asked @j-doe @j-doe", Now);

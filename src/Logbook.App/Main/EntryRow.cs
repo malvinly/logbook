@@ -11,7 +11,7 @@ public sealed class EntryRow
     {
         ArgumentNullException.ThrowIfNull(entry);
         Entry = entry;
-        Day = RangeText.LocalDate(entry);
+        Day = RangeText.StoredDate(entry);
         DayHeader = Format.DayHeader(Day);
         Time = Format.Time(entry.OccurredAt);
         Chips = Chip.For(entry);
