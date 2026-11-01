@@ -197,6 +197,26 @@ public sealed class ChangePassphraseTests : IDisposable
     }
 
     [Fact]
+    public void HeaderWithAnUnknownPropertyIsRefusedRatherThanRewrittenWithoutIt()
+    {
+        // The extra property is ten bytes, a multiple of the five an escaped '+' adds, so the length arithmetic alone
+        // would accept it and the rebuilt header would silently drop the property.
+        LogFile.Create(_file.Path, OldPassphrase, Now, NoDelays).Append(NewEntry("first"));
+        byte[] original = File.ReadAllBytes(_file.Path);
+        int headerEnd = HeaderEnd(original);
+        byte[] extra = ",\"n\":\"xxx\""u8.ToArray();
+        Assert.Equal(10, extra.Length);
+        File.WriteAllBytes(_file.Path, [.. original[..(headerEnd - 1)], .. extra, .. original[(headerEnd - 1)..]]);
+        byte[] before = File.ReadAllBytes(_file.Path);
+        LogFile log = Open(OldPassphrase);
+
+        Assert.Throws<InvalidDataException>(() => log.ChangePassphrase(OldPassphrase, NewPassphrase));
+
+        Assert.Equal(before, File.ReadAllBytes(_file.Path));
+        Assert.Equal("first", Assert.Single(Open(OldPassphrase).Live).Summary);
+    }
+
+    [Fact]
     public void FileReplacedByOneWithAnotherDataKeyIsRefused()
     {
         // A sync client could swap in a different file at the same path; its header must not be rewritten for our key.

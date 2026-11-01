@@ -248,6 +248,14 @@ public sealed class LogFile
                 throw new InvalidDataException("The file on disk is not the log that is open (its key differs). The passphrase is unchanged.");
             }
 
+            // The new header is rebuilt from the parsed one, so it is only faithful when the line on disk is exactly what
+            // this app writes for those values: an unknown property would be dropped, and a header of another form could
+            // pass the length arithmetic by chance.
+            if (!Encoding.UTF8.GetBytes(LogbookJson.Serialize(onDisk)).AsSpan().SequenceEqual(previous))
+            {
+                throw new InvalidDataException("The header was not written by Logbook in its usual form, so it cannot be replaced in place. The passphrase is unchanged.");
+            }
+
             byte[] replacement = BuildSameLengthHeader(onDisk, newPassphrase, previous.Length, out FileHeader changed);
             if (!UnwrapsToDataKey(replacement, newPassphrase))
             {
