@@ -168,7 +168,18 @@
             </StackPanel>
             <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="20,4,20,16">
               <StackPanel>
-                <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,4,0,0" />
+                <TextBlock Text="{Binding Problem}" Margin="0,4,0,0">
+                  <!-- Takes no room in the pinned footer until there is something to say. -->
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource ProblemText}">
+                      <Style.Triggers>
+                        <Trigger Property="Text" Value="">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                   <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
                   <Button Content="Follow up" Style="{StaticResource FooterButton}" Margin="8,0,0,0" Click="OnFollowUpClick"
@@ -178,7 +189,7 @@
               </StackPanel>
             </Border>
             <!-- Not a tab stop: the fields inside take focus, and a focused viewer would draw a focus ring around the whole card. -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto" Focusable="False">
               <StackPanel Margin="20,0,20,12">
                 <Grid Margin="0,8,0,0">
                   <Grid.ColumnDefinitions>

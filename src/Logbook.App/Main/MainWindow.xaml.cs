@@ -183,6 +183,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        // A different entry starts at the top of the fields; the same entry re-selected after a save keeps its place.
+        if (_editor?.Current.Id != row.Id)
+        {
+            DetailScroll.ScrollToTop();
+        }
+
         // Every revision but the live one is history; the one just before the live one is "previous" for highlighting.
         List<Entry> history = [.. _log.RevisionsOf(row.Id).Where(r => !ReferenceEquals(r, row.Entry))];
         Entry? previous = history.Count > 0 ? history[^1] : null;
