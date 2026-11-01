@@ -90,6 +90,7 @@ Plaintext JSON, one object per record, before encryption. Property names are cam
   "tags": ["asked", "staging-access"],
   "people": ["j-doe"],
   "refs": [],
+  "relatedTo": [],
   "deleted": false
 }
 ```
@@ -101,6 +102,7 @@ Plaintext JSON, one object per record, before encryption. Property names are cam
 - `reason` — optional, may be multi-line.
 - `tags`, `people` — lists of normalised strings. May be empty.
 - `refs` — list of strings: ticket numbers, URLs, file paths, message links. Free-form; rendered verbatim.
+- `relatedTo` — list of entry ids (ULIDs) this entry follows up on, set by the Follow up button (section 10). It records the thread, which tags cannot: a tag says what an entry is about, not which earlier entry it continues. May be empty; a line written before this field existed has no such property and loads with an empty list. The timeline export does not show it; the decrypted export writes it.
 - `deleted` — a tombstone is a record with `deleted: true` and `rev + 1`; other fields may be omitted. Deleted entries are hidden everywhere except the revision view and the "include history" plaintext export.
 
 ## 8. File format
