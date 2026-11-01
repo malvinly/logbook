@@ -6,7 +6,8 @@ namespace Logbook.Core.Export;
 /// <summary>
 /// A filtered set as CSV (DESIGN.md section 11): RFC 4180, comma separated, CRLF after every row, one header row,
 /// oldest first. Timestamps are the stored round-trip form with their own offset, never converted. Lists are joined
-/// by a single space, except refs, which may contain spaces themselves and are joined by "; ".
+/// by a single space, except refs, which may contain spaces themselves and are joined by "; ". A summary, reason or
+/// refs cell that would read as a formula gets a leading apostrophe, so those three are not always verbatim.
 /// </summary>
 public static class CsvExport
 {
@@ -23,11 +24,11 @@ public static class CsvExport
             [
                 Timestamp(entry.OccurredAt),
                 Timestamp(entry.RecordedAt),
-                entry.Summary,
-                entry.Reason ?? "",
+                DefuseFormula(entry.Summary),
+                DefuseFormula(entry.Reason ?? ""),
                 string.Join(' ', entry.Tags),
                 string.Join(' ', entry.People),
-                string.Join("; ", entry.Refs),
+                DefuseFormula(string.Join("; ", entry.Refs)),
                 string.Join(' ', entry.RelatedTo),
                 entry.RemindAt is { } remindAt ? Timestamp(remindAt) : "",
                 entry.Id,
@@ -46,6 +47,11 @@ public static class CsvExport
     }
 
     private static string Timestamp(DateTimeOffset value) => value.ToString("O", CultureInfo.InvariantCulture);
+
+    // Spreadsheet apps run a cell that starts with = + - or @ as a formula (Phase 7), so such a text cell gets a
+    // leading apostrophe, which they read as "this is text". Applied before quoting, so the ' sits inside the quotes.
+    private static string DefuseFormula(string text)
+        => text.Length > 0 && text[0] is '=' or '+' or '-' or '@' ? "'" + text : text;
 
     // RFC 4180: a field holding a comma, a quote or a line break is enclosed in quotes, with its quotes doubled.
     private static string Quote(string field)

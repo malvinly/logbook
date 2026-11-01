@@ -138,6 +138,113 @@ public sealed class CsvExportTests
         Assert.DoesNotContain("\"", CsvExport.Render(SampleEntries.All), StringComparison.Ordinal);
     }
 
+    // Formula-looking text cells (Phase 7): spreadsheet apps run a cell starting with = + - @ as a formula.
+    [Theory]
+    [InlineData("=SUM(1) in the sheet")]
+    [InlineData("+1 for that")]
+    [InlineData("-negative first")]
+    [InlineData("@j-doe said so")]
+    public void SummaryStartingWithAFormulaCharacterGetsAnApostrophe(string summary)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = summary };
+        Assert.Contains(",'" + summary + ",", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("=1+1")]
+    [InlineData("+1")]
+    [InlineData("-1")]
+    [InlineData("@a-smith")]
+    public void ReasonStartingWithAFormulaCharacterGetsAnApostrophe(string reason)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Reason = reason };
+        Assert.Contains(",Asked for staging access,'" + reason + ",asked staging-access,", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("=HYPERLINK(1)")]
+    [InlineData("+44")]
+    [InlineData("-x")]
+    [InlineData("@thread")]
+    public void RefsStartingWithAFormulaCharacterGetAnApostrophe(string firstRef)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Refs = [firstRef, "INC0041233"] };
+        Assert.Contains(",'" + firstRef + "; INC0041233,", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Asked again")]
+    [InlineData("'already quoted")]
+    [InlineData(" =leading space")]
+    [InlineData("#tag-like")]
+    [InlineData("1+1")]
+    public void TextCellStartingWithAnyOtherCharacterIsUnchanged(string text)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = text, Reason = text, Refs = [text] };
+        Assert.Equal(
+            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00," + text + "," + text + ",asked staging-access,j-doe," + text + ",,,01K0000000000000000000000B",
+            Rows([entry])[1]);
+    }
+
+    [Theory]
+    [InlineData("a=b")]
+    [InlineData("a+b")]
+    [InlineData("a-b")]
+    [InlineData("a@b")]
+    public void FormulaCharacterInSecondPlaceIsUnchanged(string text)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = text, Reason = text, Refs = [text] };
+        Assert.DoesNotContain("'", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApostropheSitsInsideTheQuotesWhenTheCellIsAlsoQuoted()
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = "=\"x\",y" };
+        Assert.Contains(",\"'=\"\"x\"\",y\",", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnlyTheFirstRefDecidesTheRefsCell()
+    {
+        Entry entry = SampleEntries.FirstAsk with { Refs = ["INC0041233", "=later"] };
+        Assert.Contains(",INC0041233; =later,", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EmptyTextCellsAreNotPrefixed()
+    {
+        Entry entry = SampleEntries.FirstAsk with { Reason = null, Refs = [] };
+        Assert.Equal(
+            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,Asked for staging access,,asked staging-access,j-doe,,,,01K0000000000000000000000B",
+            Rows([entry])[1]);
+    }
+
+    [Fact]
+    public void FormulaPrefixLeavesTheOtherColumnsVerbatim()
+    {
+        Entry entry = SampleEntries.FirstAsk with
+        {
+            Summary = "=a",
+            Reason = "+b",
+            Refs = ["-c"],
+            Tags = ["asked"],
+            People = ["a-smith"],
+            RelatedTo = ["01K0000000000000000000000A"],
+            RemindAt = new DateTimeOffset(2026, 8, 10, 9, 0, 0, TimeSpan.FromHours(-5)),
+        };
+        Assert.Equal(
+            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,'=a,'+b,asked,a-smith,'-c,01K0000000000000000000000A,2026-08-10T09:00:00.0000000-05:00,01K0000000000000000000000B",
+            Rows([entry])[1]);
+    }
+
+    [Fact]
+    public void HeaderRowIsUnchangedByTheFormulaRule()
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = "=a" };
+        Assert.Equal(Header, Rows([entry])[0]);
+    }
+
     [Fact]
     public void FileBytesAreUtf8WithABom()
     {
