@@ -83,6 +83,9 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
+        // Before the unlock prompt, so every window opens in the chosen theme; following Windows this changes nothing.
+        AppTheme.Apply(this, _settings.Theme);
+
         _messageWindow = new MessageWindow();
         _messageWindow.AddHook(OnMessage);
         _hotkeys = new HotkeyManager(_messageWindow);
@@ -709,6 +712,14 @@ public sealed partial class App : Application, IDisposable
         _hotkeys?.UnregisterAll();
         RegisterHotkeys();
         _suggestions = null;
+
+        // Open windows repaint through their DynamicResource brushes; the capture box's acrylic tint is a window
+        // attribute, so an open one is told separately. A box opened later reads the theme when it is created.
+        AppTheme.Apply(this, _settings.Theme);
+        if (_capture is { } capture)
+        {
+            Backdrop.RefreshTint(capture);
+        }
     }
 
     private void SaveSettings()

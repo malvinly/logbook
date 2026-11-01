@@ -51,6 +51,12 @@ public sealed class Settings
     /// </summary>
     public int IdleLockMinutes { get; set; } = 30;
 
+    /// <summary>
+    /// <c>system</c> follows the Windows light or dark setting; <c>light</c> or <c>dark</c> forces one. A settings file
+    /// written before this existed has no such property and follows Windows.
+    /// </summary>
+    public string Theme { get; set; } = "system";
+
     public ExportSettings Export { get; set; } = new();
 
     /// <summary>In the order they were saved, which is the order of the buttons.</summary>

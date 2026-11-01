@@ -48,5 +48,16 @@ internal static class Backdrop
         window.Background = Brushes.Transparent;
     }
 
+    /// <summary>Sets the tint again after the app theme changed while the window is open.</summary>
+    public static void RefreshTint(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        IntPtr hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd != IntPtr.Zero && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
+        {
+            Set(hwnd, NativeMethods.DwmwaUseImmersiveDarkMode, AppTheme.IsDark ? 1 : 0);
+        }
+    }
+
     private static bool Set(IntPtr hwnd, int attribute, int value) => NativeMethods.DwmSetWindowAttribute(hwnd, attribute, ref value, sizeof(int)) >= 0;
 }

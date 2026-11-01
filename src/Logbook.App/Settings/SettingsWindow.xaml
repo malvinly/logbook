@@ -65,6 +65,23 @@
       </Grid>
       <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap" Text="Lock after N minutes without any input to Windows; 0 never locks. Working in other apps keeps Logbook unlocked." />
 
+      <TextBlock Style="{StaticResource SectionText}" Text="Appearance" Margin="0,20,0,0" />
+      <Grid Margin="0,6,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <Label Content="Theme" />
+          <ComboBox x:Name="ThemeChoice" HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="Follow Windows" Tag="system" />
+            <ComboBoxItem Content="Light" Tag="light" />
+            <ComboBoxItem Content="Dark" Tag="dark" />
+          </ComboBox>
+        </StackPanel>
+      </Grid>
+
       <TextBlock Style="{StaticResource SectionText}" Text="Startup" Margin="0,20,0,0" />
       <CheckBox x:Name="StartWithWindows" Margin="0,6,0,0" Content="Start Logbook when I sign in (a shortcut in the Startup folder)" />
 

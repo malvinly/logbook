@@ -5,10 +5,11 @@ using System.Windows.Controls;
 using Logbook.App.Diagnostics;
 using Logbook.App.Hotkeys;
 using Logbook.App.Startup;
+using Logbook.App.Theme;
 
 namespace Logbook.App.Settings;
 
-/// <summary>Edits the settings file in place (DESIGN.md section 12). The app re-registers hotkeys after a save.</summary>
+/// <summary>Edits the settings file in place (DESIGN.md section 12). The app re-registers hotkeys and applies the theme after a save.</summary>
 public sealed partial class SettingsWindow : Window
 {
     private const int MaxIdleLockMinutes = 1440; // a day; beyond that, 0 says what is meant
@@ -24,6 +25,12 @@ public sealed partial class SettingsWindow : Window
         AutocompleteCap.Text = settings.AutocompleteCap.ToString(CultureInfo.InvariantCulture);
         AutocompleteRanking.SelectedIndex = string.Equals(settings.AutocompleteRanking, "frequent", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         IdleLockMinutes.Text = settings.IdleLockMinutes.ToString(CultureInfo.InvariantCulture);
+        ThemeChoice.SelectedIndex = AppTheme.Normalize(settings.Theme) switch
+        {
+            AppTheme.Light => 1,
+            AppTheme.Dark => 2,
+            _ => 0,
+        };
         StartWithWindows.IsChecked = StartupShortcut.IsRegistered();
         FileInfo.Text = $"Data file: {dataFilePath}\nSettings: {settingsPath}\nDiagnostics: {Diag.LogFolder}";
     }
@@ -83,6 +90,7 @@ public sealed partial class SettingsWindow : Window
         _settings.AutocompleteCap = cap;
         _settings.IdleLockMinutes = idleMinutes;
         _settings.AutocompleteRanking = (string)((ComboBoxItem)AutocompleteRanking.SelectedItem).Tag;
+        _settings.Theme = (string)((ComboBoxItem)ThemeChoice.SelectedItem).Tag;
         DialogResult = true;
     }
 }
