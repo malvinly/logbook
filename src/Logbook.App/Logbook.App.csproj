@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Logbook</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <!-- Only for NotifyIcon (DESIGN.md section 16). The WinForms implicit usings clash with WPF, so they are removed. -->
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Logbook.Core\Logbook.Core.csproj" />
+  </ItemGroup>
+
+</Project>
