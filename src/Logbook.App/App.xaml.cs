@@ -430,7 +430,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        if (log.PendingCount > 0 || _writesInFlight > 0 || _main is { IsSaving: true })
+        if (WriteInProgress(log))
         {
             int waiting = Math.Max(log.PendingCount, 1);
             AppDialog.Inform(
@@ -464,6 +464,16 @@ public sealed partial class App : Application, IDisposable
         _tray?.SetLocked(true);
         Diag.Log("Locked from the tray");
     }
+
+    /// <summary>
+    /// True while anything is pending, being written, or rewriting the header. Locking would drop unsaved captures, and
+    /// a passphrase change must not race an append, so both wait for this to clear.
+    /// </summary>
+    private bool WriteInProgress(LogFile log)
+        => log.PendingCount > 0
+            || _writesInFlight > 0
+            || _main is { IsSaving: true }
+            || Windows.OfType<ChangePassphraseWindow>().Any(w => w.IsChanging);
 
     private void ShowCapture() => ShowCapture(null);
 
@@ -546,6 +556,7 @@ public sealed partial class App : Application, IDisposable
             _main.CopyTimelineRequested += ShowExportPanel;
             _main.ExportDecryptedRequested += ShowExportDecrypted;
             _main.CheatSheetRequested += ShowCheatSheet;
+            _main.ChangePassphraseRequested += ShowChangePassphrase;
             _main.FollowUpRequested += ShowCapture;
             _main.Changed += () =>
             {
@@ -610,6 +621,27 @@ public sealed partial class App : Application, IDisposable
         }
 
         return roots;
+    }
+
+    // Only reachable from the main window, which exists only while unlocked.
+    private void ShowChangePassphrase()
+    {
+        if (Log is not { } log)
+        {
+            return;
+        }
+
+        if (WriteInProgress(log))
+        {
+            AppDialog.Inform(VisibleMain, "Not yet", "An entry is still being written to the file. Change the passphrase once the tray icon no longer shows unsaved entries.", DialogTone.Warning);
+            return;
+        }
+
+        ChangePassphraseWindow window = new(log, _dataFilePath, () => WriteInProgress(log)) { Owner = VisibleMain };
+        if (window.ShowDialog() == true)
+        {
+            AppDialog.Inform(VisibleMain, "Passphrase changed", "Use the new passphrase from now on; the old one no longer opens the log. Logbook stays unlocked, and every entry is unchanged.", DialogTone.Information);
+        }
     }
 
     private void ShowCheatSheet()

@@ -64,6 +64,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Raised for Tools → Export decrypted.</summary>
     public event Action? ExportDecryptedRequested;
 
+    /// <summary>Raised for Tools → Change passphrase.</summary>
+    public event Action? ChangePassphraseRequested;
+
     /// <summary>Raised for Help → Grammar cheat sheet.</summary>
     public event Action? CheatSheetRequested;
 
@@ -353,6 +356,8 @@ public sealed partial class MainWindow : Window
     private void OnCopyTimelineClick(object sender, RoutedEventArgs e) => CopyTimelineRequested?.Invoke(Filter.Text, _filtered);
 
     private void OnExportDecryptedClick(object sender, RoutedEventArgs e) => ExportDecryptedRequested?.Invoke();
+
+    private void OnChangePassphraseClick(object sender, RoutedEventArgs e) => ChangePassphraseRequested?.Invoke();
 
     private void OnSettingsClick(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 
