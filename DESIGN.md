@@ -215,7 +215,7 @@ Toggles in the export panel, remembered between uses:
 - **Show gaps** — appends `(N days later)` after the timestamp, computed from the previous entry in the set. Off for the first entry.
 - **Group by month** — inserts a second header line with per-month counts: `Jul (1) · Aug (3) · Sep (1) · Oct (2)`. The list below is unchanged.
 - **Compact** — drops time of day and the weekday: `• Oct 6, 2026 — …`.
-- **Tags and people** — appends the entry's tags and then its people to its line, after the refs, each with its `#` or `@` and separated by single spaces: `• Mon Oct 6, 2026 9:00 AM — Reported the printer outage [INC0040001] #reported #printer @a-smith`. Order is as stored. An entry with no tags and no people is unchanged, and the header line and the reason are unchanged.
+- **Tags and people** — appends the entry's tags and then its people to its line, after the refs, each with its `#` or `@` and separated by single spaces: `• Tue Jul 14, 2026 9:00 AM — Reported the printer outage to facilities [INC0040001] #reported #printer @a-smith`. Order is as stored. An entry with no tags and no people is unchanged, and the header line and the reason are unchanged.
 
 ### Export decrypted
 
