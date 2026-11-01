@@ -263,6 +263,7 @@ Everything above.
 - Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
 - Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
 - Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
+- Write rule: before appending, check whether the file's last byte is `\n` and, if not, write a `\n` first. Today a crash that leaves a partial trailing line makes the next append fuse with it into one unreadable line, and because that fused line is last it is skipped silently, so a capture that was confirmed as logged is lost. The check is one extra read of the last byte per append.
 
 ### Not building
 
