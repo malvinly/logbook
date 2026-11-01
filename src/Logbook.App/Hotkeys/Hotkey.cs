@@ -34,7 +34,7 @@ public sealed record Hotkey(ModifierKeys Modifiers, Key Key)
                     modifiers |= ModifierKeys.Windows;
                     break;
                 default:
-                    if (key != Key.None || !Enum.TryParse(part, ignoreCase: true, out key) || key == Key.None)
+                    if (key != Key.None || !TryParseKey(part, out key))
                     {
                         return false;
                     }
@@ -51,6 +51,26 @@ public sealed record Hotkey(ModifierKeys Modifiers, Key Key)
 
         hotkey = new Hotkey(modifiers, key);
         return true;
+    }
+
+    // Enum.TryParse also takes numbers and comma lists: "1" would be (Key)1, which is Key.Cancel, and it registers
+    // fine and never fires; a silently dead hotkey is what DESIGN.md section 12 forbids. So a single digit means that
+    // digit key, and anything else must be a name of a defined key: letters first, then letters or digits (F12, D1).
+    private static bool TryParseKey(string part, out Key key)
+    {
+        key = Key.None;
+        if (part.Length == 1 && char.IsAsciiDigit(part[0]))
+        {
+            key = Key.D0 + (part[0] - '0');
+            return true;
+        }
+
+        if (!char.IsAsciiLetter(part[0]) || !part.All(char.IsAsciiLetterOrDigit))
+        {
+            return false;
+        }
+
+        return Enum.TryParse(part, ignoreCase: true, out key) && Enum.IsDefined(key) && key != Key.None;
     }
 
     public override string ToString()
