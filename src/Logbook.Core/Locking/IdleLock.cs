@@ -20,4 +20,18 @@ public static class IdleLock
 
         return now - lastInput >= TimeSpan.FromMinutes(idleLockMinutes);
     }
+
+    /// <summary>
+    /// The instant of the last input, from the Windows millisecond tick count now (<paramref name="tickCountNow"/>) and
+    /// at the last input (<paramref name="lastInputTick"/>, from <c>GetLastInputInfo</c>), expressed against
+    /// <paramref name="now"/>.
+    /// </summary>
+    public static DateTimeOffset LastInputBefore(DateTimeOffset now, uint tickCountNow, uint lastInputTick)
+    {
+        // Both are 32-bit tick counts that wrap every 49.7 days; the unchecked difference stays right across a wrap.
+        // Read as signed, an input stamped after the tick count was read comes out negative, so the result lies after
+        // now, which IsDue treats as "not idle" like any last input in the future.
+        int idleMilliseconds = unchecked((int)(tickCountNow - lastInputTick));
+        return now - TimeSpan.FromMilliseconds(idleMilliseconds);
+    }
 }

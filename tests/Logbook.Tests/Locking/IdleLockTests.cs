@@ -54,4 +54,51 @@ public sealed class IdleLockTests
         Assert.False(IdleLock.IsDue(lastInputInTokyo, Now, 15));
         Assert.True(IdleLock.IsDue(lastInputInTokyo, Now, 10));
     }
+
+    [Fact]
+    public void LastInputIsTheTickDifferenceBeforeNow()
+    {
+        Assert.Equal(Now.AddSeconds(-3), IdleLock.LastInputBefore(Now, tickCountNow: 5000, lastInputTick: 2000));
+    }
+
+    [Fact]
+    public void SameTickIsNow()
+    {
+        Assert.Equal(Now, IdleLock.LastInputBefore(Now, tickCountNow: 5000, lastInputTick: 5000));
+    }
+
+    [Fact]
+    public void ATickCountThatWrappedSinceTheLastInputGivesASmallIdleNotFortyNineDays()
+    {
+        // Last input 1000 ms before the wrap, read 500 ms after it: 1.5 s idle.
+        DateTimeOffset lastInput = IdleLock.LastInputBefore(Now, tickCountNow: 500, lastInputTick: uint.MaxValue - 999);
+        Assert.Equal(Now.AddMilliseconds(-1500), lastInput);
+        Assert.False(IdleLock.IsDue(lastInput, Now, 1));
+    }
+
+    [Fact]
+    public void ALongIdleAcrossTheWrapIsStillDue()
+    {
+        // Twenty minutes idle, the tick count having wrapped in between.
+        uint twentyMinutes = 20 * 60 * 1000;
+        DateTimeOffset lastInput = IdleLock.LastInputBefore(Now, tickCountNow: 1000, lastInputTick: unchecked(1000u - twentyMinutes));
+        Assert.Equal(Now.AddMinutes(-20), lastInput);
+        Assert.True(IdleLock.IsDue(lastInput, Now, 15));
+    }
+
+    [Fact]
+    public void AnInputStampedAfterTheTickCountWasReadLiesAfterNowAndIsNotIdle()
+    {
+        DateTimeOffset lastInput = IdleLock.LastInputBefore(Now, tickCountNow: 5000, lastInputTick: 5040);
+        Assert.Equal(Now.AddMilliseconds(40), lastInput);
+        Assert.False(IdleLock.IsDue(lastInput, Now, 1));
+    }
+
+    [Fact]
+    public void AnInputStampedAfterTheReadAcrossTheWrapAlsoLiesAfterNow()
+    {
+        DateTimeOffset lastInput = IdleLock.LastInputBefore(Now, tickCountNow: uint.MaxValue - 9, lastInputTick: 10);
+        Assert.Equal(Now.AddMilliseconds(20), lastInput);
+        Assert.False(IdleLock.IsDue(lastInput, Now, 1));
+    }
 }

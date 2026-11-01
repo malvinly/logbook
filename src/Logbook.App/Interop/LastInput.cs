@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Logbook.Core.Locking;
 
 namespace Logbook.App.Interop;
 
@@ -14,10 +15,6 @@ internal static class LastInput
             return null;
         }
 
-        // Both are 32-bit millisecond tick counts that wrap every 49.7 days; the unchecked difference stays right
-        // across a wrap. Read as signed, an input stamped after the tick count read here comes out negative, which
-        // IdleLock treats as "not idle" like any last input in the future.
-        int idleMilliseconds = unchecked((int)((uint)Environment.TickCount - info.Time));
-        return now - TimeSpan.FromMilliseconds(idleMilliseconds);
+        return IdleLock.LastInputBefore(now, unchecked((uint)Environment.TickCount), info.Time);
     }
 }
