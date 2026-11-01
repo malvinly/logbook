@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
@@ -8,7 +7,7 @@ namespace Logbook.App.Capture;
 
 /// <summary>
 /// The "Logged — click to edit" toast (DESIGN.md sections 5 and 16): a non-activating topmost window at the bottom
-/// right of the work area that fades out after five seconds. The same window, in the danger color, reports an unsaved capture.
+/// right of the work area that fades out after five seconds. The same window, with an error glyph, reports an unsaved capture.
 /// </summary>
 public sealed partial class ToastWindow : Window
 {
@@ -23,11 +22,13 @@ public sealed partial class ToastWindow : Window
         Detail.Visibility = detail.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (danger)
         {
-            Body.Background = (Brush)FindResource("DangerBrush");
+            StatusGlyph.Text = "\uEA39"; // error badge in place of the check mark
+            StatusGlyph.SetResourceReference(ForegroundProperty, "DangerBrush");
         }
 
-        Left = workArea.Right - Width - 8;
-        Loaded += (_, _) => Top = workArea.Bottom - ActualHeight - 8;
+        // The surface keeps a margin inside the window for its shadow, which also spaces it from the screen edges.
+        Left = workArea.Right - Width;
+        Loaded += (_, _) => Top = workArea.Bottom - ActualHeight;
 
         _timer.Interval = lifetime;
         _timer.Tick += (_, _) => FadeOut();

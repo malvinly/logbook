@@ -179,6 +179,23 @@
     <Setter Property="Padding" Value="20,8" />
   </Style>
 
+  <!-- The toast's surface: opaque, since the toast window is per-pixel transparent so that it can fade, with a margin
+       inside the window for the shadow. -->
+  <Style x:Key="ToastSurface" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource FlyoutBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FlyoutStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource MediumRadius}" />
+    <Setter Property="Margin" Value="12" />
+    <Setter Property="Padding" Value="16,12,16,16" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="Effect">
+      <Setter.Value>
+        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.26" />
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- A translucent card on the Mica surface: the results list, the detail pane, a revision. -->
   <Style x:Key="Card" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource CardBrush}" />

@@ -17,6 +17,8 @@
   <Color x:Key="DividerColor">#14000000</Color>
   <Color x:Key="TextColor">#E4000000</Color>
   <Color x:Key="TextMutedColor">#9E000000</Color>
+  <!-- Glyphs drawn on an accent fill: white on the darker light-theme accent, black on the lighter dark-theme one. -->
+  <Color x:Key="OnAccentColor">#FFFFFFFF</Color>
   <Color x:Key="HoverColor">#09000000</Color>
   <Color x:Key="SelectionColor">#0F000000</Color>
   <Color x:Key="DangerColor">#FFC42B1C</Color>
@@ -41,6 +43,7 @@
   <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource DividerColor}" />
   <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
   <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="OnAccentBrush" Color="{StaticResource OnAccentColor}" />
   <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}" />
   <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource SelectionColor}" />
   <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
