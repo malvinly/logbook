@@ -20,6 +20,23 @@ public static class EntryQuery
         ];
     }
 
+    /// <summary>
+    /// The entries whose relatedTo names <paramref name="id"/>, oldest first with the id breaking ties (DESIGN.md
+    /// section 10, "Followed up by"). Pass the live entries: a deleted follow-up is hidden here as everywhere else.
+    /// </summary>
+    public static IReadOnlyList<Entry> FollowUpsOf(string id, IEnumerable<Entry> live)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(live);
+        return
+        [
+            .. live
+                .Where(e => e.RelatedTo.Contains(id, StringComparer.Ordinal))
+                .OrderBy(e => e.OccurredAt)
+                .ThenBy(e => e.Id, StringComparer.Ordinal),
+        ];
+    }
+
     private static bool Matches(Entry entry, QueryLine query)
     {
         if (!query.Tags.All(entry.Tags.Contains) || !query.People.All(entry.People.Contains))
