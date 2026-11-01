@@ -12,10 +12,13 @@ namespace Logbook.Core.Storage;
 /// </summary>
 public sealed class LogFile
 {
+    // The app retries pending writes from a timer thread while the UI thread captures and reads, so one lock guards it all.
+    private readonly object _gate = new();
     private readonly LineAppender _appender;
     private readonly byte[] _dataKey;
     private readonly List<Entry> _revisions; // every readable revision in file order, then appends
     private readonly Dictionary<string, Entry> _latest = []; // highest rev per id
+    private readonly Queue<string> _pending = new(); // encrypted lines that failed to reach the disk, oldest first
 
     private LogFile(string path, FileHeader header, byte[] dataKey, List<Entry> revisions, int unreadableLineCount, bool trailingLineTruncated, IReadOnlyList<TimeSpan>? retryDelays)
     {
@@ -40,13 +43,49 @@ public sealed class LogFile
     /// <summary>True when the last line was incomplete or unreadable: the expected result of a crash mid-write.</summary>
     public bool TrailingLineTruncated { get; }
 
+    /// <summary>Revisions captured but not yet on disk. The user must always be able to see this is not zero.</summary>
+    public int PendingCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _pending.Count;
+            }
+        }
+    }
+
     /// <summary>The highest revision of every id that has not been deleted.</summary>
-    public IReadOnlyList<Entry> Live => [.. _latest.Values.Where(e => !e.Deleted)];
+    public IReadOnlyList<Entry> Live
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _latest.Values.Where(e => !e.Deleted)];
+            }
+        }
+    }
 
     /// <summary>Every readable revision, tombstones included, in file order.</summary>
-    public IReadOnlyList<Entry> Revisions => [.. _revisions];
+    public IReadOnlyList<Entry> Revisions
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _revisions];
+            }
+        }
+    }
 
-    public IReadOnlyList<Entry> RevisionsOf(string id) => [.. _revisions.Where(e => e.Id == id)];
+    public IReadOnlyList<Entry> RevisionsOf(string id)
+    {
+        lock (_gate)
+        {
+            return [.. _revisions.Where(e => e.Id == id)];
+        }
+    }
 
     /// <summary>Creates a new file with a fresh data key. Refuses to overwrite an existing file.</summary>
     public static LogFile Create(string path, string passphrase, DateTimeOffset now, IReadOnlyList<TimeSpan>? retryDelays = null)
@@ -120,14 +159,50 @@ public sealed class LogFile
         return new LogFile(path, header, dataKey, revisions, unreadable, trailingTruncated, retryDelays);
     }
 
-    /// <summary>Encrypts and appends one revision. Throws <see cref="IOException"/> when every write attempt failed.</summary>
-    public void Append(Entry entry)
+    /// <summary>
+    /// Encrypts and appends one revision. The entry is visible in memory at once. Returns false when the line could
+    /// not be written after every retry and sits in the pending queue instead; the caller must tell the user.
+    /// Anything already pending is written first so the file keeps capture order.
+    /// </summary>
+    public bool Append(Entry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
         string line = LineCipher.Encrypt(_dataKey, Encoding.UTF8.GetBytes(LogbookJson.Serialize(entry)));
-        _appender.Append(line);
-        _revisions.Add(entry);
-        Fold(entry);
+        lock (_gate)
+        {
+            _revisions.Add(entry);
+            Fold(entry);
+            _pending.Enqueue(line);
+            return WritePendingLocked();
+        }
+    }
+
+    /// <summary>Tries the pending queue again, oldest first. Returns true when nothing is left pending.</summary>
+    public bool RetryPending()
+    {
+        lock (_gate)
+        {
+            return WritePendingLocked();
+        }
+    }
+
+    private bool WritePendingLocked()
+    {
+        while (_pending.Count > 0)
+        {
+            try
+            {
+                _appender.Append(_pending.Peek());
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+
+            _pending.Dequeue();
+        }
+
+        return true;
     }
 
     private void Fold(Entry entry)
