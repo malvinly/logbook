@@ -27,6 +27,10 @@ anything else   capture: the summary · filter: words ANDed over summary and rea
 \#word \@word   a literal # or @ in a summary</TextBlock>
       </Border>
 
+      <TextBlock Style="{StaticResource SectionText}" Text="Saved queries" Margin="0,20,0,0" />
+      <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
+                 Text="Type a filter in the main window and click Save filter as button; right-click a button to remove it. A weekly digest is a saved last:7d: one click, then Copy as timeline." />
+
       <TextBlock Style="{StaticResource SectionText}" Text="Things that stay plain text" Margin="0,20,0,0" />
       <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
                  Text="ticket #12345, C#, name@example.com and @ 3pm are not tokens: # and @ only count after a space or an opening ( or &quot;, and before a letter. Trailing , . ; : ) &quot; are dropped from a token. A date without a time is stored at noon; use the compact export when the time is not meaningful." />
