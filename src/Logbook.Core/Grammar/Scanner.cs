@@ -21,11 +21,27 @@ internal static class Scanner
             // "#" and "@" (and keywords) only start a token at the start of the line or after whitespace.
             bool atWordStart = i == 0 || char.IsWhiteSpace(text[i - 1]);
 
+            // A backslash before "#" or "@" makes it literal text; the backslash itself is dropped.
+            if (c == '\\' && i + 1 < text.Length && (text[i + 1] == '#' || text[i + 1] == '@'))
+            {
+                plain.Append(text[i + 1]);
+                i += 2;
+                continue;
+            }
+
             if ((c == '#' || c == '@') && atWordStart && i + 1 < text.Length && char.IsLetter(text[i + 1]))
             {
                 int end = EndOfWord(text, i);
+                // Trailing punctuation belongs to the sentence, not the token: "asked @j-doe." names j-doe.
+                int nameEnd = end;
+                while (nameEnd > i + 1 && IsTrailingPunctuation(text[nameEnd - 1]))
+                {
+                    nameEnd--;
+                }
+
                 Flush(tokens, plain);
-                tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..end], TokenNormalizer.Normalize(text[(i + 1)..end])));
+                tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..nameEnd], TokenNormalizer.Normalize(text[(i + 1)..nameEnd])));
+                plain.Append(text, nameEnd, end - nameEnd);
                 i = end;
                 continue;
             }
@@ -78,6 +94,8 @@ internal static class Scanner
         key = "";
         return false;
     }
+
+    private static bool IsTrailingPunctuation(char c) => c is ',' or '.' or ';' or ':' or ')';
 
     private static int EndOfWord(string text, int start)
     {
