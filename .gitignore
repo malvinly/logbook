@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+publish/
+TestResults/
+*.binlog
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.swp
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Never commit a real log or export
+*.jsonl
