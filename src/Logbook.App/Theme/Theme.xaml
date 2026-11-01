@@ -150,6 +150,35 @@
     </Setter>
   </Style>
 
+  <!-- The capture box's one large input: bare text on the acrylic, as in a launcher. Fluent's text box draws its own
+       field and underline, which is right everywhere else and wrong here, so this one keyed style has its own template. -->
+  <Style x:Key="LauncherInput" TargetType="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource CaptureSize}" />
+    <Setter Property="ContextMenu" Value="{DynamicResource DefaultControlContextMenu}" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TextBox">
+          <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- The hint bar at the foot of the capture box. -->
+  <Style x:Key="LauncherFooter" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource LayerBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="20,8" />
+  </Style>
+
   <!-- A translucent card on the Mica surface: the results list, the detail pane, a revision. -->
   <Style x:Key="Card" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource CardBrush}" />

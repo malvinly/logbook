@@ -2,58 +2,69 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="New entry" Width="680" SizeToContent="Height" ResizeMode="NoResize"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStyle="None" Background="{DynamicResource WindowBackgroundBrush}"
         Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
         PreviewKeyDown="OnPreviewKeyDown">
+  <!-- A launcher, as in the PowerToys command palette: one large input on acrylic, the chips and the "more" section as rows
+       beneath it, and a hint bar at the foot. Backdrop sets the acrylic and the rounded corners once the window exists. -->
   <WindowChrome.WindowChrome>
     <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
   </WindowChrome.WindowChrome>
-  <Border Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
-          CornerRadius="{StaticResource MediumRadius}" Margin="8" Padding="{StaticResource PagePadding}">
-    <Border.Effect>
-      <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.25" />
-    </Border.Effect>
-    <StackPanel>
-      <Grid>
-        <TextBox x:Name="Line" FontSize="{StaticResource CaptureSize}" TextChanged="OnLineChanged" />
+  <StackPanel>
+    <Grid Margin="20,18,20,14">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <TextBlock Style="{StaticResource IconText}" Text="&#xE70F;" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,14,0" />
+      <Grid Grid.Column="1">
+        <TextBox x:Name="Line" Style="{StaticResource LauncherInput}" TextChanged="OnLineChanged" />
         <TextBlock x:Name="Placeholder" Text="What happened?  #tag  @person  at:yesterday,3pm" IsHitTestVisible="False"
-                   FontSize="{StaticResource CaptureSize}" Foreground="{DynamicResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                   FontSize="{StaticResource CaptureSize}" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0,0,0" VerticalAlignment="Center" />
       </Grid>
-      <Grid Margin="0,8,0,0">
+    </Grid>
+    <Border Height="1" Background="{DynamicResource DividerBrush}" />
+    <Grid Margin="20,10,14,10" MinHeight="26">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <ItemsControl x:Name="Chips" ItemsPanel="{StaticResource ChipPanel}" VerticalAlignment="Center" />
+      <Button x:Name="MoreButton" Grid.Column="1" Style="{StaticResource LinkButton}" Click="OnMoreClick" ToolTip="Ctrl+Enter">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock x:Name="MoreText" Text="More" />
+          <TextBlock x:Name="MoreGlyph" Style="{StaticResource IconText}" FontSize="{StaticResource CaptionSize}" Text="&#xE70D;" Margin="6,1,0,0" />
+        </StackPanel>
+      </Button>
+    </Grid>
+    <TextBlock x:Name="Problem" Style="{StaticResource ProblemText}" Margin="20,0,20,10" Visibility="Collapsed" />
+    <StackPanel x:Name="More" Visibility="Collapsed" Margin="20,0,20,16">
+      <Label Content="Reason" />
+      <TextBox x:Name="Reason" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="160" VerticalScrollBarVisibility="Auto" />
+      <Grid Margin="0,10,0,0">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <ItemsControl x:Name="Chips" ItemsPanel="{StaticResource ChipPanel}" VerticalAlignment="Center" MinHeight="22" />
-        <Button x:Name="MoreButton" Grid.Column="1" Style="{StaticResource LinkButton}" Content="More  ˅" Click="OnMoreClick" ToolTip="Ctrl+Enter" />
-      </Grid>
-      <TextBlock x:Name="Problem" Style="{StaticResource CaptionText}" Foreground="{DynamicResource DangerBrush}" Margin="0,4,0,0" Visibility="Collapsed" />
-      <StackPanel x:Name="More" Visibility="Collapsed" Margin="0,12,0,0">
-        <Label Content="Reason" />
-        <TextBox x:Name="Reason" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="160" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top" />
-        <Grid Margin="0,8,0,0">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="12" />
-            <ColumnDefinition Width="*" />
-          </Grid.ColumnDefinitions>
-          <StackPanel>
-            <Label Content="Additional tags" />
-            <TextBox x:Name="ExtraTags" ToolTip="Separate with spaces" />
-          </StackPanel>
-          <StackPanel Grid.Column="2">
-            <Label Content="Additional people" />
-            <TextBox x:Name="ExtraPeople" ToolTip="Separate with spaces" />
-          </StackPanel>
-        </Grid>
-        <Label Content="Refs (one per line: ticket numbers, links, paths)" Margin="0,8,0,0" />
-        <TextBox x:Name="Refs" AcceptsReturn="True" MinHeight="44" MaxHeight="100" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-          <Button Content="Cancel" Click="OnCancelClick" Margin="0,0,8,0" />
-          <Button Content="Log it" Style="{StaticResource AccentButton}" Click="OnLogClick" />
+        <StackPanel>
+          <Label Content="Additional tags" />
+          <TextBox x:Name="ExtraTags" ToolTip="Separate with spaces" />
         </StackPanel>
+        <StackPanel Grid.Column="2">
+          <Label Content="Additional people" />
+          <TextBox x:Name="ExtraPeople" ToolTip="Separate with spaces" />
+        </StackPanel>
+      </Grid>
+      <Label Content="Refs (one per line: ticket numbers, links, paths)" Margin="0,10,0,0" />
+      <TextBox x:Name="Refs" AcceptsReturn="True" MinHeight="44" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Content="Cancel" Style="{StaticResource FooterButton}" Click="OnCancelClick" Margin="0,0,8,0" />
+        <Button Content="Log it" Style="{StaticResource AccentButton}" Click="OnLogClick" />
       </StackPanel>
-      <TextBlock Style="{StaticResource CaptionText}" Margin="0,8,0,0" Text="Enter logs it · Esc cancels · Ctrl+Enter for reason, refs and more" />
     </StackPanel>
-  </Border>
+    <Border Style="{StaticResource LauncherFooter}">
+      <TextBlock Style="{StaticResource CaptionText}" Text="Enter logs it  ·  Esc cancels  ·  Ctrl+Enter for reason, refs and more" />
+    </Border>
+  </StackPanel>
 </Window>

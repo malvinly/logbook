@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using Logbook.App.Autocomplete;
 using Logbook.App.Chips;
+using Logbook.App.Interop;
 using Logbook.Core;
 using Logbook.Core.Grammar;
 
@@ -21,8 +22,10 @@ public sealed partial class CaptureWindow : Window
         InitializeComponent();
         _workArea = workArea;
         _popups = [SuggestionPopup.Attach(Line, suggestions), SuggestionPopup.Attach(ExtraTags, suggestions), SuggestionPopup.Attach(ExtraPeople, suggestions)];
+        Backdrop.UseAcrylic(this);
+        // Centred and high, as a launcher sits; the box grows downwards when "more" opens.
         Left = workArea.Left + (workArea.Width - Width) / 2;
-        Top = workArea.Top + workArea.Height * 0.3;
+        Top = workArea.Top + workArea.Height * 0.25;
         Loaded += (_, _) => Line.Focus();
     }
 
@@ -75,7 +78,8 @@ public sealed partial class CaptureWindow : Window
     {
         bool open = More.Visibility != Visibility.Visible;
         More.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        MoreButton.Content = open ? "Less  ˄" : "More  ˅";
+        MoreText.Text = open ? "Less" : "More";
+        MoreGlyph.Text = open ? "" : ""; // chevron up, chevron down
         if (open)
         {
             Reason.Focus();
