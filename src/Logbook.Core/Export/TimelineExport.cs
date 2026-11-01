@@ -36,7 +36,7 @@ public static class TimelineExport
     internal static string When(Entry entry, ExportOptions options)
         => entry.OccurredAt.ToString(options.Compact ? CompactPattern : FullPattern, CultureInfo.InvariantCulture);
 
-    /// <param name="filterText">The filter as typed; blank means "All entries".</param>
+    /// <param name="filterText">The filter as typed, or a saved query's name (<see cref="ExportTitle"/>); blank means "All entries".</param>
     /// <param name="entries">The filtered set in any order.</param>
     /// <param name="options">The four toggles.</param>
     public static string Render(string filterText, IEnumerable<Entry> entries, ExportOptions options)

@@ -9,7 +9,7 @@ namespace Logbook.Core.Export;
 /// </summary>
 public static class TimelineHtml
 {
-    /// <param name="filterText">The filter as typed; blank means "All entries".</param>
+    /// <param name="filterText">The filter as typed, or a saved query's name (<see cref="ExportTitle"/>); blank means "All entries".</param>
     /// <param name="entries">The filtered set in any order.</param>
     /// <param name="options">The four toggles, with the same meaning as for the plain text.</param>
     public static string Render(string filterText, IEnumerable<Entry> entries, ExportOptions options)
