@@ -78,11 +78,11 @@ public sealed class CsvExportTests
         Entry entry = SampleEntries.FirstAsk with
         {
             People = ["j-doe", "a-smith"],
-            Refs = ["INC0041233", "Teams thread 4 Oct"],
+            Refs = ["INC0041233", "chat thread 4 Oct"],
             RelatedTo = ["01K0000000000000000000000A", "01K0000000000000000000000B"],
         };
         Assert.Equal(
-            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,Asked for staging access,,asked staging-access,j-doe a-smith,INC0041233; Teams thread 4 Oct,01K0000000000000000000000A 01K0000000000000000000000B,,01K0000000000000000000000B",
+            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,Asked for staging access,,asked staging-access,j-doe a-smith,INC0041233; chat thread 4 Oct,01K0000000000000000000000A 01K0000000000000000000000B,,01K0000000000000000000000B",
             Rows([entry])[1]);
     }
 
@@ -113,6 +113,16 @@ public sealed class CsvExportTests
     {
         Entry entry = SampleEntries.FirstAsk with { Reason = "a\rb" };
         Assert.Contains(",\"a\rb\",", CsvExport.Render([entry]), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReasonWithBareLineFeedsIsQuotedAndStaysOneRow()
+    {
+        // The app stores a multi-line reason with "\n" alone, so this is the usual case, not the CRLF one.
+        Entry entry = SampleEntries.FirstAsk with { Reason = "first line\nsecond line" };
+        string[] rows = Rows([entry]);
+        Assert.Equal(3, rows.Length); // header, the one row, and the empty piece after the last CRLF
+        Assert.Contains(",Asked for staging access,\"first line\nsecond line\",asked staging-access,", rows[1], StringComparison.Ordinal);
     }
 
     [Fact]
