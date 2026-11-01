@@ -33,6 +33,15 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetForegroundWindow(IntPtr hWnd);
 
+    // Windows lets only the process that has the foreground bring another window forward. A second launch has it (the
+    // user just started it), so it hands that right to the first instance before asking it to show its main window;
+    // otherwise the first instance's Activate only flashes the taskbar button. ASFW_ANY: any process may take it.
+    public const uint AsfwAny = uint.MaxValue;
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AllowSetForegroundWindow(uint processId);
+
     [DllImport("user32.dll", ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DestroyIcon(IntPtr hIcon);

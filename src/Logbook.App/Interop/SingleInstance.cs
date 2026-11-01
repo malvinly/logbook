@@ -30,7 +30,12 @@ internal sealed class SingleInstance : IDisposable
         return null;
     }
 
-    public static void NotifyFirstInstance() => NativeMethods.PostMessageW(NativeMethods.HwndBroadcast, ShowMessage, IntPtr.Zero, IntPtr.Zero);
+    public static void NotifyFirstInstance()
+    {
+        // Before the post, so the first instance may take the foreground this launch holds (see NativeMethods).
+        NativeMethods.AllowSetForegroundWindow(NativeMethods.AsfwAny);
+        NativeMethods.PostMessageW(NativeMethods.HwndBroadcast, ShowMessage, IntPtr.Zero, IntPtr.Zero);
+    }
 
     public void Dispose()
     {
