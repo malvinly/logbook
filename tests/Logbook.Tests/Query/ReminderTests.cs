@@ -52,6 +52,19 @@ public sealed class ReminderTests
     }
 
     [Fact]
+    public void RemindersDueAtTheSameInstantComeInIdOrder()
+    {
+        // The same instant written in two offsets; the lower id wins whatever the input order.
+        DateTimeOffset at = Now.AddHours(-1);
+        Entry lowerId = Remind(SampleEntries.SampleAsk, at.ToOffset(TimeSpan.FromHours(9)));
+        Entry higherId = Remind(SampleEntries.SampleStandup, at);
+        Assert.True(string.CompareOrdinal(lowerId.Id, higherId.Id) < 0);
+
+        Assert.Same(lowerId, Next([higherId, lowerId]));
+        Assert.Same(lowerId, Next([lowerId, higherId]));
+    }
+
+    [Fact]
     public void AReminderAlreadyShownIsSkipped()
     {
         Entry first = Remind(SampleEntries.SampleAsk, Now.AddDays(-2));
