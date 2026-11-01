@@ -26,7 +26,7 @@ Decisions and events are the same record. There is no distinction in the schema;
 ## 3. Constraints
 
 - .NET 10, WPF, Windows only. No third-party installs on the target machine, so the app is a self-contained build you drop in a folder; NuGet packages are fine.
-- The data file lives in a folder managed by a file sync service, because that is the only backed-up location. Sync services sync files; they do not understand databases. The file format is designed to be sync-safe: append-only, one record per line, never rewritten in place.
+- The data file lives in a folder managed by a file sync service, because that is the only backed-up location. Sync services sync files; they do not understand databases. The file format is designed to be sync-safe: append-only, one record per line, never rewritten in place (the single exception is line 1 on a passphrase change, written over itself at the same length; section 8).
 - The Windows user account may change. Nothing may depend on the user profile surviving: no DPAPI, no per-user registry secrets, no absolute paths into `C:\Users\<login>`.
 - The author must be able to understand every line. Prefer the boring implementation. Keep the core free of UI dependencies so it can be ported (likely to TypeScript) later.
 
@@ -132,7 +132,8 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 - A random 256-bit **data key** is generated once when the file is created. All records are encrypted with it.
 - The **passphrase** is run through PBKDF2-HMAC-SHA256 (salt and iteration count from the header) to produce a 256-bit **key-encryption key**. The data key is wrapped (AES-256-GCM) with that and stored in the header as `wrappedKey`.
 - Unlock = derive KEK from passphrase, unwrap data key. If the GCM tag on `wrappedKey` fails to verify, the passphrase is wrong. There is no separate verifier field; the wrap is the verifier.
-- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 2.)
+- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 5, under Tools → Change passphrase in the main window.) The data key does not change: a new salt is drawn, the key-encryption key is derived from the new passphrase with the iteration count the header already has, and the same data key is wrapped again; `format`, `fileId` and `createdAt` are kept.
+- How line 1 is rewritten, the one deliberate exception to the append-only rule: **in place, at the same byte length**, so not one byte of lines 2..n moves or changes and the file is never truncated or rewritten whole. The header JSON escapes `+` in base64 as `\u002B`, so its length depends on its random values; the new salt is drawn until it needs no escaping, and the key is wrapped again with fresh nonces until the line comes out exactly as long as the old one, in the same JSON form `Create` writes. Before writing: the current passphrase is verified against the header on disk (a wrong one is reported, nothing written), that header must unwrap to the open log's data key, and the new header is verified in memory to unwrap it with the new passphrase. The write opens the file with `FileMode.Open`, `FileAccess.ReadWrite`, `FileShare.Read`, `FileOptions.WriteThrough`, checks that line 1 is still the bytes it read, writes the new bytes at offset 0, flushes and closes, with the same retry schedule as appends; the file is not held open between operations. Line 1 is then read back and must match and unwrap; if not, the previous bytes (kept in memory until then) are written back and the failure reported. Refused, with nothing written: an empty new passphrase, a header whose length a rewritten one cannot match (one this app did not write; there is no fallback to a whole-file rewrite), a file on disk with another data key, and any time a capture is pending or a write is in flight (the same checks as Lock now), since a header rewrite racing an append is not worth reasoning about. After the change the app stays unlocked with the same data key.
 - There is no recovery. If the passphrase is lost, the log is lost. The first-run screen says this in plain words and tells you to write the passphrase down somewhere physical, since the machine and its password manager may not be yours forever.
 
 ### Write rules
@@ -142,7 +143,7 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 - Writes never sleep while holding the lock that reads take, so the main window stays responsive while a write is retrying.
 - If the file did not end with `\n` when it was opened (a crash cut a write short), the first append writes `\n` first, so the new line never fuses with the partial one. A complete line that only lost its newline is recovered by this; a partial one becomes a counted unreadable line.
 - Exit with unsaved captures asks first. A Windows sign-out gets one more write attempt and is refused while anything is still unsaved, so the loss is never silent.
-- The file is never truncated, rewritten, or compacted by the app. Revisions accumulate. At three entries a day with occasional edits this is a few hundred KB per year.
+- The file is never truncated, rewritten, or compacted by the app; the in-place header rewrite of a passphrase change (key hierarchy, above) touches line 1 only. Revisions accumulate. At three entries a day with occasional edits this is a few hundred KB per year.
 
 ### Load rules
 
