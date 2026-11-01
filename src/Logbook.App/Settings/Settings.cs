@@ -49,7 +49,7 @@ public sealed class Settings
     /// Lock after this many minutes without any input to Windows (DESIGN.md section 9); 0 never locks. A settings
     /// file written before this existed has no such property and gets the default.
     /// </summary>
-    public int IdleLockMinutes { get; set; } = 30;
+    public int IdleLockMinutes { get; set; } = 60;
 
     /// <summary>
     /// <c>system</c> follows the Windows light or dark setting; <c>light</c> or <c>dark</c> forces one. A settings file
