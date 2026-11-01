@@ -277,7 +277,10 @@ public sealed partial class MainWindow : Window
 
     private async void OnDeleteClick(object sender, RoutedEventArgs e)
     {
-        if (_editor is null)
+        // Taken before the question: while it is open a toast or balloon click can select another entry, or a refresh
+        // can close the pane, and the entry the user confirmed is the one on screen when Delete was pressed. An
+        // editor's entry never changes, so this editor tombstones exactly that entry.
+        if (_editor is not { } target)
         {
             return;
         }
@@ -288,7 +291,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        await AppendAsync(_editor.ToTombstone(DateTimeOffset.Now)).ConfigureAwait(true);
+        await AppendAsync(target.ToTombstone(DateTimeOffset.Now)).ConfigureAwait(true);
         Results.SelectedItem = null;
         Refresh();
     }
