@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -23,15 +24,18 @@ public sealed class SuggestionPopup
     {
         _box = box;
         _suggestions = suggestions;
-        _list = new ListBox { MaxHeight = 220, MinWidth = 180 };
+        // No background of its own: the list sits on the flyout surface, which carries the theme colors and fonts.
+        _list = new ListBox { MaxHeight = 220, MinWidth = 200, Background = null };
         _list.PreviewMouseLeftButtonUp += (_, _) => Accept();
+        Border surface = new() { Child = _list };
+        surface.SetResourceReference(FrameworkElement.StyleProperty, "Flyout");
         _popup = new Popup
         {
             PlacementTarget = box,
             Placement = PlacementMode.Bottom,
             StaysOpen = true,
             AllowsTransparency = true,
-            Child = _list,
+            Child = surface,
         };
         box.TextChanged += (_, _) => Refresh();
         box.SelectionChanged += (_, _) => Refresh();
