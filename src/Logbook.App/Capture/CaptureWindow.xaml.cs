@@ -79,7 +79,7 @@ public sealed partial class CaptureWindow : Window
         bool open = More.Visibility != Visibility.Visible;
         More.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         MoreText.Text = open ? "Less" : "More";
-        MoreGlyph.Text = open ? "" : ""; // chevron up, chevron down
+        MoreGlyph.Text = open ? "\uE70E" : "\uE70D"; // chevron up, chevron down
         if (open)
         {
             Reason.Focus();
