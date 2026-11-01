@@ -12,19 +12,26 @@ namespace Logbook.Core.Storage;
 /// </summary>
 public sealed class LogFile
 {
-    // The app retries pending writes from a timer thread while the UI thread captures and reads, so one lock guards it all.
-    private readonly object _gate = new();
+    // An unauthenticated header could name any count; this bound keeps a damaged value from hanging the unlock.
+    private const int MaxIterations = 10_000_000;
+
+    // Two locks. The state lock is held only for memory updates, so the UI can read Live and PendingCount while a
+    // write is retrying. The writer lock serialises file writes, so queued lines reach the disk in capture order.
+    private readonly object _state = new();
+    private readonly object _writer = new();
     private readonly LineAppender _appender;
     private readonly byte[] _dataKey;
     private readonly List<Entry> _revisions; // every readable revision in file order, then appends
-    private readonly Dictionary<string, Entry> _latest = []; // highest rev per id
-    private readonly Queue<string> _pending = new(); // encrypted lines that failed to reach the disk, oldest first
+    private readonly Dictionary<string, Entry> _latest = []; // highest rev per id; on a tie the later line wins
+    private readonly Queue<string> _pending = new(); // encrypted lines that have not reached the disk, oldest first
+    private bool _needsLeadingNewline; // the file ended mid-line when opened; the next write must start on a new line
 
-    private LogFile(string path, FileHeader header, byte[] dataKey, List<Entry> revisions, int unreadableLineCount, bool trailingLineTruncated, IReadOnlyList<TimeSpan>? retryDelays)
+    private LogFile(string path, FileHeader header, byte[] dataKey, List<Entry> revisions, int unreadableLineCount, bool trailingLineTruncated, bool endsMidLine, IReadOnlyList<TimeSpan>? retryDelays)
     {
         _appender = new LineAppender(path, retryDelays ?? LineAppender.DefaultRetryDelays);
         _dataKey = dataKey;
         _revisions = revisions;
+        _needsLeadingNewline = endsMidLine;
         foreach (Entry entry in revisions)
         {
             Fold(entry);
@@ -48,7 +55,7 @@ public sealed class LogFile
     {
         get
         {
-            lock (_gate)
+            lock (_state)
             {
                 return _pending.Count;
             }
@@ -60,7 +67,7 @@ public sealed class LogFile
     {
         get
         {
-            lock (_gate)
+            lock (_state)
             {
                 return [.. _latest.Values.Where(e => !e.Deleted)];
             }
@@ -72,16 +79,17 @@ public sealed class LogFile
     {
         get
         {
-            lock (_gate)
+            lock (_state)
             {
                 return [.. _revisions];
             }
         }
     }
 
+    /// <summary>Every revision of one id in file order. The last element is the one <see cref="Live"/> shows.</summary>
     public IReadOnlyList<Entry> RevisionsOf(string id)
     {
-        lock (_gate)
+        lock (_state)
         {
             return [.. _revisions.Where(e => e.Id == id)];
         }
@@ -106,12 +114,13 @@ public sealed class LogFile
             stream.Flush();
         }
 
-        return new LogFile(path, header, dataKey, [], 0, false, retryDelays);
+        return new LogFile(path, header, dataKey, [], 0, false, false, retryDelays);
     }
 
     /// <summary>
-    /// Throws <see cref="InvalidDataException"/> for a missing, malformed or unknown-format header and
-    /// <see cref="CryptographicException"/> for a wrong passphrase.
+    /// Throws <see cref="InvalidDataException"/> for a missing, malformed or unknown-format header,
+    /// <see cref="CryptographicException"/> for a wrong passphrase, and the usual <see cref="IOException"/> or
+    /// <see cref="UnauthorizedAccessException"/> when the file cannot be read.
     /// </summary>
     public static LogFile Open(string path, string passphrase, IReadOnlyList<TimeSpan>? retryDelays = null)
     {
@@ -156,7 +165,7 @@ public sealed class LogFile
             }
         }
 
-        return new LogFile(path, header, dataKey, revisions, unreadable, trailingTruncated, retryDelays);
+        return new LogFile(path, header, dataKey, revisions, unreadable, trailingTruncated, endsMidLine: !terminated, retryDelays);
     }
 
     /// <summary>
@@ -168,45 +177,63 @@ public sealed class LogFile
     {
         ArgumentNullException.ThrowIfNull(entry);
         string line = LineCipher.Encrypt(_dataKey, Encoding.UTF8.GetBytes(LogbookJson.Serialize(entry)));
-        lock (_gate)
+        lock (_state)
         {
             _revisions.Add(entry);
             Fold(entry);
+            if (_needsLeadingNewline)
+            {
+                // Otherwise this line would fuse with the cut-off one and both would be unreadable next time.
+                line = "\n" + line;
+                _needsLeadingNewline = false;
+            }
+
             _pending.Enqueue(line);
-            return WritePendingLocked();
         }
+
+        return WritePending();
     }
 
     /// <summary>Tries the pending queue again, oldest first. Returns true when nothing is left pending.</summary>
-    public bool RetryPending()
+    public bool RetryPending() => WritePending();
+
+    private bool WritePending()
     {
-        lock (_gate)
+        lock (_writer)
         {
-            return WritePendingLocked();
-        }
-    }
-
-    private bool WritePendingLocked()
-    {
-        while (_pending.Count > 0)
-        {
-            try
+            while (true)
             {
-                _appender.Append(_pending.Peek());
-            }
-            catch (IOException)
-            {
-                return false;
-            }
+                string? next;
+                lock (_state)
+                {
+                    next = _pending.Count > 0 ? _pending.Peek() : null;
+                }
 
-            _pending.Dequeue();
+                if (next is null)
+                {
+                    return true;
+                }
+
+                try
+                {
+                    _appender.Append(next);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    return false;
+                }
+
+                lock (_state)
+                {
+                    _pending.Dequeue();
+                }
+            }
         }
-
-        return true;
     }
 
     private void Fold(Entry entry)
     {
+        // ">=" so that on equal revs the later line wins, which keeps RevisionsOf(id)[^1] equal to the live one.
         if (!_latest.TryGetValue(entry.Id, out Entry? current) || entry.Rev >= current.Rev)
         {
             _latest[entry.Id] = entry;
@@ -263,6 +290,25 @@ public sealed class LogFile
         if (header.Kdf?.Alg != FileHeader.Pbkdf2HmacSha256 || header.Kdf.Salt is null || header.WrappedKey is null)
         {
             throw new InvalidDataException("The header is missing or has an unknown key derivation.");
+        }
+
+        if (header.Kdf.Iterations < 1 || header.Kdf.Iterations > MaxIterations)
+        {
+            throw new InvalidDataException($"The header's iteration count {header.Kdf.Iterations} is out of range.");
+        }
+
+        try
+        {
+            if (Convert.FromBase64String(header.Kdf.Salt).Length != KeyDerivation.SaltSize)
+            {
+                throw new InvalidDataException("The header's salt has the wrong length.");
+            }
+
+            Convert.FromBase64String(header.WrappedKey);
+        }
+        catch (FormatException e)
+        {
+            throw new InvalidDataException("The header's salt or wrapped key is not valid base64.", e);
         }
 
         return header;

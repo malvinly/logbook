@@ -67,15 +67,50 @@ public sealed class LineAppenderTests : IDisposable
     }
 
     [Fact]
-    public void DefaultScheduleIsTenAttemptsDoublingFromOneHundredMilliseconds()
+    public void DefaultScheduleIsTenAttemptsStartingAtOneHundredMillisecondsAndUnderTenSeconds()
     {
         Assert.Equal(9, LineAppender.DefaultRetryDelays.Count);
         Assert.Equal(TimeSpan.FromMilliseconds(100), LineAppender.DefaultRetryDelays[0]);
         Assert.Equal(TimeSpan.FromMilliseconds(200), LineAppender.DefaultRetryDelays[1]);
         Assert.Equal(TimeSpan.FromMilliseconds(400), LineAppender.DefaultRetryDelays[2]);
-        for (int i = 1; i < LineAppender.DefaultRetryDelays.Count; i++)
+        TimeSpan total = TimeSpan.Zero;
+        foreach (TimeSpan delay in LineAppender.DefaultRetryDelays)
         {
-            Assert.Equal(LineAppender.DefaultRetryDelays[i - 1] * 2, LineAppender.DefaultRetryDelays[i]);
+            total += delay;
+        }
+
+        Assert.True(total < TimeSpan.FromSeconds(10), $"total wait {total} must stay short; the 30-second timer covers the rest");
+    }
+
+    [Fact]
+    public async Task RetriesWhileTheFileIsReadOnly()
+    {
+        File.WriteAllText(_file.Path, "header\n");
+        File.SetAttributes(_file.Path, FileAttributes.ReadOnly);
+        Task release = Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            File.SetAttributes(_file.Path, FileAttributes.Normal);
+        });
+
+        new LineAppender(_file.Path, ShortDelays).Append("line");
+        await release;
+
+        Assert.Equal("header\nline\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void GivesUpOnAReadOnlyFileWithUnauthorizedAccess()
+    {
+        File.WriteAllText(_file.Path, "header\n");
+        File.SetAttributes(_file.Path, FileAttributes.ReadOnly);
+        try
+        {
+            Assert.Throws<UnauthorizedAccessException>(() => new LineAppender(_file.Path, NoDelays).Append("line"));
+        }
+        finally
+        {
+            File.SetAttributes(_file.Path, FileAttributes.Normal);
         }
     }
 }

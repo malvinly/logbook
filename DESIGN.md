@@ -134,7 +134,10 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 ### Write rules
 
 - Open with `FileMode.Append`, `FileAccess.Write`, `FileShare.Read`, `FileOptions.WriteThrough`. Write the line and `\n` in one call, flush, close. The file is never held open between writes.
-- Sync clients briefly lock files during upload. On `IOException` (sharing violation), retry with backoff: 100 ms, 200 ms, 400 ms, up to ~10 attempts. On final failure, keep the record in an in-memory pending queue, show a visible error toast, and retry the queue on the next capture and on a 30-second timer. The user must always know if something is unsaved. Losing a capture silently is the one unforgivable bug in this app.
+- Sync clients briefly lock files during upload, and a scanner replacing the file can report access denied for a moment. On `IOException` or `UnauthorizedAccessException`, retry with backoff: 100 ms, 200 ms, 400 ms, 800 ms, then 1 s, up to 10 attempts (about 6.5 s in all); longer outages are the 30-second timer's job, because the user must hear about an unsaved capture sooner than that. On final failure, keep the record in an in-memory pending queue, show a visible error toast, and retry the queue on the next capture and on a 30-second timer. The user must always know if something is unsaved. Losing a capture silently is the one unforgivable bug in this app.
+- Writes never sleep while holding the lock that reads take, so the main window stays responsive while a write is retrying.
+- If the file did not end with `\n` when it was opened (a crash cut a write short), the first append writes `\n` first, so the new line never fuses with the partial one. A complete line that only lost its newline is recovered by this; a partial one becomes a counted unreadable line.
+- Exit with unsaved captures asks first. A Windows sign-out gets one more write attempt and is refused while anything is still unsaved, so the loss is never silent.
 - The file is never truncated, rewritten, or compacted by the app. Revisions accumulate. At three entries a day with occasional edits this is a few hundred KB per year.
 
 ### Load rules
@@ -263,7 +266,6 @@ Everything above.
 - Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
 - Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
 - Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
-- Write rule: before appending, check whether the file's last byte is `\n` and, if not, write a `\n` first. Today a crash that leaves a partial trailing line makes the next append fuse with it into one unreadable line, and because that fused line is last it is skipped silently, so a capture that was confirmed as logged is lost. The check is one extra read of the last byte per append.
 
 ### Not building
 
@@ -321,7 +323,7 @@ Namespaces follow folders: `Logbook.Core.Grammar`, `Logbook.Core.Storage`, `Logb
 
 - Capture uses `DateTimeOffset.Now`. Storage is ISO-8601 round-trip (`"O"`) with offset.
 - Export renders with `CultureInfo.InvariantCulture` and fixed patterns: `ddd MMM d, yyyy h:mm tt` for full, `MMM d, yyyy` for compact. Output is intentionally US-style regardless of machine locale, because the format is part of the spec.
-- `since:`/`until:` are inclusive: `since:` from 00:00:00 local on that date, `until:` through 23:59:59.999 local. `last:Nd` = N days, `last:Nw` = 7N days, `last:Nm` = `AddMonths(-N)` on today's date, all anchored to now.
+- `since:`/`until:` are inclusive calendar dates, compared against the date each entry carries in its own stored offset, never against a converted instant: an entry written at 00:30 in Tokyo is a Tokyo-date entry wherever the log is read. `last:Nd` = N days, `last:Nw` = 7N days, `last:Nm` = `AddMonths(-N)`, all counted back from today's date.
 - `at:` with a date and no time stores 12:00:00 in the current local offset.
 
 ### Files

@@ -249,14 +249,127 @@ public sealed class LogFileTests : IDisposable
         File.WriteAllText(_file.Path, File.ReadAllText(_file.Path) + "garbage");
 
         LogFile reopened = Open();
+        Assert.True(reopened.TrailingLineTruncated);
         reopened.Append(NewEntry("second"));
 
-        // The garbage and the new line fuse into one unreadable line. Being last, it reads as truncated, so the
-        // new record is lost without a count. See the Phase 2 note on checking for a trailing newline before append.
+        // The new line starts on a fresh line, so the garbage becomes a counted middle line and "second" survives.
         LogFile again = Open();
-        Assert.Equal(["first"], again.Live.Select(e => e.Summary));
+        Assert.Equal(["first", "second"], again.Live.Select(e => e.Summary));
+        Assert.Equal(1, again.UnreadableLineCount);
+        Assert.False(again.TrailingLineTruncated);
+    }
+
+    [Fact]
+    public void CompleteLineThatLostItsNewlineIsRecoveredByTheNextAppend()
+    {
+        LogFile log = Create();
+        log.Append(NewEntry("first"));
+        log.Append(NewEntry("second"));
+        File.WriteAllText(_file.Path, File.ReadAllText(_file.Path).TrimEnd('\n'));
+
+        Open().Append(NewEntry("third"));
+
+        LogFile again = Open();
+        Assert.Equal(["first", "second", "third"], again.Live.Select(e => e.Summary));
         Assert.Equal(0, again.UnreadableLineCount);
-        Assert.True(again.TrailingLineTruncated);
+    }
+
+    [Fact]
+    public void RecordThatDecryptsToBadJsonOrHasNoIdIsCountedAsUnreadable()
+    {
+        LogFile log = Create();
+        byte[] key = DataKeyOf(log);
+        log.Append(NewEntry("first"));
+        AppendRawLine(LineCipher.Encrypt(key, "{not json"u8));
+        AppendRawLine(LineCipher.Encrypt(key, "{\"rev\":1,\"summary\":\"no id\"}"u8));
+        log.Append(NewEntry("second"));
+
+        LogFile reopened = Open();
+        Assert.Equal(2, reopened.UnreadableLineCount);
+        Assert.Equal(["first", "second"], reopened.Live.Select(e => e.Summary));
+    }
+
+    [Fact]
+    public void OnEqualRevisionsTheLaterLineWinsAndEndsTheHistory()
+    {
+        LogFile log = Create();
+        Entry first = NewEntry("original");
+        log.Append(first);
+        log.Append(first with { Rev = 2, Summary = "edit a" });
+        log.Append(first with { Rev = 2, Summary = "edit b" }); // a double-clicked Save
+
+        LogFile reopened = Open();
+        Entry live = Assert.Single(reopened.Live);
+        Assert.Equal("edit b", live.Summary);
+        Assert.Equal(live.Summary, reopened.RevisionsOf(first.Id)[^1].Summary);
+    }
+
+    [Theory]
+    [InlineData("\"iterations\":600000", "\"iterations\":0")]
+    [InlineData("\"iterations\":600000", "\"iterations\":-5")]
+    [InlineData("\"iterations\":600000", "\"iterations\":2000000000")]
+    [InlineData("\"salt\":\"", "\"salt\":\"!!")]
+    [InlineData("\"wrappedKey\":\"", "\"wrappedKey\":\"!!")]
+    public void DamagedHeaderValuesAreRefusedAsInvalidData(string find, string replace)
+    {
+        Create();
+        string[] lines = FileLines();
+        Assert.Contains(find, lines[0], StringComparison.Ordinal);
+        lines[0] = lines[0].Replace(find, replace, StringComparison.Ordinal);
+        File.WriteAllText(_file.Path, string.Join('\n', lines));
+        Assert.Throws<InvalidDataException>(() => Open());
+    }
+
+    [Fact]
+    public void ShortSaltIsRefusedAsInvalidData()
+    {
+        FileHeader header = Create().Header;
+        string shortSalt = Convert.ToBase64String(Convert.FromBase64String(header.Kdf.Salt)[..8]);
+        FileHeader damaged = header with { Kdf = header.Kdf with { Salt = shortSalt } };
+        File.WriteAllText(_file.Path, LogbookJson.Serialize(damaged) + "\n");
+        Assert.Throws<InvalidDataException>(() => Open());
+    }
+
+    [Fact]
+    public void ReadOnlyFileLeavesTheLinePendingInsteadOfThrowing()
+    {
+        LogFile log = Create();
+        File.SetAttributes(_file.Path, FileAttributes.ReadOnly);
+        try
+        {
+            Assert.False(log.Append(NewEntry("first")));
+            Assert.Equal(1, log.PendingCount);
+            Assert.Equal("first", Assert.Single(log.Live).Summary);
+        }
+        finally
+        {
+            File.SetAttributes(_file.Path, FileAttributes.Normal);
+        }
+
+        Assert.True(log.RetryPending());
+        Assert.Equal("first", Assert.Single(Open().Live).Summary);
+    }
+
+    [Fact]
+    public async Task ReadsDoNotWaitForAWriteThatIsRetrying()
+    {
+        IReadOnlyList<TimeSpan> slow = [.. Enumerable.Repeat(TimeSpan.FromMilliseconds(100), 20)];
+        LogFile log = LogFile.Create(_file.Path, Passphrase, Now, slow);
+        log.Append(NewEntry("first"));
+        using FileStream held = new(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        Task<bool> write = Task.Run(() => log.Append(NewEntry("second")));
+        await Task.Delay(150);
+        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        int live = log.Live.Count;
+        int pending = log.PendingCount;
+        clock.Stop();
+
+        Assert.Equal(2, live);
+        Assert.Equal(1, pending);
+        Assert.True(clock.ElapsedMilliseconds < 500, $"reads took {clock.ElapsedMilliseconds} ms while a write was retrying");
+        held.Dispose();
+        Assert.True(await write);
     }
 
     private void AppendRawLine(string line) => File.AppendAllText(_file.Path, line + "\n");
