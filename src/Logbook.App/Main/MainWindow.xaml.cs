@@ -5,6 +5,7 @@ using System.Windows.Data;
 using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Diagnostics;
+using Logbook.App.Dialogs;
 using Logbook.Core;
 using Logbook.Core.Export;
 using Logbook.Core.Grammar;
@@ -197,8 +198,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        MessageBoxResult answer = MessageBox.Show(this, "Delete this entry? It stays in the file's history but disappears from every list and export.", "Delete entry", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-        if (answer != MessageBoxResult.Yes)
+        bool delete = AppDialog.Confirm(this, "Delete this entry?", "It stays in the file's history but disappears from every list and export.", "Delete", "Cancel", DialogTone.Warning, confirmIsDefault: false);
+        if (!delete)
         {
             return;
         }
@@ -234,7 +235,7 @@ public sealed partial class MainWindow : Window
         if (!saved)
         {
             Diag.Log("Revision could not be written; it is pending");
-            MessageBox.Show(this, "The change is kept in memory but could not be written to the file yet. It will be retried every 30 seconds.", "Not saved yet", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Inform(this, "Not saved yet", "The change is kept in memory but could not be written to the file yet. It will be retried every 30 seconds.", DialogTone.Warning);
         }
     }
 

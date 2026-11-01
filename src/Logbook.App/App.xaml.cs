@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
 using Logbook.App.Diagnostics;
+using Logbook.App.Dialogs;
 using Logbook.App.Export;
 using Logbook.App.Help;
 using Logbook.App.Hotkeys;
@@ -117,7 +118,7 @@ public sealed partial class App : Application, IDisposable
         {
             e.Cancel = true;
             Diag.Log($"Refused session end with {pending} pending");
-            MessageBox.Show($"Logbook still has {RangeText.Count(pending)} that could not be written to the file. Fix the file (is the sync client holding it?) and try again, or exit Logbook from the tray and accept the loss.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Inform(null, "Entries not saved yet", $"Logbook still has {RangeText.Count(pending)} that could not be written to the file. Fix the file (is the sync client holding it?) and try again, or exit Logbook from the tray and accept the loss.", DialogTone.Warning);
         }
 
         base.OnSessionEnding(e);
@@ -161,13 +162,15 @@ public sealed partial class App : Application, IDisposable
         int pending = FlushPendingNow();
         if (pending > 0)
         {
-            MessageBoxResult answer = MessageBox.Show(
-                $"{RangeText.Count(pending)} could not be written to the file and will be lost if Logbook exits now. Exit anyway?",
+            bool exitAnyway = AppDialog.Confirm(
+                null,
                 "Unsaved entries",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning,
-                MessageBoxResult.No);
-            if (answer != MessageBoxResult.Yes)
+                $"{RangeText.Count(pending)} could not be written to the file and will be lost if Logbook exits now. Exit anyway?",
+                "Exit anyway",
+                "Keep running",
+                DialogTone.Warning,
+                confirmIsDefault: false);
+            if (!exitAnyway)
             {
                 return;
             }
@@ -217,7 +220,7 @@ public sealed partial class App : Application, IDisposable
         if (_dataFilePath.Length == 0)
         {
             Diag.Log($"The configured data file path is not inside the synced root: {settings.DataFileRelativePath}");
-            MessageBox.Show("The settings point at a data file outside the synced folder, which Logbook does not allow. Choose the file again.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Inform(null, "Data file outside the synced folder", "The settings point at a data file outside the synced folder, which Logbook does not allow. Choose the file again.", DialogTone.Warning);
             return RunFirstRun(settings);
         }
 
@@ -242,11 +245,11 @@ public sealed partial class App : Application, IDisposable
         {
             // The configured file is gone: run the picker rather than create a new file silently (DESIGN.md section 16).
             Diag.Log($"Configured data file is missing: {_dataFilePath}");
-            MessageBox.Show(
+            AppDialog.Inform(
+                null,
+                "Log file not found",
                 $"The log file is not where the settings say:\n{_dataFilePath}\n\nIf the sync client is still downloading, quit and wait for it; creating a new log here would split your entries across two files. Otherwise choose or create the file now.",
-                "Logbook",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                DialogTone.Warning);
             return RunFirstRun(settings);
         }
 
@@ -287,7 +290,7 @@ public sealed partial class App : Application, IDisposable
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
                     Diag.Log("Could not create the data file", e);
-                    MessageBox.Show("The file could not be created: " + e.Message, "Logbook", MessageBoxButton.OK, MessageBoxImage.Error);
+                    AppDialog.Inform(null, "Could not create the file", "The file could not be created: " + e.Message, DialogTone.Error);
                     continue;
                 }
             }
@@ -325,12 +328,15 @@ public sealed partial class App : Application, IDisposable
         }
 
         LocalMarker.Set(StartupOfferMarker);
-        MessageBoxResult answer = MessageBox.Show(
-            "Start Logbook when you sign in? A hotkey that is not running logs nothing. This adds a shortcut to your Startup folder; you can change it later in Settings.",
-            "Logbook",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-        if (answer != MessageBoxResult.Yes)
+        bool register = AppDialog.Confirm(
+            null,
+            "Start Logbook when you sign in?",
+            "A hotkey that is not running logs nothing. This adds a shortcut to your Startup folder; you can change it later in Settings.",
+            "Start with Windows",
+            "Not now",
+            DialogTone.Question,
+            confirmIsDefault: true);
+        if (!register)
         {
             return;
         }
@@ -619,7 +625,7 @@ public sealed partial class App : Application, IDisposable
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Diag.Log("Unhandled exception", e.Exception);
-        MessageBox.Show("Something went wrong. Details were written to the diagnostics log:\n" + Diag.LogFolder, "Logbook", MessageBoxButton.OK, MessageBoxImage.Error);
+        AppDialog.Inform(null, "Something went wrong", "Details were written to the diagnostics log:\n" + Diag.LogFolder, DialogTone.Error);
         e.Handled = true;
         if (_tray is null)
         {

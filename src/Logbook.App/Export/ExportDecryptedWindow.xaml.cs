@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using Logbook.App.Diagnostics;
+using Logbook.App.Dialogs;
 using Logbook.App.Startup;
 using Logbook.Core;
 using Logbook.Core.Storage;
@@ -110,8 +111,8 @@ public sealed partial class ExportDecryptedWindow : Window
 
         if (IsSynced(fullPath))
         {
-            MessageBoxResult answer = MessageBox.Show(this, "This folder is synced. The export is unencrypted and others may be able to search it. Write it there anyway?", "Export into a synced folder", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-            if (answer != MessageBoxResult.Yes)
+            bool writeThere = AppDialog.Confirm(this, "Export into a synced folder?", "This folder is synced. The export is unencrypted and others may be able to search it. Write it there anyway?", "Write it there", "Cancel", DialogTone.Warning, confirmIsDefault: false);
+            if (!writeThere)
             {
                 return;
             }
