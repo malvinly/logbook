@@ -299,7 +299,7 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 
 1. HTML clipboard format alongside plain text so mail clients get bold dates and real bullets.
 2. CSV export.
-3. Dark theme — a second `ResourceDictionary`, switched from settings or following the OS.
+3. Dark theme override in settings. Phase 2 already follows the Windows light or dark setting with a second token dictionary (`Theme.Dark.xaml`); what is left is a setting to force one or the other.
 
 ### Not building
 
