@@ -34,7 +34,7 @@ public sealed partial class ExportPanel : Window
         _saveSettings = saveSettings;
         _dataFilePath = dataFilePath;
         _syncRoots = syncRoots;
-        CsvWhy.Text = "Save as CSV writes the entries listed here with every field. " + PlaintextTarget.Why;
+        CsvWhy.Text = "Save as CSV writes the entries listed here with every field, except that a text cell starting with =, +, - or @ gets a leading apostrophe so spreadsheets do not run it as a formula. " + PlaintextTarget.Why;
         ShowGaps.IsChecked = settings.ShowGaps;
         GroupByMonth.IsChecked = settings.GroupByMonth;
         Compact.IsChecked = settings.Compact;
