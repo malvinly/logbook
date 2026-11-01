@@ -490,29 +490,53 @@ public sealed partial class App : Application, IDisposable
     // Drops the open log and everything that shows it. Callers have already checked that nothing is unsaved.
     private void Lock(string reason)
     {
-        // Every window that shows or edits entries goes; toasts only hold an id and will prompt when clicked.
-        foreach (Window window in Windows.OfType<Window>().ToList())
+        LogFile? log = Log;
+        try
         {
-            if (window is MainWindow main)
+            // Every window closes, toasts included: the "Logged" toast shows a decrypted summary and stays up while the
+            // mouse is over it. A toast's click already goes through the unlock prompt, so closing one loses nothing.
+            // Newest first, so a dialog closes before the window that owns it; closing an owner closes its dialogs, so a
+            // window may be gone by the time the loop reaches it.
+            foreach (Window window in Windows.OfType<Window>().Reverse().ToList())
             {
-                main.CloseForLock();
-            }
-            else if (window is not ToastWindow)
-            {
-                window.Close();
+                if (!Windows.OfType<Window>().Contains(window))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (window is MainWindow main)
+                    {
+                        main.CloseForLock();
+                    }
+                    else if (window.IsLoaded)
+                    {
+                        window.Close();
+                    }
+                }
+                catch (InvalidOperationException e)
+                {
+                    // WPF refuses Close on a window that is already closing; that window is on its way out anyway.
+                    Diag.Log("A window could not be closed for the lock", e);
+                }
             }
         }
-
-        _main = null;
-        _capture = null;
-        _suggestions = null;
-        _suggestionsFor = null;
-        Log = null;
-        _reminderTimer.Stop();
-        _idleTimer.Stop();
-        _remindersShown.Clear();
-        _tray?.SetLocked(true);
-        Diag.Log(reason);
+        finally
+        {
+            // Whatever happened above, the app must end up locked: a half-done lock would keep the key and the entries.
+            _main = null;
+            _capture = null;
+            _suggestions = null;
+            _suggestionsFor = null;
+            Log = null;
+            _reminderTimer.Stop();
+            _idleTimer.Stop();
+            _remindersShown.Clear();
+            _tray?.SetLocked(true);
+            log?.Close(); // zeroes the data key and empties the entries; callers checked nothing is pending
+            Diag.Log(reason);
+        }
     }
 
     /// <summary>
