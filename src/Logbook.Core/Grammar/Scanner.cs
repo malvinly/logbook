@@ -23,16 +23,17 @@ internal static class Scanner
             // Keywords, phrases, and usually "#" and "@", start a token only at the start of the line or after whitespace.
             bool atWordStart = i == 0 || char.IsWhiteSpace(text[i - 1]);
 
-            // A backslash before "#" or "@" makes it literal text; the backslash itself is dropped.
-            if (c == '\\' && i + 1 < text.Length && (text[i + 1] == '#' || text[i + 1] == '@'))
+            // A tag or person may also open right after "(" or a quote, so (#asked) and "@j-doe" are tokens.
+            bool sigilMayStart = atWordStart || text[i - 1] is '(' or '"' || i == afterSeparator;
+
+            // A backslash before "#" or "@" makes it literal text. The backslash is dropped only where the sigil would
+            // otherwise start a token; elsewhere it escapes nothing and is kept as typed, as in \\server\#share.
+            if (c == '\\' && sigilMayStart && i + 2 < text.Length && text[i + 1] is '#' or '@' && char.IsLetter(text[i + 2]))
             {
                 plain.Append(text[i + 1]);
                 i += 2;
                 continue;
             }
-
-            // A tag or person may also open right after "(" or a quote, so (#asked) and "@j-doe" are tokens.
-            bool sigilMayStart = atWordStart || text[i - 1] is '(' or '"' || i == afterSeparator;
             if ((c == '#' || c == '@') && sigilMayStart && i + 1 < text.Length && char.IsLetter(text[i + 1]))
             {
                 int end = EndOfName(text, i);

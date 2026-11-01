@@ -276,12 +276,33 @@ public sealed class CollisionRuleTests
     [InlineData(@"\@j-doe", "@j-doe")]
     [InlineData(@"say \#hi there", "say #hi there")]
     [InlineData(@"C:\temp\file.txt", @"C:\temp\file.txt")] // backslash elsewhere is ordinary text
+    [InlineData(@"done (\#asked)", "done (#asked)")] // after an opening paren a tag could start, so the escape counts
     public void BackslashEscapesSigilInCapture(string text, string summary)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
         Assert.Empty(line.Tags);
         Assert.Empty(line.People);
         Assert.Equal(summary, line.Summary);
+    }
+
+    [Theory]
+    [InlineData(@"\\server\#share")] // "#" after a letter could not start a token, so nothing is escaped
+    [InlineData(@"ticket \#12345")] // nor before a digit
+    [InlineData(@"x\@y")]
+    [InlineData(@"\# alone")]
+    [InlineData(@"\@")]
+    public void BackslashThatEscapesNothingIsKeptAsTyped(string text)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Empty(line.Tags);
+        Assert.Empty(line.People);
+        Assert.Equal(text, line.Summary);
+    }
+
+    [Fact]
+    public void BackslashThatEscapesNothingIsKeptInAQuery()
+    {
+        Assert.Equal([@"\\server\#share"], LineParser.ParseQuery(@"\\server\#share", Today).Words);
     }
 
     [Fact]
