@@ -1,14 +1,18 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
 using Logbook.App.Diagnostics;
 using Logbook.App.Export;
-using Logbook.App.Main;
+using Logbook.App.Help;
 using Logbook.App.Hotkeys;
 using Logbook.App.Interop;
 using Logbook.App.Lock;
+using Logbook.App.Main;
+using Logbook.App.Settings;
+using Logbook.App.Startup;
 using Logbook.App.Tray;
 using Logbook.Core;
 using Logbook.Core.Export;
@@ -17,11 +21,13 @@ using Logbook.Core.Storage;
 namespace Logbook.App;
 
 /// <summary>
-/// Startup and the tray lifetime: single instance, settings, tray icon, hotkeys, lock state, and the 30-second
-/// retry of pending writes (DESIGN.md sections 8, 9 and 12). Windows are created on demand and never own the process.
+/// Startup and the tray lifetime: single instance, settings and first run, tray icon, hotkeys, lock state, and the
+/// 30-second retry of pending writes (DESIGN.md sections 8, 9 and 12). Windows are created on demand and never own the process.
 /// </summary>
 public sealed partial class App : Application, IDisposable
 {
+    private const string StartupOfferMarker = "startup-offered";
+
     private SingleInstance? _instance;
     private MessageWindow? _messageWindow;
     private HotkeyManager? _hotkeys;
@@ -34,6 +40,8 @@ public sealed partial class App : Application, IDisposable
     private Settings.Settings _settings = new();
     private string _root = "";
     private string _dataFilePath = "";
+    private bool _firstRun;
+    private bool _placeholderSeen;
 
     /// <summary>Null while locked. The data key lives inside for the life of the process.</summary>
     public LogFile? Log { get; private set; }
@@ -56,7 +64,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        if (!LoadSettings())
+        if (!PrepareDataFile())
         {
             Shutdown();
             return;
@@ -75,8 +83,27 @@ public sealed partial class App : Application, IDisposable
 
         _retryTimer = new Timer(_ => RetryPending(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
+        if (_placeholderSeen)
+        {
+            _tray.ShowBalloon("Downloaded from sync", "The log was a cloud placeholder and had to be downloaded. Mark its folder \"Always keep on this device\" so this does not block a capture.", warning: false);
+        }
+
         // The app starts locked and asks once at launch; if dismissed, the next hotkey asks again.
-        EnsureUnlocked();
+        // First run has already opened or created the file.
+        if (Log is not null)
+        {
+            _tray.SetLocked(false);
+        }
+        else
+        {
+            EnsureUnlocked();
+        }
+
+        OfferStartupRegistration();
+        if (_firstRun)
+        {
+            ShowCheatSheet();
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -100,28 +127,135 @@ public sealed partial class App : Application, IDisposable
         _instance = null;
     }
 
-    private bool LoadSettings()
+    /// <summary>Finds the settings and data file, running first-run setup when there are none. False means quit.</summary>
+    private bool PrepareDataFile()
     {
-        // Until the first-run flow exists (build step 9), a missing settings or data file is reported and the app exits.
-        string? envVar = Settings.SettingsStore.FindConfiguredEnvVar();
-        string? root = envVar is null ? null : Settings.SettingsStore.ResolveRoot(envVar);
-        Settings.Settings? settings = root is null ? null : Settings.SettingsStore.Load(root);
+        string? envVar = SettingsStore.FindConfiguredEnvVar();
+        string? root = envVar is null ? null : SettingsStore.ResolveRoot(envVar);
+        Settings.Settings? settings = root is null ? null : SettingsStore.Load(root);
         if (root is null || settings is null)
         {
-            MessageBox.Show("No logbook.settings.json was found in a synced folder. First-run setup is not built yet.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Information);
-            return false;
+            return RunFirstRun();
         }
 
         _root = root;
         _settings = settings;
-        _dataFilePath = Settings.SettingsStore.DataFilePath(root, settings);
-        if (!File.Exists(_dataFilePath))
+        _dataFilePath = SettingsStore.DataFilePath(root, settings);
+
+        // Several logbook*.jsonl files beside each other: ask which is real, never guess (DESIGN.md section 8).
+        IReadOnlyList<string> siblings = SyncFile.Siblings(_dataFilePath);
+        if (siblings.Count > 1)
         {
-            MessageBox.Show($"The data file was not found:\n{_dataFilePath}", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return false;
+            PickFileWindow picker = new(siblings);
+            if (picker.ShowDialog() != true || picker.ChosenPath is null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(picker.ChosenPath, _dataFilePath, StringComparison.OrdinalIgnoreCase))
+            {
+                _dataFilePath = picker.ChosenPath;
+                _settings.DataFileRelativePath = Path.GetRelativePath(_root, _dataFilePath);
+                SaveSettings();
+            }
+        }
+        else if (!File.Exists(_dataFilePath))
+        {
+            // The configured file is gone: run the picker rather than create a new file silently (DESIGN.md section 16).
+            Diag.Log($"Configured data file is missing: {_dataFilePath}");
+            return RunFirstRun();
+        }
+
+        if (SyncFile.IsPlaceholder(_dataFilePath))
+        {
+            Diag.Log("The data file is a sync placeholder; reading it will download it");
+            _placeholderSeen = true;
         }
 
         return true;
+    }
+
+    // DESIGN.md section 12, first run steps 1 to 3. Cancelling a later step returns to the first.
+    private bool RunFirstRun()
+    {
+        while (true)
+        {
+            FirstRunWindow welcome = new();
+            if (welcome.ShowDialog() != true)
+            {
+                return false;
+            }
+
+            LogFile opened;
+            if (welcome.CreateNew)
+            {
+                NewPassphraseWindow passphrase = new(welcome.DataFilePath);
+                if (passphrase.ShowDialog() != true)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    opened = LogFile.Create(welcome.DataFilePath, passphrase.Passphrase, DateTimeOffset.Now);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Diag.Log("Could not create the data file", e);
+                    MessageBox.Show("The file could not be created: " + e.Message, "Logbook", MessageBoxButton.OK, MessageBoxImage.Error);
+                    continue;
+                }
+            }
+            else
+            {
+                UnlockWindow unlock = new(welcome.DataFilePath);
+                if (unlock.ShowDialog() != true || unlock.Opened is null)
+                {
+                    continue;
+                }
+
+                opened = unlock.Opened;
+            }
+
+            _root = welcome.Root;
+            _settings = welcome.Settings;
+            _dataFilePath = welcome.DataFilePath;
+            Log = opened;
+            _firstRun = true;
+            SaveSettings();
+            Diag.Log("First run complete");
+            return true;
+        }
+    }
+
+    // Offered once per Windows profile; a login change wipes the shortcut and the marker together (DESIGN.md section 12).
+    private void OfferStartupRegistration()
+    {
+        if (StartupShortcut.IsRegistered() || LocalMarker.Exists(StartupOfferMarker))
+        {
+            return;
+        }
+
+        LocalMarker.Set(StartupOfferMarker);
+        MessageBoxResult answer = MessageBox.Show(
+            "Start Logbook when you sign in? A hotkey that is not running logs nothing. This adds a shortcut to your Startup folder; you can change it later in Settings.",
+            "Logbook",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            StartupShortcut.Register();
+        }
+        catch (Exception e) when (e is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Diag.Log("Could not create the startup shortcut", e);
+            _tray?.ShowBalloon("Startup shortcut not created", e.Message, warning: true);
+        }
     }
 
     private void RegisterHotkeys()
@@ -260,41 +394,51 @@ public sealed partial class App : Application, IDisposable
         return _suggestions;
     }
 
+    private Window? VisibleMain => _main is { IsVisible: true } ? _main : null;
+
     private void ShowExportPanel(string filterText, IReadOnlyList<Entry> entries)
     {
-        ExportPanel panel = new(filterText, entries, _settings.Export, SaveSettings) { Owner = _main };
+        ExportPanel panel = new(filterText, entries, _settings.Export, SaveSettings) { Owner = VisibleMain };
         panel.ShowDialog();
     }
 
     private void ShowExportDecrypted()
     {
-        ExportDecryptedWindow window = new(Log!, _root, _settings, SaveSettings) { Owner = _main };
+        ExportDecryptedWindow window = new(Log!, _root, _settings, SaveSettings) { Owner = VisibleMain };
         window.ShowDialog();
+    }
+
+    private void ShowCheatSheet()
+    {
+        CheatSheetWindow sheet = new(_settings.CaptureHotkey, _settings.MainWindowHotkey) { Owner = VisibleMain };
+        sheet.ShowDialog();
+    }
+
+    private void ShowSettings()
+    {
+        SettingsWindow window = new(_settings, SettingsStore.SettingsPath(_root), _dataFilePath) { Owner = VisibleMain };
+        if (window.ShowDialog() != true)
+        {
+            return;
+        }
+
+        SaveSettings();
+        _hotkeys?.UnregisterAll();
+        RegisterHotkeys();
+        _suggestions = null;
     }
 
     private void SaveSettings()
     {
         try
         {
-            Settings.SettingsStore.Save(_root, _settings);
+            SettingsStore.Save(_root, _settings);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Diag.Log("Could not save settings", e);
             _tray?.ShowBalloon("Settings not saved", "The settings file could not be written: " + e.Message, warning: true);
         }
-    }
-
-    private void ShowCheatSheet()
-    {
-        // Built in step 9.
-        Diag.Log("Cheat sheet requested");
-    }
-
-    private void ShowSettings()
-    {
-        // Built in step 9.
-        Diag.Log("Settings requested");
     }
 
     private void RetryPending()

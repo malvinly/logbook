@@ -37,9 +37,6 @@ public sealed class Settings
     public ExportSettings Export { get; set; } = new();
 
     public string? LastExportFolder { get; set; }
-
-    /// <summary>Set once the startup-registration offer has been answered, so it is not repeated.</summary>
-    public bool StartupOfferShown { get; set; }
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
