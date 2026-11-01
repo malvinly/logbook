@@ -120,6 +120,13 @@ public sealed partial class App : Application, IDisposable
             EnsureUnlocked();
         }
 
+        // Exit was chosen from the tray while the unlock prompt was up. The startup offer marks itself as made before it
+        // asks, so asking now, while the app shuts down, would lose it for good.
+        if (_exiting)
+        {
+            return;
+        }
+
         OfferStartupRegistration();
         if (_firstRun)
         {
