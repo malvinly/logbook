@@ -35,6 +35,7 @@ public sealed partial class App : Application, IDisposable
     private Timer? _retryTimer;
     private CaptureWindow? _capture;
     private MainWindow? _main;
+    private UnlockWindow? _unlockPrompt;
     private Suggestions? _suggestions;
     private LogFile? _suggestionsFor;
     private Settings.Settings _settings = new();
@@ -42,6 +43,7 @@ public sealed partial class App : Application, IDisposable
     private string _dataFilePath = "";
     private bool _firstRun;
     private bool _placeholderSeen;
+    private bool _exiting;
 
     /// <summary>Null while locked. The data key lives inside for the life of the process.</summary>
     public LogFile? Log { get; private set; }
@@ -73,19 +75,18 @@ public sealed partial class App : Application, IDisposable
         _messageWindow = new MessageWindow();
         _messageWindow.AddHook(OnMessage);
         _hotkeys = new HotkeyManager(_messageWindow);
-        _tray = new TrayIcon(_messageWindow.Handle);
+        _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentColor"), ThemeColor("TextMutedColor"), ThemeColor("DangerColor"));
         _tray.OpenRequested += ShowMainWindow;
         _tray.CaptureRequested += ShowCapture;
         _tray.SettingsRequested += ShowSettings;
-        _tray.ExitRequested += Shutdown;
-        _tray.BalloonClicked += ShowSettings;
+        _tray.ExitRequested += RequestExit;
         RegisterHotkeys();
 
         _retryTimer = new Timer(_ => RetryPending(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
         if (_placeholderSeen)
         {
-            _tray.ShowBalloon("Downloaded from sync", "The log was a cloud placeholder and had to be downloaded. Mark its folder \"Always keep on this device\" so this does not block a capture.", warning: false);
+            _tray.ShowBalloon("Downloaded from sync", "The log was only a cloud placeholder until now. Mark its folder \"Always keep on this device\" so a download never delays a capture.", warning: false);
         }
 
         // The app starts locked and asks once at launch; if dismissed, the next hotkey asks again.
@@ -104,6 +105,20 @@ public sealed partial class App : Application, IDisposable
         {
             ShowCheatSheet();
         }
+    }
+
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        // A sign-out or shutdown would take the in-memory queue with it; one more try, then refuse rather than lose it.
+        int pending = FlushPendingNow();
+        if (pending > 0)
+        {
+            e.Cancel = true;
+            Diag.Log($"Refused session end with {pending} pending");
+            MessageBox.Show($"Logbook still has {RangeText.Count(pending)} that could not be written to the file. Fix the file (is the sync client holding it?) and try again, or exit Logbook from the tray and accept the loss.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        base.OnSessionEnding(e);
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -127,6 +142,62 @@ public sealed partial class App : Application, IDisposable
         _instance = null;
     }
 
+    private System.Drawing.Color ThemeColor(string key)
+    {
+        System.Windows.Media.Color c = (System.Windows.Media.Color)FindResource(key);
+        return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+    }
+
+    // Tray → Exit. Unsaved captures get one more write and then a question; the answer must be explicit.
+    private void RequestExit()
+    {
+        if (_exiting)
+        {
+            return;
+        }
+
+        int pending = FlushPendingNow();
+        if (pending > 0)
+        {
+            MessageBoxResult answer = MessageBox.Show(
+                $"{RangeText.Count(pending)} could not be written to the file and will be lost if Logbook exits now. Exit anyway?",
+                "Unsaved entries",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            Diag.Log($"Exiting with {pending} pending at the user's request");
+        }
+
+        _exiting = true;
+        Shutdown();
+    }
+
+    /// <summary>One synchronous retry of the queue. Returns what is still pending afterwards.</summary>
+    private int FlushPendingNow()
+    {
+        LogFile? log = Log;
+        if (log is null || log.PendingCount == 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            log.RetryPending();
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Diag.Log("Final retry failed", e);
+        }
+
+        return log.PendingCount;
+    }
+
     /// <summary>Finds the settings and data file, running first-run setup when there are none. False means quit.</summary>
     private bool PrepareDataFile()
     {
@@ -135,18 +206,24 @@ public sealed partial class App : Application, IDisposable
         Settings.Settings? settings = root is null ? null : SettingsStore.Load(root);
         if (root is null || settings is null)
         {
-            return RunFirstRun();
+            return RunFirstRun(null);
         }
 
         _root = root;
         _settings = settings;
         _dataFilePath = SettingsStore.DataFilePath(root, settings);
+        if (_dataFilePath.Length == 0)
+        {
+            Diag.Log($"The configured data file path is not inside the synced root: {settings.DataFileRelativePath}");
+            MessageBox.Show("The settings point at a data file outside the synced folder, which Logbook does not allow. Choose the file again.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return RunFirstRun(settings);
+        }
 
         // Several logbook*.jsonl files beside each other: ask which is real, never guess (DESIGN.md section 8).
         IReadOnlyList<string> siblings = SyncFile.Siblings(_dataFilePath);
         if (siblings.Count > 1)
         {
-            PickFileWindow picker = new(siblings);
+            PickFileWindow picker = new(siblings, _dataFilePath);
             if (picker.ShowDialog() != true || picker.ChosenPath is null)
             {
                 return false;
@@ -155,7 +232,7 @@ public sealed partial class App : Application, IDisposable
             if (!string.Equals(picker.ChosenPath, _dataFilePath, StringComparison.OrdinalIgnoreCase))
             {
                 _dataFilePath = picker.ChosenPath;
-                _settings.DataFileRelativePath = Path.GetRelativePath(_root, _dataFilePath);
+                _settings.DataFileRelativePath = Path.GetRelativePath(SettingsStore.DataRoot(_root, _settings), _dataFilePath);
                 SaveSettings();
             }
         }
@@ -163,7 +240,12 @@ public sealed partial class App : Application, IDisposable
         {
             // The configured file is gone: run the picker rather than create a new file silently (DESIGN.md section 16).
             Diag.Log($"Configured data file is missing: {_dataFilePath}");
-            return RunFirstRun();
+            MessageBox.Show(
+                $"The log file is not where the settings say:\n{_dataFilePath}\n\nIf the sync client is still downloading, quit and wait for it; creating a new log here would split your entries across two files. Otherwise choose or create the file now.",
+                "Logbook",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return RunFirstRun(settings);
         }
 
         if (SyncFile.IsPlaceholder(_dataFilePath))
@@ -176,7 +258,8 @@ public sealed partial class App : Application, IDisposable
     }
 
     // DESIGN.md section 12, first run steps 1 to 3. Cancelling a later step returns to the first.
-    private bool RunFirstRun()
+    // Existing settings (hotkeys, toggles) are kept; only the file location changes.
+    private bool RunFirstRun(Settings.Settings? existing)
     {
         while (true)
         {
@@ -217,8 +300,11 @@ public sealed partial class App : Application, IDisposable
                 opened = unlock.Opened;
             }
 
+            Settings.Settings settings = existing ?? new Settings.Settings();
+            settings.SyncRootEnvVar = welcome.SyncRootEnvVar;
+            settings.DataFileRelativePath = welcome.DataFileRelativePath;
             _root = welcome.Root;
-            _settings = welcome.Settings;
+            _settings = settings;
             _dataFilePath = welcome.DataFilePath;
             Log = opened;
             _firstRun = true;
@@ -254,7 +340,7 @@ public sealed partial class App : Application, IDisposable
         catch (Exception e) when (e is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             Diag.Log("Could not create the startup shortcut", e);
-            _tray?.ShowBalloon("Startup shortcut not created", e.Message, warning: true);
+            _tray?.ShowBalloon("Startup shortcut not created", e.Message, warning: true, ShowSettings);
         }
     }
 
@@ -270,14 +356,14 @@ public sealed partial class App : Application, IDisposable
         if (!Hotkey.TryParse(text, out Hotkey hotkey))
         {
             Diag.Log($"The {purpose} hotkey '{text}' is not a valid chord");
-            _tray?.ShowBalloon("Hotkey not set", $"'{text}' is not a valid {purpose} hotkey. Click to open Settings.", warning: true);
+            _tray?.ShowBalloon("Hotkey not set", $"'{text}' is not a valid {purpose} hotkey. Click to open Settings.", warning: true, ShowSettings);
             return;
         }
 
         if (!_hotkeys!.TryRegister(hotkey, action))
         {
             Diag.Log($"Windows refused the {purpose} hotkey {hotkey}");
-            _tray?.ShowBalloon("Hotkey in use", $"{hotkey} could not be registered for {purpose}; another app may own it. Click to open Settings.", warning: true);
+            _tray?.ShowBalloon("Hotkey in use", $"{hotkey} could not be registered for {purpose}; another app may own it. Click to open Settings.", warning: true, ShowSettings);
         }
     }
 
@@ -289,16 +375,30 @@ public sealed partial class App : Application, IDisposable
             return true;
         }
 
-        UnlockWindow prompt = new(_dataFilePath);
-        if (prompt.ShowDialog() == true && prompt.Opened is { } opened)
+        // A hotkey pressed while the prompt is already up must not stack a second prompt and a second LogFile.
+        if (_unlockPrompt is { } open)
         {
-            Log = opened;
-            _tray?.SetLocked(false);
-            Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
-            return true;
+            open.Activate();
+            return false;
         }
 
-        return false;
+        _unlockPrompt = new UnlockWindow(_dataFilePath);
+        try
+        {
+            if (_unlockPrompt.ShowDialog() == true && _unlockPrompt.Opened is { } opened)
+            {
+                Log = opened;
+                _tray?.SetLocked(false);
+                Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
+                return true;
+            }
+
+            return false;
+        }
+        finally
+        {
+            _unlockPrompt = null;
+        }
     }
 
     private void ShowCapture()
@@ -314,37 +414,47 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        _capture = new CaptureWindow(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions);
-        _capture.Captured += entry => _ = SaveCapturedAsync(entry, _capture.WorkArea);
-        _capture.Closed += (_, _) => _capture = null;
-        _capture.Show();
-        _capture.Activate();
+        CaptureWindow capture = new(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions);
+        capture.Captured += entry => _ = SaveCapturedAsync(entry, capture.WorkArea);
+        capture.Closed += (_, _) => _capture = null;
+        _capture = capture;
+        capture.Show();
+        capture.Activate();
     }
 
-    // The write runs off the UI thread: it can retry for a while if the sync client holds the file.
+    // The write runs off the UI thread: it can retry for a few seconds if the sync client holds the file.
     private async Task SaveCapturedAsync(Entry entry, Rect workArea)
     {
         LogFile log = Log!;
-        bool saved = await Task.Run(() => log.Append(entry)).ConfigureAwait(true);
+        bool saved;
+        try
+        {
+            saved = await Task.Run(() => log.Append(entry)).ConfigureAwait(true);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Not expected, but this path must never fail quietly: the entry is in memory and in the queue.
+            Diag.Log("Capture write failed unexpectedly", e);
+            saved = false;
+        }
+
         _suggestions = null; // the new entry may introduce a tag or person
+        _tray?.SetPending(log.PendingCount);
         if (_main is { IsVisible: true })
         {
             _main.Refresh();
         }
 
-        if (saved)
-        {
-            ToastWindow toast = new(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5));
-            toast.Clicked += () => ShowMainWindow(entry.Id);
-            toast.Show();
-        }
-        else
+        ToastWindow toast = saved
+            ? new ToastWindow(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5))
+            : new ToastWindow(workArea, "Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds; the tray icon shows the count.", danger: true, TimeSpan.FromSeconds(15));
+        if (!saved)
         {
             Diag.Log("Capture could not be written; it is pending");
-            ToastWindow toast = new(workArea, "Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds.", danger: true, TimeSpan.FromSeconds(15));
-            toast.Clicked += () => ShowMainWindow(entry.Id);
-            toast.Show();
         }
+
+        toast.Clicked += () => ShowMainWindow(entry.Id);
+        toast.Show();
     }
 
     private void ShowMainWindow() => ShowMainWindow(null);
@@ -363,6 +473,11 @@ public sealed partial class App : Application, IDisposable
             _main.CopyTimelineRequested += ShowExportPanel;
             _main.ExportDecryptedRequested += ShowExportDecrypted;
             _main.CheatSheetRequested += ShowCheatSheet;
+            _main.Changed += () =>
+            {
+                _suggestions = null;
+                _tray?.SetPending(Log?.PendingCount ?? 0);
+            };
         }
         else
         {
@@ -384,7 +499,7 @@ public sealed partial class App : Application, IDisposable
 
     private Suggestions BuildSuggestions()
     {
-        // Rebuilt on demand; a few thousand entries make this trivial.
+        // Cached until a write clears it; a few thousand entries make the rebuild trivial.
         if (_suggestionsFor != Log || _suggestions is null)
         {
             _suggestions = new Suggestions(Log?.Live ?? [], _settings.AutocompleteCap, _settings.AutocompleteRanking);
@@ -404,8 +519,23 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowExportDecrypted()
     {
-        ExportDecryptedWindow window = new(Log!, _root, _settings, SaveSettings) { Owner = VisibleMain };
+        ExportDecryptedWindow window = new(Log!, _dataFilePath, SyncRoots(), _settings, SaveSettings) { Owner = VisibleMain };
         window.ShowDialog();
+    }
+
+    // Every synced folder on the machine, not only the configured one: a plaintext export must not land in any of them.
+    private List<string> SyncRoots()
+    {
+        List<string> roots = [_root];
+        foreach (string envVar in SettingsStore.KnownSyncEnvVars)
+        {
+            if (SettingsStore.ResolveRoot(envVar) is { } folder && !roots.Contains(folder, StringComparer.OrdinalIgnoreCase))
+            {
+                roots.Add(folder);
+            }
+        }
+
+        return roots;
     }
 
     private void ShowCheatSheet()
@@ -441,6 +571,7 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
+    // Timer thread. Nothing here may throw: an exception on a thread-pool thread would end the process and its queue.
     private void RetryPending()
     {
         LogFile? log = Log;
@@ -449,8 +580,27 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        bool drained = log.RetryPending();
-        Diag.Log(drained ? "Pending writes flushed" : $"Pending writes still failing: {log.PendingCount} waiting");
+        try
+        {
+            bool drained = log.RetryPending();
+            Diag.Log(drained ? "Pending writes flushed" : $"Pending writes still failing: {log.PendingCount} waiting");
+            Dispatcher.BeginInvoke(() =>
+            {
+                _tray?.SetPending(log.PendingCount);
+                if (drained)
+                {
+                    _tray?.ShowBalloon("Saved", "The entries that were waiting have been written to the file.", warning: false);
+                    if (_main is { IsVisible: true })
+                    {
+                        _main.Refresh();
+                    }
+                }
+            });
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Diag.Log("Retry of pending writes failed", e);
+        }
     }
 
     private IntPtr OnMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
