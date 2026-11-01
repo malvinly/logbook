@@ -110,7 +110,8 @@
       <GridSplitter Grid.Column="1" Width="12" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
 
       <Border Grid.Column="2" Style="{StaticResource Card}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <!-- Not a tab stop: the fields inside take focus, and a focused viewer would draw a focus ring around the whole card. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
           <Grid>
             <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource CardPadding}" />
             <StackPanel x:Name="Detail" Margin="20,16,20,20" Visibility="Collapsed">
