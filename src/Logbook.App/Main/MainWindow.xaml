@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:main="clr-namespace:Logbook.App.Main"
         xmlns:settings="clr-namespace:Logbook.App.Settings"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Logbook" Width="1120" Height="760" MinWidth="860" MinHeight="520" WindowStartupLocation="CenterScreen">
   <!-- Laid out as a Windows 11 list and detail page: the filter and the count on the Mica surface, then the results and
        the selected entry as two cards side by side. -->
@@ -10,10 +11,15 @@
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <Style x:Key="ChangedLabel" TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
       <Style.Triggers>
-        <Trigger Property="Tag" Value="True">
+        <!-- Tag is typed object, so a plain Value="True" stays the string "True" and never equals the bound bool. -->
+        <Trigger Property="Tag">
+          <Trigger.Value>
+            <sys:Boolean>True</sys:Boolean>
+          </Trigger.Value>
           <Setter Property="Background" Value="{DynamicResource ChangedBrush}" />
           <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
           <Setter Property="Padding" Value="4,0,4,2" />
+          <Setter Property="HorizontalAlignment" Value="Left" />
         </Trigger>
       </Style.Triggers>
     </Style>
