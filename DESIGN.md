@@ -132,7 +132,7 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 - A random 256-bit **data key** is generated once when the file is created. All records are encrypted with it.
 - The **passphrase** is run through PBKDF2-HMAC-SHA256 (salt and iteration count from the header) to produce a 256-bit **key-encryption key**. The data key is wrapped (AES-256-GCM) with that and stored in the header as `wrappedKey`.
 - Unlock = derive KEK from passphrase, unwrap data key. If the GCM tag on `wrappedKey` fails to verify, the passphrase is wrong. There is no separate verifier field; the wrap is the verifier.
-- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 5, under Tools → Change passphrase in the main window.) The data key does not change: a new salt is drawn, the key-encryption key is derived from the new passphrase with the iteration count the header already has, and the same data key is wrapped again; `format`, `fileId` and `createdAt` are kept. Because the same data key is re-wrapped, a copy of the file made before the change (sync version history, a conflict copy, a backup) still opens with the old passphrase, and its data key decrypts every record written since; rotating the data key would need a whole-file rewrite and is not built (section 14, Phase 6).
+- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 5, under Tools → Change passphrase in the main window.) The data key does not change: a new salt is drawn, the key-encryption key is derived from the new passphrase with the iteration count the header already has, and the same data key is wrapped again; `format`, `fileId` and `createdAt` are kept. Because the same data key is re-wrapped, a copy of the file made before the change (sync version history, a conflict copy, a backup) still opens with the old passphrase, and its data key decrypts every record written since; rotating the data key would need a whole-file rewrite and is not built (section 14, Not building).
 - How line 1 is rewritten, the one deliberate exception to the append-only rule: **in place, at the same byte length**, so not one byte of lines 2..n moves or changes and the file is never truncated or rewritten whole. The header JSON escapes `+` in base64 as `\u002B`, so its length depends on its random values; the new salt is drawn until it needs no escaping, and the key is wrapped again with fresh nonces until the line comes out exactly as long as the old one, in the same JSON form `Create` writes. Before writing: the current passphrase is verified against the header on disk (a wrong one is reported, nothing written), that header must unwrap to the open log's data key, and the new header is verified in memory to unwrap it with the new passphrase. The write opens the file with `FileMode.Open`, `FileAccess.ReadWrite`, `FileShare.Read`, `FileOptions.WriteThrough`, checks that line 1 is still the bytes it read, writes the new bytes at offset 0, flushes and closes, with the same retry schedule as appends; the file is not held open between operations. Line 1 is then read back and must match and unwrap; if not, the previous bytes (kept in memory until then) are written back and the failure reported. A retry that finds line 1 already holding the new bytes (an earlier attempt wrote them and then failed to flush or close) takes the write as done and goes on to the read-back; the write-back goes only over the new bytes, so a line 1 that holds neither header is left alone; and when the header is left in an unknown state the message says to try the new passphrase first. Refused, with nothing written: an empty new passphrase, a header that is not byte for byte what this app writes for its own values (an unknown property, other spacing or order) or whose length a rewritten one cannot match (one this app did not write; there is no fallback to a whole-file rewrite), a file on disk with another data key, and any time a capture is pending or a write is in flight (the same checks as Lock now), since a header rewrite racing an append is not worth reasoning about. After the change the app stays unlocked with the same data key.
 - There is no recovery. If the passphrase is lost, the log is lost. The first-run screen says this in plain words and tells you to write the passphrase down somewhere physical, since the machine and its password manager may not be yours forever.
 
@@ -286,7 +286,7 @@ Each phase is approved as a whole. Once a phase is started, every step in it is 
 
 Everything above.
 
-### Phase 2 — make it something you will keep using
+### Phase 2 (done) — make it something you will keep using
 
 The app has to look good before any further feature matters, and the small grammar items ride along. No change to the file format.
 
@@ -303,7 +303,7 @@ The app has to look good before any further feature matters, and the small gramm
 3. Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
 4. Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
 
-### Phase 3 — the three driving scenarios as buttons
+### Phase 3 (done) — the three driving scenarios as buttons
 
 Pure UI over the existing query and renderer, plus one settings field. No risk to the data.
 
@@ -311,39 +311,48 @@ Pure UI over the existing query and renderer, plus one settings field. No risk t
 2. Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
 3. Export toggle to include people and tags per line (useful when the filter is broader than one person).
 
-### Phase 4 — the first format additions
+### Phase 4 (done) — the first format additions
 
 Both items add a field to the record: `relatedTo` a list that may be empty, `remindAt` a nullable time. The schema's unknown-property tolerance means no format bump, but it is the first time the model changes, so they land together with their own Core tests.
 
 1. `relatedTo` — list of ids linking follow-ups to the original entry, plus a "Follow up" button that opens capture pre-filled with the entry's tags and people. Built in the detail pane rather than on each row; section 10 says why. Tags conflate topic with thread; this separates them.
 2. Follow-up reminder — a single nullable `remindAt` on an entry and a tray balloon when it passes. Nothing more elaborate.
 
-### Phase 5 — security housekeeping
+### Phase 5 (done) — security housekeeping
 
 Both touch the key hierarchy and the lock path, so they get a review of their own rather than riding beside UI work.
 
 1. Change passphrase — rewrite the header only.
 2. Idle auto-lock — clear the data key after N minutes; next hotkey prompts.
 
-### Phase 6 — outputs and themes
+### Phase 6 (done) — outputs and themes
 
 Independent items, none urgent. The dark theme is much cheaper after Phase 2 has templated every control.
 
 1. HTML clipboard format alongside plain text so mail clients get bold dates and real bullets.
 2. CSV export.
 3. Dark theme override in settings. Phase 2 already follows the Windows light or dark setting with a second token dictionary (`Theme.Dark.xaml`); what is left is a setting to force one or the other. Built as the `theme` setting in section 12: forcing merges WPF's `Fluent.Light.xaml` or `Fluent.Dark.xaml` in place of `Fluent.xaml` together with the matching token dictionary, only at startup and on Settings save, never from the Windows theme-change message.
-4. Grammar polish: a token that fills a whole parenthetical leaves `()` in the summary (`done (#asked)` stores `done ()`), and in a filter the leftover punctuation becomes words, so `(#asked)` or `@j-doe,` in the filter bar also requires a literal `(` or `,`. Drop punctuation-only leftovers in both.
-5. A window and taskbar icon drawn from the tray icon's "L" badge; the windows still show WPF's default icon in their title bars.
-6. Export header from a saved query: when the filter came from a saved-query button, title the timeline with the button's name, so a weekly digest reads `This week — 2 entries` rather than `last:7d — 2 entries`.
-7. "Followed up by" lines in the detail pane of an original, the reverse of the Phase 4 "Follows up on" line, if following a thread forwards turns out to matter in practice.
-8. Lock when Windows locks the session (`WM_WTSSESSION_CHANGE`), alongside the Phase 5 idle lock, if locking the workstation turns out to be the moment you walk away more often than N idle minutes are.
-9. CSV cells that start with `=`, `+`, `-` or `@` are read as formulas by spreadsheet apps; decide whether the CSV export should neutralise them (for example with a leading `'`), at the cost of no longer writing the text verbatim.
-10. The tray icon is drawn once from the tokens at startup, so it keeps the old colors until the next start after the theme setting is changed live, as it already did when Windows changes mode while the app runs; redraw it on a theme change if that turns out to be noticeable.
-11. Data-key rotation on passphrase change. A passphrase change re-wraps the same data key (section 8), so a copy made before the change still opens with the old passphrase and decrypts every later record. Rotating the key means re-encrypting every record into a new file under a new data key, a whole-file rewrite that has to be reconciled with the append-only rule and the sync folder. To be decided by the author.
+Items 4 to 11, which this list held as notes while the phase was built, were decided on 2026-11-01: all of them are Phase 7 below, except data-key rotation, which is not being built (Not building, below).
+
+### Phase 7 — the decisions from the Phases 2–6 review
+
+Everything the review of Phases 2 to 6 left open, decided together on 2026-11-01. Each item's behaviour is written into its own section, tagged "(Phase 7)"; this list is the build order. No change to the file format. The docs went first: items 1 and 10 were committed before any code, so a reader of the design sees the target, not the drift.
+
+1. Doc reconciliations where the code was right and the text was stale: CLAUDE.md and section 16 on the theme files, the line-1 exception and the token-start rule; section 16 on the stored timestamp form; section 8 on when hydration happens; Phase 3 on seeding.
+2. Grammar (section 6), one rule group with its tests: a tag or person ends at `,` and `;`; trailing `?`, `!` and `'s` are stripped; keyword values are stripped the same way; punctuation-only leftovers are dropped in summary and filter; a backslash is kept where it escapes nothing.
+3. `at:` takes the local offset at the date and time it names (section 16), with tests across a clock change.
+4. Core moves with tests (section 16): the decrypted export's line selection and the idle tick-wrap check.
+5. The reminder balloon shows no summary (section 10), and tray balloons queue (section 12).
+6. Idle lock: default 60 minutes (section 12); locks anyway at twice the limit when a dialog is open (section 9); lock on workstation lock and sign-out (section 9).
+7. CSV cells that would read as formulas get a leading `'` (section 11); the timeline header takes a saved-query button's name (section 11).
+8. "Followed up by" lines in the detail pane of an original entry (section 10).
+9. Window and taskbar icon from the tray badge (section 16); the tray icon redrawn on a theme change (section 12).
+10. README rewritten to describe the app as it is.
 
 ### Not building
 
 - AI auto-tagging. Sending names and incidents to a third-party API from a managed work machine is a policy problem, and recency-ranked autocomplete over a small tag set solves the real need.
+- Data-key rotation on passphrase change. A change re-wraps the same data key (section 8), so a copy of the file made before it still opens with the old passphrase and decrypts every later record. Rotating would mean re-encrypting every record into a new file under a new key, a whole-file rewrite that contradicts the append-only rule and would have to be reconciled with the sync folder. Section 8 tells the user about old copies instead.
 - Hash chains or any tamper evidence.
 - SQLite, a persisted index, or full-text ranking. A few thousand records in a list is the design.
 - Prefix tag matching. Exact plus autocomplete is strictly better.
