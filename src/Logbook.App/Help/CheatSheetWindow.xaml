@@ -1,0 +1,30 @@
+<Window x:Class="Logbook.App.Help.CheatSheetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Logbook cheat sheet" Width="640" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+  <StackPanel Margin="{StaticResource PagePadding}">
+    <TextBlock Style="{StaticResource TitleText}" Text="Hotkeys" />
+    <TextBlock x:Name="Hotkeys" Margin="0,4,0,0" FontFamily="{StaticResource MonoFont}" />
+
+    <TextBlock Style="{StaticResource TitleText}" Text="One grammar, for capture and for the filter bar" Margin="0,16,0,0" />
+    <TextBlock Margin="0,4,0,0" FontFamily="{StaticResource MonoFont}" xml:space="preserve">#tag            lowercase-kebab; several are ANDed in a filter
+@person         anyone involved, any role; the verb goes in a tag (#asked, #told, #decided)
+at:...          capture only: at:2026-10-06  at:2026-10-06,15:00  at:yesterday,3pm  at:15:00  at:mon
+since: until:   filter only, inclusive dates: 2026-10-06, today, yesterday
+last:30d        filter only: d, w or m, shorthand for since:
+"exact phrase"  filter only: substring match on the phrase
+anything else   capture: the summary · filter: words ANDed over summary and reason
+\#word \@word   a literal # or @ in a summary</TextBlock>
+
+    <TextBlock Style="{StaticResource TitleText}" Text="Things that stay plain text" Margin="0,16,0,0" />
+    <TextBlock Margin="0,4,0,0" TextWrapping="Wrap"
+               Text="ticket #12345, C#, name@example.com and @ 3pm are not tokens: # and @ only count after a space and before a letter. Trailing , . ; : ) are dropped from a token. A date without a time is stored at noon; use the compact export when the time is not meaningful." />
+
+    <TextBlock Style="{StaticResource TitleText}" Text="Conventions worth keeping" Margin="0,16,0,0" />
+    <TextBlock Margin="0,4,0,0" TextWrapping="Wrap"
+               Text="Keep tags coarse: a tag you will use once is a word in the summary. Your own notes are discoverable in a dispute, and that cuts both ways; write entries you would be comfortable reading aloud." />
+
+    <Button Content="Close" IsDefault="True" IsCancel="True" HorizontalAlignment="Right" Margin="0,16,0,0" />
+  </StackPanel>
+</Window>
