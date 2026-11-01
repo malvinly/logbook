@@ -39,6 +39,9 @@ public sealed class SuggestionPopup
         box.LostKeyboardFocus += (_, _) => Hide();
     }
 
+    /// <summary>True while the list is showing, so a window-level key handler can leave Enter and Escape to it.</summary>
+    public bool IsOpen => _popup.IsOpen;
+
     /// <param name="box">The text box to watch.</param>
     /// <param name="suggestions">Called each time the list is refreshed, so a rebuilt index is picked up.</param>
     public static SuggestionPopup Attach(TextBox box, Func<Suggestions> suggestions)

@@ -14,14 +14,13 @@ namespace Logbook.App.Capture;
 public sealed partial class CaptureWindow : Window
 {
     private readonly Rect _workArea;
+    private readonly SuggestionPopup[] _popups;
 
     public CaptureWindow(Rect workArea, Func<Suggestions> suggestions)
     {
         InitializeComponent();
         _workArea = workArea;
-        SuggestionPopup.Attach(Line, suggestions);
-        SuggestionPopup.Attach(ExtraTags, suggestions);
-        SuggestionPopup.Attach(ExtraPeople, suggestions);
+        _popups = [SuggestionPopup.Attach(Line, suggestions), SuggestionPopup.Attach(ExtraTags, suggestions), SuggestionPopup.Attach(ExtraPeople, suggestions)];
         Left = workArea.Left + (workArea.Width - Width) / 2;
         Top = workArea.Top + workArea.Height * 0.3;
         Loaded += (_, _) => Line.Focus();
@@ -42,6 +41,13 @@ public sealed partial class CaptureWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Preview events reach the window before the text box. While a suggestion list is open, Enter accepts a
+        // name and Escape closes the list; the window must not submit or close on top of that.
+        if (_popups.Any(p => p.IsOpen))
+        {
+            return;
+        }
+
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
@@ -99,8 +105,8 @@ public sealed partial class CaptureWindow : Window
             now,
             line.Summary,
             BlankToNull(Reason.Text),
-            Merge(line.Tags, ExtraTags.Text),
-            Merge(line.People, ExtraPeople.Text),
+            TokenNormalizer.NormalizeList(ExtraTags.Text, existing: line.Tags),
+            TokenNormalizer.NormalizeList(ExtraPeople.Text, existing: line.People),
             Lines(Refs.Text),
             false);
 
@@ -110,22 +116,6 @@ public sealed partial class CaptureWindow : Window
 
     private static string? BlankToNull(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
 
-    /// <summary>Parsed names plus the extra box, normalised the same way and without duplicates.</summary>
-    private static List<string> Merge(IReadOnlyList<string> parsed, string extra)
-    {
-        List<string> names = [.. parsed];
-        foreach (string raw in extra.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            string name = TokenNormalizer.Normalize(raw.TrimStart('#', '@'));
-            if (name.Length > 0 && !names.Contains(name))
-            {
-                names.Add(name);
-            }
-        }
-
-        return names;
-    }
-
     private static IReadOnlyList<string> Lines(string text)
-        => [.. text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+        => [.. text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 }
