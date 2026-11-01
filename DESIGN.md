@@ -2,7 +2,7 @@
 
 A personal, single-user Windows tray app for recording decisions and events several times a day, so you can later answer "when did X happen", "how many times has X happened since Y", and "did I tell anyone about Z", and hand someone a dated list that proves it.
 
-This document is the source of truth for Phase 1. Anything not in Phase 1 is listed under Later or Not Building so it isn't forgotten and isn't accidentally built early.
+This document is the source of truth for the app. Anything not in Phase 1 is listed under Later or Not Building so it isn't forgotten and isn't accidentally built early.
 
 ## 1. Purpose and driving scenarios
 
@@ -58,8 +58,8 @@ One grammar serves both capture and query. Learn it once.
 - `@person` — a person. Same normalisation as tags. In capture it attaches the person; in query it filters.
 - `at:<when>` — capture only. Sets `occurredAt`. Forms: `at:2026-10-06`, `at:2026-10-06,15:00`, `at:yesterday`, `at:yesterday,3pm`, `at:15:00` (today at that time), `at:mon` (the most recent Monday before today; on a Monday that is last week). Date without time stores 12:00 local; use the compact export when the time isn't meaningful.
 - `since:<date>` / `until:<date>` — query only. Inclusive bounds on `occurredAt`. Date forms: ISO `2026-10-06`, `today`, `yesterday`.
-- `last:<n><unit>` — query only. `last:30d`, `last:12w`, `last:6m`. Shorthand for `since:`.
-- `"quoted phrase"` — query only. Substring match on the exact phrase.
+- `last:<n><unit>` — query only. `last:30d`, `last:12w`, `last:6m`. Shorthand for `since:`. Inclusive of today and of the day N days ago, so `last:7d` spans eight calendar days.
+- `"quoted phrase"` — query only. Substring match on the exact phrase over summary and reason. Quoted phrases, like bare words, match case-insensitively.
 - Anything else — capture: summary text. Query: case-insensitive substring match over summary and reason; multiple bare words are ANDed.
 
 ### Collision rules
@@ -132,7 +132,7 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 - A random 256-bit **data key** is generated once when the file is created. All records are encrypted with it.
 - The **passphrase** is run through PBKDF2-HMAC-SHA256 (salt and iteration count from the header) to produce a 256-bit **key-encryption key**. The data key is wrapped (AES-256-GCM) with that and stored in the header as `wrappedKey`.
 - Unlock = derive KEK from passphrase, unwrap data key. If the GCM tag on `wrappedKey` fails to verify, the passphrase is wrong. There is no separate verifier field; the wrap is the verifier.
-- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 5, under Tools → Change passphrase in the main window.) The data key does not change: a new salt is drawn, the key-encryption key is derived from the new passphrase with the iteration count the header already has, and the same data key is wrapped again; `format`, `fileId` and `createdAt` are kept.
+- Changing the passphrase rewrites only line 1. Records are untouched. (Phase 1 ships the hierarchy; the change-passphrase UI is Phase 5, under Tools → Change passphrase in the main window.) The data key does not change: a new salt is drawn, the key-encryption key is derived from the new passphrase with the iteration count the header already has, and the same data key is wrapped again; `format`, `fileId` and `createdAt` are kept. Because the same data key is re-wrapped, a copy of the file made before the change (sync version history, a conflict copy, a backup) still opens with the old passphrase, and its data key decrypts every record written since; rotating the data key would need a whole-file rewrite and is not built (section 14, Phase 6).
 - How line 1 is rewritten, the one deliberate exception to the append-only rule: **in place, at the same byte length**, so not one byte of lines 2..n moves or changes and the file is never truncated or rewritten whole. The header JSON escapes `+` in base64 as `\u002B`, so its length depends on its random values; the new salt is drawn until it needs no escaping, and the key is wrapped again with fresh nonces until the line comes out exactly as long as the old one, in the same JSON form `Create` writes. Before writing: the current passphrase is verified against the header on disk (a wrong one is reported, nothing written), that header must unwrap to the open log's data key, and the new header is verified in memory to unwrap it with the new passphrase. The write opens the file with `FileMode.Open`, `FileAccess.ReadWrite`, `FileShare.Read`, `FileOptions.WriteThrough`, checks that line 1 is still the bytes it read, writes the new bytes at offset 0, flushes and closes, with the same retry schedule as appends; the file is not held open between operations. Line 1 is then read back and must match and unwrap; if not, the previous bytes (kept in memory until then) are written back and the failure reported. A retry that finds line 1 already holding the new bytes (an earlier attempt wrote them and then failed to flush or close) takes the write as done and goes on to the read-back; the write-back goes only over the new bytes, so a line 1 that holds neither header is left alone; and when the header is left in an unknown state the message says to try the new passphrase first. Refused, with nothing written: an empty new passphrase, a header that is not byte for byte what this app writes for its own values (an unknown property, other spacing or order) or whose length a rewritten one cannot match (one this app did not write; there is no fallback to a whole-file rewrite), a file on disk with another data key, and any time a capture is pending or a write is in flight (the same checks as Lock now), since a header rewrite racing an append is not worth reasoning about. After the change the app stays unlocked with the same data key.
 - There is no recovery. If the passphrase is lost, the log is lost. The first-run screen says this in plain words and tells you to write the passphrase down somewhere physical, since the machine and its password manager may not be yours forever.
 
@@ -149,13 +149,13 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 
 - Read all lines. Parse the header; refuse to open on a bad or unknown `format`.
 - Decrypt each record line. A line that fails base64 or GCM verification in the **middle** of the file is counted and skipped; the main window shows "N unreadable lines" so corruption is visible, not hidden. A **trailing** line that is truncated is skipped silently with a log entry; it is the expected result of a crash mid-write. Truncated means exactly this: the last line has no terminating `\n`, or it is shorter than any valid record line could be (the 40 base64 characters of a nonce and a tag). A full-length last line that ends in `\n` was written whole, since a line and its newline go in one write, so if it fails it is counted as unreadable like a middle line.
-- Group by `id`, keep the highest `rev`. Drop tombstoned ids from the live list but keep them for the revision view.
+- Group by `id`, keep the highest `rev`. Drop tombstoned ids from the live list but keep them for the revision view. The edge cases, in file order: on equal revs the later line wins; a tombstone followed by a higher non-tombstone rev brings the entry back; a lower rev after a higher one is ignored for the live list (it still appears in the revision view).
 - Everything lives in `List<Entry>` for the life of the process. Queries are LINQ. No persisted index.
 
 ### Sync-service specifics
 
 - Some sync clients keep only a placeholder locally and download the file on first access. On launch, check the file for a reparse point and force hydration (open and read it) before anything else. Recommend the user mark the folder as always available offline.
-- On launch, glob the data folder for `logbook*.jsonl`. If more than one file matches (sync conflict copies, old-profile re-syncs), do not guess: show each with its header `createdAt` and line count and ask which is the real one.
+- On launch, glob the data folder for `logbook*.jsonl`, leaving out `logbook-export-*` names (the decrypted export's own default name, section 11), which are never logs. If more than one file matches (sync conflict copies, old-profile re-syncs), do not guess: show each with its header `createdAt` and line count and ask which is the real one.
 
 ## 9. Passphrase and locked state
 
@@ -207,9 +207,9 @@ Takes the **current filtered set**, flips it to oldest-first, and puts a plain-t
 ```
 #staging-access — 3 entries, Oct 6 – Oct 20, 2026
 
-• Mon Oct 6, 2026 10:14 AM — Asked for access to the staging environment; told it would be looked into.
-• Wed Oct 15, 2026 2:30 PM (9 days later) — Followed up; no response to the first ask.
-• Mon Oct 20, 2026 9:02 AM (5 days later) — Asked again in standup; told it would be this week.
+• Tue Oct 6, 2026 10:14 AM — Asked for access to the staging environment; told it would be looked into.
+• Thu Oct 15, 2026 2:30 PM (9 days later) — Followed up; no response to the first ask.
+• Tue Oct 20, 2026 9:02 AM (5 days later) — Asked again in standup; told it would be this week.
       Reason: wanted it on record before the release freeze.
 ```
 
@@ -222,8 +222,8 @@ Rules:
 
 Toggles in the export panel, remembered between uses:
 
-- **Show gaps** — appends `(N days later)` after the timestamp, computed from the previous entry in the set. Off for the first entry. Gaps are calendar days between the entries' stored dates in export order and are never negative: when entries in different offsets put a later instant on an earlier stored date, the gap is `(same day)`.
-- **Group by month** — inserts a second header line with per-month counts: `Jul (1) · Aug (3) · Sep (1) · Oct (2)`. The list below is unchanged.
+- **Show gaps** — appends `(N days later)` after the timestamp, computed from the previous entry in the set. Off for the first entry. A gap of 0 reads `(same day)` and a gap of 1 reads `(1 day later)`. Gaps are calendar days between the entries' stored dates in export order and are never negative: when entries in different offsets put a later instant on an earlier stored date, the gap is `(same day)`.
+- **Group by month** — inserts a second header line with per-month counts: `Jul (1) · Aug (3) · Sep (1) · Oct (2)`. When the set spans more than one year, each month carries its year: `Jul 2025 (1) · Jan 2026 (2)`. The list below is unchanged.
 - **Compact** — drops time of day and the weekday: `• Oct 6, 2026 — …`.
 - **Tags and people** — appends the entry's tags and then its people to its line, after the refs, each with its `#` or `@` and separated by single spaces: `• Tue Jul 14, 2026 9:00 AM — Reported the printer outage to facilities [INC0040001] #reported #printer @a-smith`. Order is as stored. An entry with no tags and no people is unchanged, and the header line and the reason are unchanged.
 
@@ -310,9 +310,9 @@ Pure UI over the existing query and renderer, plus one settings field. No risk t
 
 ### Phase 4 — the first format additions
 
-Both items add a nullable field to the record. The schema's unknown-property tolerance means no format bump, but it is the first time the model changes, so they land together with their own Core tests.
+Both items add a field to the record: `relatedTo` a list that may be empty, `remindAt` a nullable time. The schema's unknown-property tolerance means no format bump, but it is the first time the model changes, so they land together with their own Core tests.
 
-1. `relatedTo` — list of ids linking follow-ups to the original entry, plus a "Follow up" button on a row that opens capture pre-filled with its tags and people. Tags conflate topic with thread; this separates them.
+1. `relatedTo` — list of ids linking follow-ups to the original entry, plus a "Follow up" button that opens capture pre-filled with the entry's tags and people. Built in the detail pane rather than on each row; section 10 says why. Tags conflate topic with thread; this separates them.
 2. Follow-up reminder — a single nullable `remindAt` on an entry and a tray balloon when it passes. Nothing more elaborate.
 
 ### Phase 5 — security housekeeping
@@ -336,6 +336,7 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 8. Lock when Windows locks the session (`WM_WTSSESSION_CHANGE`), alongside the Phase 5 idle lock, if locking the workstation turns out to be the moment you walk away more often than N idle minutes are.
 9. CSV cells that start with `=`, `+`, `-` or `@` are read as formulas by spreadsheet apps; decide whether the CSV export should neutralise them (for example with a leading `'`), at the cost of no longer writing the text verbatim.
 10. The tray icon is drawn once from the tokens at startup, so it keeps the old colors until the next start after the theme setting is changed live, as it already did when Windows changes mode while the app runs; redraw it on a theme change if that turns out to be noticeable.
+11. Data-key rotation on passphrase change. A passphrase change re-wraps the same data key (section 8), so a copy made before the change still opens with the old passphrase and decrypts every later record. Rotating the key means re-encrypting every record into a new file under a new data key, a whole-file rewrite that has to be reconciled with the append-only rule and the sync folder. To be decided by the author.
 
 ### Not building
 
