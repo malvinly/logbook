@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 using Logbook.App.Diagnostics;
 using Logbook.Core;
+using Logbook.Core.Export;
 using Logbook.Core.Storage;
 using Microsoft.Win32;
 
@@ -84,9 +85,7 @@ public sealed partial class ExportDecryptedWindow : Window
         }
 
         bool history = IncludeHistory.IsChecked == true;
-        IEnumerable<Entry> records = history
-            ? _log.Revisions
-            : _log.Live.OrderBy(entry => entry.Id, StringComparer.Ordinal);
+        IReadOnlyList<Entry> records = DecryptedExport.Select(_log.Revisions, _log.Live, history);
         try
         {
             StringBuilder text = new();
