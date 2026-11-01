@@ -122,6 +122,11 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe)", ")")]
     [InlineData("asked @j-doe).", ").")]
     [InlineData("asked @j-doe\"", "\"")]
+    [InlineData("asked @j-doe?", "?")]
+    [InlineData("asked @j-doe!", "!")]
+    [InlineData("asked @j-doe?!", "?!")]
+    [InlineData("asked @j-doe's", "'s")]
+    [InlineData("asked @j-doe's.", "'s.")]
     public void TrailingPunctuationIsStrippedFromTokenAndLeftInText(string text, string leftover)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
@@ -153,6 +158,37 @@ public sealed class CollisionRuleTests
     {
         // The rewrite gives back the filter text as typed; only a capture summary drops the space.
         Assert.Equal("asked @j-doe, then since:2026-02-02", LineParser.WithDateRange("asked @j-doe, then", new DateOnly(2026, 2, 2), null));
+    }
+
+    [Fact]
+    public void QuestionMarkExclamationAndPossessiveAreStrippedFromTagsToo()
+    {
+        CaptureLine line = LineParser.ParseCapture("asked about #printer? and #printer's tray!", Now);
+        Assert.Equal(["printer"], line.Tags);
+        Assert.Equal("asked about? and's tray!", line.Summary);
+    }
+
+    [Fact]
+    public void PossessiveIsLeftInTheSummaryAsTyped()
+    {
+        // Read literally, the rule leaves the 's behind and drops the space before it, as it does for a comma.
+        CaptureLine line = LineParser.ParseCapture("told @j-doe's manager", Now);
+        Assert.Equal(["j-doe"], line.People);
+        Assert.Equal("told's manager", line.Summary);
+    }
+
+    [Theory]
+    [InlineData("@o'brien", "o'brien")] // an apostrophe inside a name is kept
+    [InlineData("#rock'n'roll", "rock'n'roll")]
+    [InlineData("@j-doe'", "j-doe'")] // a lone trailing apostrophe is not a possessive
+    [InlineData("@j-doe's-team", "j-doe's-team")] // 's that does not end the token
+    [InlineData("@j-doe'S", "j-doe's")] // only a lowercase s; the name is then lowercased
+    [InlineData("#why?not", "why?not")] // ? and ! inside a token are kept
+    public void ApostropheOrMarkThatIsNotTrailingStaysInTheToken(string text, string expected)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Equal([expected], [.. line.Tags, .. line.People]);
+        Assert.Equal("", line.Summary);
     }
 
     [Theory]

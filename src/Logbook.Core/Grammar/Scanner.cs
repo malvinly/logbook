@@ -36,12 +36,7 @@ internal static class Scanner
             if ((c == '#' || c == '@') && sigilMayStart && i + 1 < text.Length && char.IsLetter(text[i + 1]))
             {
                 int end = EndOfName(text, i);
-                // Trailing punctuation belongs to the sentence, not the token: "asked @j-doe." names j-doe.
-                int nameEnd = end;
-                while (nameEnd > i + 1 && IsTrailingPunctuation(text[nameEnd - 1]))
-                {
-                    nameEnd--;
-                }
+                int nameEnd = StripTrailing(text, i + 1, end);
 
                 Flush(tokens, plain);
                 tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..nameEnd], TokenNormalizer.Normalize(text[(i + 1)..nameEnd])));
@@ -104,7 +99,30 @@ internal static class Scanner
         return false;
     }
 
-    private static bool IsTrailingPunctuation(char c) => c is ',' or '.' or ';' or ':' or ')' or '"';
+    // Trailing punctuation belongs to the sentence, not the token: "asked @j-doe." and "@j-doe's desk" both name j-doe.
+    // Returns the end of what is left, never before start; the stripped characters stay in the text.
+    private static int StripTrailing(string text, int start, int end)
+    {
+        while (end > start)
+        {
+            if (IsTrailingPunctuation(text[end - 1]))
+            {
+                end--;
+            }
+            else if (end - 2 >= start && text[end - 2] == '\'' && text[end - 1] == 's')
+            {
+                end -= 2; // a possessive 's
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return end;
+    }
+
+    private static bool IsTrailingPunctuation(char c) => c is ',' or '.' or ';' or ':' or ')' or '"' or '?' or '!';
 
     // A tag or person ends at whitespace or at a "," or ";", so a list of them needs no spaces.
     private static int EndOfName(string text, int start)
