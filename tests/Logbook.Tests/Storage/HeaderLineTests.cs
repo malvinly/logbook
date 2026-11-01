@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text;
 using Logbook.Core.Storage;
 using Xunit;
@@ -97,5 +98,78 @@ public sealed class HeaderLineTests : IDisposable
         await release;
 
         Assert.Equal("BBBBBB\nrecord\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void LineOneThatAlreadyHoldsTheReplacementCountsAsWrittenAndIsReadBack()
+    {
+        // What a retry sees when the first attempt got the new bytes onto disk and then threw on flush or close.
+        File.WriteAllText(_file.Path, "BBBBBB\nrecord\n");
+        byte[]? seen = null;
+
+        HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), line => { seen = line; return true; }, NoDelays);
+
+        Assert.Equal(Bytes("BBBBBB"), seen);
+        Assert.Equal("BBBBBB\nrecord\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void LineOneThatOnlyStartsWithThePreviousBytesIsRefusedUnchanged()
+    {
+        File.WriteAllText(_file.Path, "AAAAAAX\nrecord\n");
+
+        Assert.Throws<InvalidDataException>(() => HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), _ => true, NoDelays));
+
+        Assert.Equal("AAAAAAX\nrecord\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void FileHeldThroughEveryRetryIsAnIOExceptionAndLeftUntouched()
+    {
+        File.WriteAllText(_file.Path, "AAAAAA\nrecord\n");
+        IReadOnlyList<TimeSpan> threeDelays = [TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero];
+
+        using (new FileStream(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), _ => true, threeDelays));
+        }
+
+        Assert.Equal("AAAAAA\nrecord\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void RestoreLeavesALineOneThatIsNeitherHeaderAlone()
+    {
+        // Something else rewrote line 1 between our write and the read-back. The restore only ever undoes our own bytes.
+        File.WriteAllText(_file.Path, "AAAAAA\nrecord\n");
+
+        IOException e = Assert.Throws<IOException>(() => HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), _ =>
+        {
+            File.WriteAllText(_file.Path, "CCCCCC\nrecord\n");
+            return false;
+        }, NoDelays));
+
+        Assert.Equal("CCCCCC\nrecord\n", File.ReadAllText(_file.Path));
+        Assert.DoesNotContain("unchanged", e.Message, StringComparison.Ordinal);
+        Assert.Contains("new passphrase first", e.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void ReadBackThatCannotReadTheFilePutsThePreviousHeaderBack()
+    {
+        // A byte-range lock deep in the record line lets the write of line 1 through (its buffered read stops at 4 KB)
+        // but makes the read-back of the whole file fail.
+        string content = "AAAAAA\n" + new string('r', 6000) + "\n";
+        File.WriteAllText(_file.Path, content);
+        IOException e;
+        using (FileStream locker = new(_file.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            locker.Lock(5000, 10);
+            e = Assert.Throws<IOException>(() => HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), _ => true, NoDelays));
+        }
+
+        Assert.Contains("written back", e.Message, StringComparison.Ordinal);
+        Assert.Equal(content, File.ReadAllText(_file.Path));
     }
 }
