@@ -97,7 +97,7 @@ public sealed class CollisionRuleTests
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
         Assert.Equal(["j-doe"], line.People);
-        Assert.Equal("asked " + leftover, line.Summary);
+        Assert.Equal("asked" + leftover, line.Summary);
     }
 
     [Fact]
@@ -105,7 +105,25 @@ public sealed class CollisionRuleTests
     {
         CaptureLine line = LineParser.ParseCapture("done #asked.", Now);
         Assert.Equal(["asked"], line.Tags);
-        Assert.Equal("done .", line.Summary);
+        Assert.Equal("done.", line.Summary);
+    }
+
+    [Theory]
+    [InlineData("asked @j-doe, then", "asked, then")]
+    [InlineData("asked #staging-access; no reply", "asked; no reply")]
+    [InlineData("told @j-doe and @a-smith.", "told and.")]
+    [InlineData("asked @j-doe , then", "asked , then")] // a space the user typed before the comma is theirs
+    [InlineData("@j-doe, then", ", then")]
+    public void SpaceBeforeStrippedPunctuationIsDroppedFromTheSummary(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now).Summary);
+    }
+
+    [Fact]
+    public void DateRangeRewriteKeepsTheSpaceBeforeStrippedPunctuation()
+    {
+        // The rewrite gives back the filter text as typed; only a capture summary drops the space.
+        Assert.Equal("asked @j-doe, then since:2026-02-02", LineParser.WithDateRange("asked @j-doe, then", new DateOnly(2026, 2, 2), null));
     }
 
     [Theory]

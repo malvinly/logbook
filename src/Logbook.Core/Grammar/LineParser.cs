@@ -16,6 +16,7 @@ public static class LineParser
         List<string> tags = [];
         List<string> people = [];
         DateTimeOffset? occurredAt = null;
+        TokenKind previous = TokenKind.Text;
 
         foreach (Token token in Scanner.Scan(text, quotedPhrases: false))
         {
@@ -31,9 +32,18 @@ public static class LineParser
                     occurredAt = at; // The last at: on the line wins.
                     break;
                 default:
+                    // Text that touches a tag or person is the punctuation stripped from it ("asked @j-doe, then"). With the
+                    // token gone, the space before it would be left in front of the comma, so it goes too: "asked, then".
+                    if (previous is TokenKind.Tag or TokenKind.Person && token.Raw.Length > 0 && !char.IsWhiteSpace(token.Raw[0]))
+                    {
+                        TrimEnd(summary);
+                    }
+
                     summary.Append(token.Raw);
                     break;
             }
+
+            previous = token.Kind;
         }
 
         return new CaptureLine(CollapseWhitespace(summary.ToString()), occurredAt, tags, people);
@@ -129,6 +139,14 @@ public static class LineParser
         }
 
         text.Append(token);
+    }
+
+    private static void TrimEnd(StringBuilder text)
+    {
+        while (text.Length > 0 && char.IsWhiteSpace(text[^1]))
+        {
+            text.Length--;
+        }
     }
 
     private static void AddUnique(List<string> list, string value)
