@@ -9,6 +9,7 @@ public sealed class BalloonOrder<T>
     where T : class
 {
     private readonly Queue<T> _waiting = new();
+    private bool _onScreen; // Windows has reported the showing balloon as shown
 
     /// <summary>The balloon on screen now, or null when none is.</summary>
     public T? Showing { get; private set; }
@@ -35,11 +36,30 @@ public sealed class BalloonOrder<T>
         return balloon;
     }
 
+    /// <summary>Windows reports the showing balloon is on screen. Nothing changes while none is showing.</summary>
+    public void Shown()
+    {
+        if (Showing is not null)
+        {
+            _onScreen = true;
+        }
+    }
+
     /// <summary>
-    /// The balloon on screen has closed. Returns the next one for the caller to show, or null when none is waiting.
-    /// A close while nothing is showing changes nothing.
+    /// Windows reports a balloon has closed. Returns the next one for the caller to show, or null when none is waiting
+    /// or the close does not count. It counts only once the showing balloon has been reported shown: Windows reports
+    /// one close twice (hidden, then timed out), and the second arrives after the next balloon has been put up but
+    /// before that one shows, so counting it would take the next balloon down at once.
     /// </summary>
-    public T? Closed()
+    public T? Closed() => _onScreen ? Release() : null;
+
+    /// <summary>
+    /// The caller gives up waiting for Windows to report a close (it may never report one for a balloon it did not
+    /// show) and takes the showing balloon as closed, shown or not. Returns the next one to show, or null.
+    /// </summary>
+    public T? Expired() => Showing is null ? null : Release();
+
+    private T? Release()
     {
         if (_waiting.TryDequeue(out T? next))
         {
@@ -48,6 +68,7 @@ public sealed class BalloonOrder<T>
         }
 
         Showing = null;
+        _onScreen = false;
         return null;
     }
 
@@ -55,5 +76,6 @@ public sealed class BalloonOrder<T>
     {
         Showing = balloon;
         LastShown = balloon;
+        _onScreen = false;
     }
 }

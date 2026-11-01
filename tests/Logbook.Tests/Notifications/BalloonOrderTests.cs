@@ -12,6 +12,13 @@ public sealed class BalloonOrderTests
     private static readonly Balloon Downloaded = new("Downloaded from sync", "nothing");
     private static readonly Balloon Reminder = new("Reminder", "entry-1");
 
+    // What Windows reports for a balloon that shows and then times out, as far as the order cares.
+    private static Balloon? ShownThenClosed(BalloonOrder<Balloon> queue)
+    {
+        queue.Shown();
+        return queue.Closed();
+    }
+
     [Fact]
     public void ABalloonEnqueuedWhileNothingIsShowingShowsAtOnce()
     {
@@ -43,13 +50,13 @@ public sealed class BalloonOrderTests
         queue.Enqueue(Downloaded);
         queue.Enqueue(Reminder);
 
-        Assert.Same(HotkeyFailed, queue.Closed());
+        Assert.Same(HotkeyFailed, ShownThenClosed(queue));
         Assert.Equal("settings", queue.LastShown!.ClickOpens);
-        Assert.Same(Downloaded, queue.Closed());
+        Assert.Same(Downloaded, ShownThenClosed(queue));
         Assert.Equal("nothing", queue.LastShown!.ClickOpens);
-        Assert.Same(Reminder, queue.Closed());
+        Assert.Same(Reminder, ShownThenClosed(queue));
         Assert.Equal("entry-1", queue.LastShown!.ClickOpens);
-        Assert.Null(queue.Closed());
+        Assert.Null(ShownThenClosed(queue));
     }
 
     [Fact]
@@ -60,7 +67,7 @@ public sealed class BalloonOrderTests
         queue.Enqueue(Reminder);
 
         Assert.Same(HotkeyFailed, queue.Showing);
-        Assert.Same(Reminder, queue.Closed());
+        Assert.Same(Reminder, ShownThenClosed(queue));
         Assert.Same(Reminder, queue.Showing);
     }
 
@@ -70,7 +77,7 @@ public sealed class BalloonOrderTests
         BalloonOrder<Balloon> queue = new();
         queue.Enqueue(HotkeyFailed);
 
-        Assert.Null(queue.Closed());
+        Assert.Null(ShownThenClosed(queue));
         Assert.Null(queue.Showing);
     }
 
@@ -89,7 +96,7 @@ public sealed class BalloonOrderTests
     {
         BalloonOrder<Balloon> queue = new();
         queue.Enqueue(HotkeyFailed);
-        queue.Closed();
+        ShownThenClosed(queue);
 
         Assert.Same(Reminder, queue.Enqueue(Reminder));
     }
@@ -100,7 +107,7 @@ public sealed class BalloonOrderTests
         // Windows can take a balloon off the screen and still let it be clicked from its notification list.
         BalloonOrder<Balloon> queue = new();
         queue.Enqueue(Reminder);
-        queue.Closed();
+        ShownThenClosed(queue);
 
         Assert.Null(queue.Showing);
         Assert.Same(Reminder, queue.LastShown);
@@ -117,5 +124,91 @@ public sealed class BalloonOrderTests
         queue.Enqueue(HotkeyFailed);
 
         Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void ASecondCloseForTheSameBalloonDoesNotTakeTheNextOneDown()
+    {
+        // Windows reports one balloon's close twice (hidden, then timed out); the second arrives after the next balloon
+        // was put up but before Windows reports it shown.
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Downloaded);
+        queue.Enqueue(Reminder);
+        queue.Shown();
+
+        Assert.Same(Downloaded, queue.Closed());
+        Assert.Null(queue.Closed());
+        Assert.Same(Downloaded, queue.Showing);
+
+        queue.Shown();
+        Assert.Same(Reminder, queue.Closed());
+    }
+
+    [Fact]
+    public void ACloseBeforeTheBalloonIsReportedShownDoesNotCount()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+
+        Assert.Null(queue.Closed());
+        Assert.Same(HotkeyFailed, queue.Showing);
+    }
+
+    [Fact]
+    public void ExpiredReleasesTheNextEvenIfWindowsNeverReportedTheBalloonShown()
+    {
+        // Notifications off or do not disturb: Windows may report neither a show nor a close.
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+
+        Assert.Same(Reminder, queue.Expired());
+        Assert.Same(Reminder, queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void ExpiredWithNothingWaitingLeavesNothingShowingButKeepsTheClickAction()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(Reminder);
+
+        Assert.Null(queue.Expired());
+        Assert.Null(queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void ExpiredWhileNothingIsShowingChangesNothing()
+    {
+        BalloonOrder<Balloon> queue = new();
+
+        Assert.Null(queue.Expired());
+        Assert.Null(queue.Showing);
+    }
+
+    [Fact]
+    public void ALateCloseAfterTheQueueEmptiedChangesNothing()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(Reminder);
+        queue.Expired();
+
+        Assert.Null(queue.Closed());
+        Assert.Same(HotkeyFailed, queue.Enqueue(HotkeyFailed));
+    }
+
+    [Fact]
+    public void AShownReportWhileNothingIsShowingDoesNotLetTheNextBalloonsFirstCloseCount()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Shown();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+
+        Assert.Null(queue.Closed());
+        Assert.Same(HotkeyFailed, queue.Showing);
     }
 }

@@ -57,12 +57,13 @@ internal sealed class TrayIcon : IDisposable
         // must still open its entry then. A click does not release the queue: Windows may follow it with a close of the
         // same balloon, and releasing twice would put the next balloon up and take it down at once.
         _icon.BalloonTipClicked += (_, _) => _balloons.LastShown?.OnClick?.Invoke();
-        _icon.BalloonTipClosed += (_, _) => BalloonClosed();
+        _icon.BalloonTipShown += (_, _) => _balloons.Shown();
+        _icon.BalloonTipClosed += (_, _) => AfterClose(_balloons.Closed());
 
         // Windows may never report a close for a balloon it did not show (notifications off, do not disturb), and the
         // queue would then wait forever. If no close has come by the balloon's timeout plus a margin, take it as closed.
         _balloonFallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(BalloonTimeoutMilliseconds + 5_000) };
-        _balloonFallback.Tick += (_, _) => BalloonClosed();
+        _balloonFallback.Tick += (_, _) => AfterClose(_balloons.Expired());
         Redraw();
     }
 
@@ -108,12 +109,16 @@ internal sealed class TrayIcon : IDisposable
         _balloonFallback.Start();
     }
 
-    private void BalloonClosed()
+    // A close that did not count (BalloonOrder.Closed says when) leaves the balloon up and the fallback running.
+    private void AfterClose(Balloon? next)
     {
-        _balloonFallback.Stop();
-        if (_balloons.Closed() is { } next)
+        if (next is not null)
         {
             Display(next);
+        }
+        else if (_balloons.Showing is null)
+        {
+            _balloonFallback.Stop();
         }
     }
 
