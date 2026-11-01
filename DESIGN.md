@@ -65,7 +65,7 @@ One grammar serves both capture and query. Learn it once.
 ### Collision rules
 
 - A `#` or `@` starts a token only at the start of the line, after whitespace, or right after opening punctuation (`(` or `"`), and only when followed by a letter. So `(#asked)` and `"@j-doe"` are tokens, while `ticket #12345`, `C#`, `someone@example.com`, and `@ 3pm` are all plain text. In a query a `"` at a word start opens a quoted phrase first, so `"@j-doe"` there is the phrase, not a person.
-- A tag or person token ends at whitespace or end of line. Trailing punctuation (`,` `.` `;` `:` `)` `"`) is stripped from the token and left in the text.
+- A tag or person token ends at whitespace or end of line. Trailing punctuation (`,` `.` `;` `:` `)` `"`) is stripped from the token and left in the text. In a capture the space before it goes as well, so `asked @j-doe, then` stores the summary `asked, then`, not `asked , then`; a space typed before the punctuation (`asked @j-doe , then`) is kept.
 - Keyword tokens (`at:`, `since:`, `until:`, `last:`) are recognised only at a word boundary followed immediately by a non-space value.
 - To put a literal `#word` or `@word` in a summary, prefix with a backslash: `\#notatag`.
 
