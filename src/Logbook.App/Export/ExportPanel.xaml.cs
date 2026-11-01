@@ -1,4 +1,7 @@
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
+using Logbook.App.Diagnostics;
 using Logbook.App.Settings;
 using Logbook.Core;
 using Logbook.Core.Export;
@@ -55,7 +58,25 @@ public sealed partial class ExportPanel : Window
     private void OnCopyClick(object sender, RoutedEventArgs e)
     {
         // Windows text on the clipboard is conventionally CRLF; the renderer itself stays LF for portability.
-        Clipboard.SetText(Preview.Text.Replace("\n", "\r\n", StringComparison.Ordinal), TextDataFormat.UnicodeText);
-        Copied.Text = $"Copied {RangeText.Count(_entries.Count)}.";
+        DataObject data = new();
+        data.SetText(Preview.Text.Replace("\n", "\r\n", StringComparison.Ordinal), TextDataFormat.UnicodeText);
+
+        // Ask clipboard history and cross-device clipboard sync to leave this out: it is decrypted entry text.
+        byte[] no = [0, 0, 0, 0];
+        data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(no));
+        data.SetData("CanIncludeInClipboardHistory", new MemoryStream(no));
+        data.SetData("CanUploadToCloudClipboard", new MemoryStream(no));
+
+        try
+        {
+            Clipboard.SetDataObject(data, copy: true);
+            Copied.Text = $"Copied {RangeText.Count(_entries.Count)}.";
+        }
+        catch (COMException ex)
+        {
+            // Another process holds the clipboard open; common with clipboard managers and remote desktops.
+            Diag.Log("Clipboard was busy", ex);
+            Copied.Text = "The clipboard is busy; try again in a moment.";
+        }
     }
 }
