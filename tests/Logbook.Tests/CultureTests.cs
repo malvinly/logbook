@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text;
+using Logbook.Core;
 using Logbook.Core.Export;
 using Logbook.Core.Grammar;
 using Xunit;
@@ -41,6 +43,40 @@ public sealed class CultureTests
         Assert.Contains("#staging-access — 3 entries, Oct 6 – Oct 20, 2026", text, StringComparison.Ordinal);
         Assert.Contains("Oct (3)", text, StringComparison.Ordinal);
         Assert.Contains("• Thu Oct 15, 2026 2:30 PM (9 days later) — ", text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("ar-SA")]
+    [InlineData("ja-JP")]
+    public void EveryExportIsByteForByteTheInvariantOutputUnderAnyCulture(string culture)
+    {
+        // ar-SA defaults to the Um al-Qura calendar and ja-JP has its own AM/PM designators, so any format call that
+        // follows the thread culture would change the bytes. Reminders and related ids exercise every CSV column.
+        Entry withEverything = SampleEntries.ToldAboutOutages with
+        {
+            RemindAt = new DateTimeOffset(2026, 8, 21, 8, 15, 30, 250, TimeSpan.FromHours(2)),
+            RelatedTo = [SampleEntries.PrinterOutage.Id],
+            Refs = ["INC0040002", "a,b"],
+        };
+        Entry[] entries = [.. SampleEntries.All, withEverything with { Id = "01K0000000000000000000000Z" }];
+        ExportOptions compact = new(ShowGaps: true, GroupByMonth: true, Compact: true, TagsAndPeople: true);
+        ExportOptions full = new(ShowGaps: true, GroupByMonth: true, Compact: false, TagsAndPeople: true);
+
+        string[] Render() =>
+        [
+            TimelineExport.Render("#printer", entries, compact),
+            TimelineExport.Render("#printer", entries, full),
+            TimelineHtml.Render("#printer", entries, compact),
+            TimelineHtml.Render("#printer", entries, full),
+            CsvExport.Render(entries),
+        ];
+
+        string[] invariant = Under("", Render);
+        string[] local = Under(culture, Render);
+        for (int i = 0; i < invariant.Length; i++)
+        {
+            Assert.Equal(Encoding.UTF8.GetBytes(invariant[i]), Encoding.UTF8.GetBytes(local[i]));
+        }
     }
 
     [Theory]
