@@ -19,6 +19,9 @@ public sealed class LogFile
     // key (about one draw in 25,000). It only bounds the search; a header of another form is refused before it starts.
     private const int MaxWrapAttempts = 1_000_000;
 
+    // The base64 length of a 12-byte nonce and a 16-byte tag with no ciphertext: no record line can be shorter.
+    private const int MinRecordLineLength = 40;
+
     // Two locks. The state lock is held only for memory updates, so the UI can read Live and PendingCount while a
     // write is retrying. The writer lock serialises file writes, so queued lines reach the disk in capture order.
     private readonly object _state = new();
@@ -53,10 +56,16 @@ public sealed class LogFile
     /// <summary>Line 1 as last read or written. Replaced by <see cref="ChangePassphrase"/>.</summary>
     public FileHeader Header { get; private set; }
 
-    /// <summary>Lines before the last one that failed base64, decryption or JSON. Shown to the user, never hidden.</summary>
+    /// <summary>
+    /// Record lines that failed base64, decryption or JSON, the last one included when it ends in a newline and is long
+    /// enough to be a record. Shown to the user, never hidden.
+    /// </summary>
     public int UnreadableLineCount { get; }
 
-    /// <summary>True when the last line was incomplete or unreadable: the expected result of a crash mid-write.</summary>
+    /// <summary>
+    /// True when the last line had no terminating newline, or was too short to be any record: the expected result of a
+    /// crash mid-write.
+    /// </summary>
     public bool TrailingLineTruncated { get; }
 
     /// <summary>Revisions captured but not yet on disk. The user must always be able to see this is not zero.</summary>
@@ -164,8 +173,10 @@ public sealed class LogFile
             {
                 revisions.Add(entry);
             }
-            else if (isLast)
+            else if (isLast && lines[i].Length < MinRecordLineLength)
             {
+                // A terminated line was written whole (the line and its newline go in one write), so only one too short
+                // to be any record is taken for a cut-off write; a full-length one that fails is counted below.
                 trailingTruncated = true;
             }
             else

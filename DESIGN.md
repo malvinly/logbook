@@ -148,7 +148,7 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 ### Load rules
 
 - Read all lines. Parse the header; refuse to open on a bad or unknown `format`.
-- Decrypt each record line. A line that fails base64 or GCM verification in the **middle** of the file is counted and skipped; the main window shows "N unreadable lines" so corruption is visible, not hidden. A **trailing** line that is truncated (no terminating `\n`, or short) is skipped silently with a log entry; it is the expected result of a crash mid-write.
+- Decrypt each record line. A line that fails base64 or GCM verification in the **middle** of the file is counted and skipped; the main window shows "N unreadable lines" so corruption is visible, not hidden. A **trailing** line that is truncated is skipped silently with a log entry; it is the expected result of a crash mid-write. Truncated means exactly this: the last line has no terminating `\n`, or it is shorter than any valid record line could be (the 40 base64 characters of a nonce and a tag). A full-length last line that ends in `\n` was written whole, since a line and its newline go in one write, so if it fails it is counted as unreadable like a middle line.
 - Group by `id`, keep the highest `rev`. Drop tombstoned ids from the live list but keep them for the revision view.
 - Everything lives in `List<Entry>` for the life of the process. Queries are LINQ. No persisted index.
 

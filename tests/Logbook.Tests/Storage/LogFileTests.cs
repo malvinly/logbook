@@ -231,8 +231,9 @@ public sealed class LogFileTests : IDisposable
     }
 
     [Fact]
-    public void UnreadableTerminatedTrailingLineIsTreatedAsTruncated()
+    public void ShortTerminatedTrailingLineIsTreatedAsTruncated()
     {
+        // Too short to hold even a nonce and a tag, so it can only be the remains of a cut-off write.
         LogFile log = Create();
         log.Append(NewEntry("first"));
         AppendRawLine("AAAA");
@@ -240,6 +241,25 @@ public sealed class LogFileTests : IDisposable
         LogFile reopened = Open();
         Assert.True(reopened.TrailingLineTruncated);
         Assert.Equal(0, reopened.UnreadableLineCount);
+        Assert.Equal("first", Assert.Single(reopened.Live).Summary);
+    }
+
+    [Fact]
+    public void FullLengthTerminatedTrailingLineThatFailsIsCountedAsUnreadable()
+    {
+        // A line and its newline go to disk in one write, so a terminated full-length line was written whole: if it does
+        // not decrypt, that is corruption to show, not a crash to skip.
+        LogFile log = Create();
+        log.Append(NewEntry("first"));
+        log.Append(NewEntry("second"));
+        string[] lines = FileLines();
+        char[] last = lines[2].ToCharArray();
+        last[20] = last[20] == 'A' ? 'B' : 'A';
+        File.WriteAllText(_file.Path, lines[0] + "\n" + lines[1] + "\n" + new string(last) + "\n");
+
+        LogFile reopened = Open();
+        Assert.Equal(1, reopened.UnreadableLineCount);
+        Assert.False(reopened.TrailingLineTruncated);
         Assert.Equal("first", Assert.Single(reopened.Live).Summary);
     }
 
