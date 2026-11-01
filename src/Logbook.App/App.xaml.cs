@@ -909,7 +909,15 @@ public sealed partial class App : Application, IDisposable
         {
             // Windows broadcasts this when light or dark mode (or the accent) changes; follow it without a restart.
             // WPF handles the same message to swap its Fluent resources, so the tokens follow once that work is done.
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, () => AppTheme.FollowWindows(this));
+            // An open capture box's acrylic tint is a window attribute, not a brush, so it is told as Settings save does.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+            {
+                AppTheme.FollowWindows(this);
+                if (_capture is { } capture)
+                {
+                    Backdrop.RefreshTint(capture);
+                }
+            });
         }
 
         return IntPtr.Zero;
