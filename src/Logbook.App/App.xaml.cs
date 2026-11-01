@@ -129,6 +129,16 @@ public sealed partial class App : Application, IDisposable
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
     {
         // A sign-out or shutdown would take the in-memory queue with it; one more try, then refuse rather than lose it.
+        // A write still running would be killed halfway, so that is refused too; it ends within seconds.
+        if (WriteInFlight())
+        {
+            e.Cancel = true;
+            Diag.Log("Refused session end while a write was in flight");
+            AppDialog.Inform(null, "Still writing", "Logbook is writing to the file right now. Wait a moment, then sign out or shut down again.", DialogTone.Warning);
+            base.OnSessionEnding(e);
+            return;
+        }
+
         int pending = FlushPendingNow();
         if (pending > 0)
         {
@@ -167,7 +177,9 @@ public sealed partial class App : Application, IDisposable
         return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
     }
 
-    // Tray → Exit. Unsaved captures get one more write and then a question; the answer must be explicit.
+    // Tray → Exit. A write still running is waited for, not killed halfway; unsaved captures get one more write and
+    // then a question, and the answer must be explicit. The answer covers only the entries it named: a capture made
+    // while the question was open and not written either asks again.
     private void RequestExit()
     {
         if (_exiting)
@@ -175,9 +187,21 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        int pending = FlushPendingNow();
-        if (pending > 0)
+        int accepted = 0; // how many unsaved entries the user has agreed to lose
+        while (true)
         {
+            if (WriteInFlight())
+            {
+                AppDialog.Inform(VisibleMain, "Still writing", "Logbook is writing to the file right now. Wait a moment, then exit again.", DialogTone.Warning);
+                return;
+            }
+
+            int pending = FlushPendingNow();
+            if (pending <= accepted)
+            {
+                break;
+            }
+
             bool exitAnyway = AppDialog.Confirm(
                 null,
                 "Unsaved entries",
@@ -191,7 +215,12 @@ public sealed partial class App : Application, IDisposable
                 return;
             }
 
-            Diag.Log($"Exiting with {pending} pending at the user's request");
+            accepted = pending;
+        }
+
+        if (accepted > 0)
+        {
+            Diag.Log($"Exiting with {accepted} pending at the user's request");
         }
 
         _exiting = true;
@@ -543,9 +572,11 @@ public sealed partial class App : Application, IDisposable
     /// True while anything is pending, being written, or rewriting the header. Locking would drop unsaved captures, and
     /// a passphrase change must not race an append, so both wait for this to clear.
     /// </summary>
-    private bool WriteInProgress(LogFile log)
-        => log.PendingCount > 0
-            || _writesInFlight > 0
+    private bool WriteInProgress(LogFile log) => log.PendingCount > 0 || WriteInFlight();
+
+    /// <summary>True while a capture, a detail-pane save or a passphrase change is being written right now.</summary>
+    private bool WriteInFlight()
+        => _writesInFlight > 0
             || _main is { IsSaving: true }
             || Windows.OfType<ChangePassphraseWindow>().Any(w => w.IsChanging);
 
