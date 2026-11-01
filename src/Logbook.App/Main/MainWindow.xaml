@@ -192,6 +192,8 @@
               <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,8,0,0" />
               <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                 <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
+                <Button Content="Follow up" Style="{StaticResource FooterButton}" Margin="8,0,0,0" Click="OnFollowUpClick"
+                        ToolTip="A new entry with these tags and people, linked to this one" />
                 <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
               </StackPanel>
 

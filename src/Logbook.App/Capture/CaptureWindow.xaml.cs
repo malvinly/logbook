@@ -10,14 +10,19 @@ namespace Logbook.App.Capture;
 
 /// <summary>
 /// The launcher-style capture box (DESIGN.md section 5). The line is parsed on every keystroke and the recognised
-/// tokens show as chips, so what will be stored is visible before Enter. The window remembers nothing.
+/// tokens show as chips, so what will be stored is visible before Enter. The window remembers nothing: a follow-up's
+/// pre-fill comes from the explicit Follow up button and lives only as long as this window, so Escape drops it.
 /// </summary>
 public sealed partial class CaptureWindow : Window
 {
     private readonly Rect _workArea;
     private readonly SuggestionPopup[] _popups;
+    private readonly Entry? _followUpOf;
 
-    public CaptureWindow(Rect workArea, Func<Suggestions> suggestions)
+    /// <param name="workArea">The monitor work area to centre on.</param>
+    /// <param name="suggestions">Autocomplete source.</param>
+    /// <param name="followUpOf">The entry this one follows up on, from the main window's Follow up button; null for a plain capture.</param>
+    public CaptureWindow(Rect workArea, Func<Suggestions> suggestions, Entry? followUpOf = null)
     {
         InitializeComponent();
         _workArea = workArea;
@@ -26,6 +31,12 @@ public sealed partial class CaptureWindow : Window
         // Centred and high, as a launcher sits; the box grows downwards when "more" opens.
         Left = workArea.Left + (workArea.Width - Width) / 2;
         Top = workArea.Top + workArea.Height * 0.25;
+        _followUpOf = followUpOf;
+        if (followUpOf is not null)
+        {
+            PrefillFollowUp(followUpOf);
+        }
+
         Loaded += (_, _) => Line.Focus();
     }
 
@@ -34,6 +45,58 @@ public sealed partial class CaptureWindow : Window
 
     /// <summary>Raised once with the new entry when the user confirms. The window closes itself afterwards.</summary>
     public event Action<Entry>? Captured;
+
+    // The original's tags and people go into the line as typed tokens, so the chips show them and they stay editable.
+    // No tag is added for the thread itself: relatedTo carries it (DESIGN.md section 7).
+    private void PrefillFollowUp(Entry original)
+    {
+        List<string> tokens = [];
+        List<string> extraTags = [];
+        List<string> extraPeople = [];
+        foreach (string tag in original.Tags)
+        {
+            // A stored name that would not parse back as a token (one starting with a digit, say) goes to the "more" box.
+            if (ParsesBackAs("#" + tag, tag, line => line.Tags))
+            {
+                tokens.Add("#" + tag);
+            }
+            else
+            {
+                extraTags.Add(tag);
+            }
+        }
+
+        foreach (string person in original.People)
+        {
+            if (ParsesBackAs("@" + person, person, line => line.People))
+            {
+                tokens.Add("@" + person);
+            }
+            else
+            {
+                extraPeople.Add(person);
+            }
+        }
+
+        // A trailing space so typing starts a new word rather than extending the last token.
+        Line.Text = tokens.Count > 0 ? string.Join(' ', tokens) + " " : "";
+        Line.CaretIndex = Line.Text.Length;
+        ExtraTags.Text = string.Join(' ', extraTags);
+        ExtraPeople.Text = string.Join(' ', extraPeople);
+        if (extraTags.Count > 0 || extraPeople.Count > 0)
+        {
+            ToggleMore();
+        }
+
+        FollowUpNote.Text = $"Follows up on: {Format.DateTime(original.OccurredAt)} — {original.Summary}";
+        FollowUpNote.Visibility = Visibility.Visible;
+    }
+
+    private static bool ParsesBackAs(string token, string name, Func<CaptureLine, IReadOnlyList<string>> pick)
+    {
+        IReadOnlyList<string> names = pick(LineParser.ParseCapture(token, DateTimeOffset.Now));
+        return names.Count == 1 && names[0] == name;
+    }
 
     private void OnLineChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
@@ -112,7 +175,7 @@ public sealed partial class CaptureWindow : Window
             TokenNormalizer.NormalizeList(ExtraTags.Text, existing: line.Tags),
             TokenNormalizer.NormalizeList(ExtraPeople.Text, existing: line.People),
             Lines(Refs.Text),
-            [],
+            _followUpOf is null ? [] : [_followUpOf.Id],
             false);
 
         Captured?.Invoke(entry);

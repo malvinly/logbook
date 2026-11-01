@@ -67,6 +67,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Raised for Help → Grammar cheat sheet.</summary>
     public event Action? CheatSheetRequested;
 
+    /// <summary>Raised by the detail pane's Follow up button with the selected entry; the app owns the capture box.</summary>
+    public event Action<Entry>? FollowUpRequested;
+
     /// <summary>Raised after an edit or delete was appended, so caches built from the live set can be dropped.</summary>
     public event Action? Changed;
 
@@ -201,6 +204,14 @@ public sealed partial class MainWindow : Window
         await AppendAsync(revision).ConfigureAwait(true);
         Refresh();
         Select(revision.Id);
+    }
+
+    private void OnFollowUpClick(object sender, RoutedEventArgs e)
+    {
+        if (_editor is not null)
+        {
+            FollowUpRequested?.Invoke(_editor.Current);
+        }
     }
 
     private async void OnDeleteClick(object sender, RoutedEventArgs e)

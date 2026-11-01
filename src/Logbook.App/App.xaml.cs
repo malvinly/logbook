@@ -456,20 +456,24 @@ public sealed partial class App : Application, IDisposable
         Diag.Log("Locked from the tray");
     }
 
-    private void ShowCapture()
+    private void ShowCapture() => ShowCapture(null);
+
+    /// <param name="followUpOf">The entry the main window's Follow up button was pressed on; null for a plain capture.</param>
+    private void ShowCapture(Entry? followUpOf)
     {
         if (!EnsureUnlocked())
         {
             return;
         }
 
+        // A box that is already open keeps what was typed in it, follow-up or not; nothing typed is ever thrown away.
         if (_capture is { } open)
         {
             open.Activate();
             return;
         }
 
-        CaptureWindow capture = new(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions);
+        CaptureWindow capture = new(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions, followUpOf);
         capture.Captured += entry => _ = SaveCapturedAsync(entry, capture.WorkArea);
         capture.Closed += (_, _) => _capture = null;
         _capture = capture;
@@ -533,6 +537,7 @@ public sealed partial class App : Application, IDisposable
             _main.CopyTimelineRequested += ShowExportPanel;
             _main.ExportDecryptedRequested += ShowExportDecrypted;
             _main.CheatSheetRequested += ShowCheatSheet;
+            _main.FollowUpRequested += ShowCapture;
             _main.Changed += () =>
             {
                 _suggestions = null;

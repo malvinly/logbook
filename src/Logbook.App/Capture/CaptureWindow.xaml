@@ -23,6 +23,8 @@
                    FontSize="{StaticResource CaptureSize}" Foreground="{DynamicResource TextMutedBrush}" Margin="2,0,0,0" VerticalAlignment="Center" />
       </Grid>
     </Grid>
+    <!-- Shown only for a follow-up, so the link that will be stored is visible before Enter, like the chips. -->
+    <TextBlock x:Name="FollowUpNote" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis" Margin="20,0,20,12" Visibility="Collapsed" />
     <Border Height="1" Background="{DynamicResource DividerBrush}" />
     <Grid Margin="20,10,14,10" MinHeight="26">
       <Grid.ColumnDefinitions>
