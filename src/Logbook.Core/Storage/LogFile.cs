@@ -34,6 +34,7 @@ public sealed class LogFile
     private readonly Dictionary<string, Entry> _latest = []; // highest rev per id; on a tie the later line wins
     private readonly Queue<string> _pending = new(); // encrypted lines that have not reached the disk, oldest first
     private bool _needsLeadingNewline; // the file ended mid-line when opened; the next write must start on a new line
+    private bool _closed; // set by Close, under both locks
 
     private LogFile(string path, FileHeader header, byte[] dataKey, List<Entry> revisions, int unreadableLineCount, bool trailingLineTruncated, bool endsMidLine, IReadOnlyList<TimeSpan>? retryDelays)
     {
@@ -119,12 +120,22 @@ public sealed class LogFile
         byte[] salt = KeyDerivation.NewSalt();
         byte[] dataKey = DataKey.Generate();
         byte[] kek = KeyDerivation.Derive(passphrase, salt, KeyDerivation.DefaultIterations);
+        string wrappedKey;
+        try
+        {
+            wrappedKey = DataKey.Wrap(dataKey, kek);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(kek);
+        }
+
         FileHeader header = new(
             FileHeader.CurrentFormat,
             Ulid.Generate(now),
             now,
             new KdfParameters(FileHeader.Pbkdf2HmacSha256, Convert.ToBase64String(salt), KeyDerivation.DefaultIterations),
-            DataKey.Wrap(dataKey, kek));
+            wrappedKey);
 
         using (FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, bufferSize: 4096, FileOptions.WriteThrough))
         {
@@ -151,7 +162,15 @@ public sealed class LogFile
 
         FileHeader header = ParseHeader(text[..headerEnd]);
         byte[] kek = KeyDerivation.Derive(passphrase, Convert.FromBase64String(header.Kdf.Salt), header.Kdf.Iterations);
-        byte[] dataKey = DataKey.Unwrap(header.WrappedKey, kek); // the wrap is the passphrase verifier
+        byte[] dataKey;
+        try
+        {
+            dataKey = DataKey.Unwrap(header.WrappedKey, kek); // the wrap is the passphrase verifier
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(kek);
+        }
 
         // A terminating newline leaves an empty final segment, which is not a line. Without one, the final
         // segment is a line that was cut off mid-write.
@@ -196,9 +215,11 @@ public sealed class LogFile
     public bool Append(Entry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        string line = LineCipher.Encrypt(_dataKey, Encoding.UTF8.GetBytes(LogbookJson.Serialize(entry)));
         lock (_state)
         {
+            // Encrypted under the state lock, so Close cannot zero the key halfway through.
+            ThrowIfClosed();
+            string line = LineCipher.Encrypt(_dataKey, Encoding.UTF8.GetBytes(LogbookJson.Serialize(entry)));
             _revisions.Add(entry);
             Fold(entry);
             if (_needsLeadingNewline)
@@ -222,7 +243,9 @@ public sealed class LogFile
     /// <see cref="CryptographicException"/> for a wrong current passphrase, <see cref="InvalidDataException"/> when the
     /// header on disk is not one this app can replace in place (or belongs to another data key), and
     /// <see cref="IOException"/> or <see cref="UnauthorizedAccessException"/> when the file cannot be read or written.
-    /// In every failure case the file is left as it was.
+    /// In every failure case the file is left as it was, except an <see cref="IOException"/> whose message says the
+    /// header is in an unknown state and which passphrase to try first. <see cref="InvalidOperationException"/> after
+    /// <see cref="Close"/>.
     /// </summary>
     public void ChangePassphrase(string currentPassphrase, string newPassphrase)
     {
@@ -232,6 +255,7 @@ public sealed class LogFile
         // The writer lock keeps appends out for the whole change, so a header write never races a record write.
         lock (_writer)
         {
+            ThrowIfClosed();
             if (PendingCount > 0)
             {
                 throw new InvalidOperationException("Entries are still waiting to be written; change the passphrase once they are on disk.");
@@ -362,7 +386,46 @@ public sealed class LogFile
     }
 
     /// <summary>Tries the pending queue again, oldest first. Returns true when nothing is left pending.</summary>
-    public bool RetryPending() => WritePending();
+    public bool RetryPending()
+    {
+        lock (_writer)
+        {
+            ThrowIfClosed();
+        }
+
+        return WritePending();
+    }
+
+    /// <summary>
+    /// Zeroes the data key and drops the decrypted entries, for Lock now and idle lock (DESIGN.md section 9). Afterwards
+    /// <see cref="Live"/> and <see cref="Revisions"/> are empty and <see cref="Append"/>, <see cref="RetryPending"/> and
+    /// <see cref="ChangePassphrase"/> throw <see cref="InvalidOperationException"/> rather than encrypt under a zeroed
+    /// key. Anything still pending is dropped with the key, so the caller must refuse to lock while
+    /// <see cref="PendingCount"/> is not zero. Waits for a write in flight to finish. Calling it again does nothing.
+    /// </summary>
+    public void Close()
+    {
+        // Both locks: the writer lock waits out a write or passphrase change in flight, and the state lock keeps Append
+        // from encrypting while the key is zeroed. Holding either lock is then enough to see _closed.
+        lock (_writer)
+        {
+            lock (_state)
+            {
+                _closed = true;
+                CryptographicOperations.ZeroMemory(_dataKey);
+                _revisions.Clear();
+                _latest.Clear();
+            }
+        }
+    }
+
+    private void ThrowIfClosed()
+    {
+        if (_closed)
+        {
+            throw new InvalidOperationException("The log is closed; unlock it again to write.");
+        }
+    }
 
     private bool WritePending()
     {

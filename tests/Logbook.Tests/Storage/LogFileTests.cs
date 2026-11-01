@@ -373,6 +373,33 @@ public sealed class LogFileTests : IDisposable
     }
 
     [Fact]
+    public void AfterCloseWritesAreRefusedAndTheEntriesAreDropped()
+    {
+        LogFile log = Create();
+        log.Append(NewEntry("first"));
+        byte[] before = File.ReadAllBytes(_file.Path);
+
+        log.Close();
+
+        Assert.Throws<InvalidOperationException>(() => log.Append(NewEntry("second")));
+        Assert.Throws<InvalidOperationException>(() => log.RetryPending());
+        Assert.Throws<InvalidOperationException>(() => log.ChangePassphrase(Passphrase, "battery staple"));
+        Assert.Empty(log.Live);
+        Assert.Empty(log.Revisions);
+        Assert.Equal(before, File.ReadAllBytes(_file.Path));
+        Assert.Equal("first", Assert.Single(Open().Live).Summary);
+    }
+
+    [Fact]
+    public void CloseTwiceIsHarmless()
+    {
+        LogFile log = Create();
+        log.Close();
+        log.Close();
+        Assert.Throws<InvalidOperationException>(() => log.Append(NewEntry("first")));
+    }
+
+    [Fact]
     public void ReadOnlyFileLeavesTheLinePendingInsteadOfThrowing()
     {
         LogFile log = Create();
