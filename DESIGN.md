@@ -154,7 +154,7 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 
 ### Sync-service specifics
 
-- Some sync clients keep only a placeholder locally and download the file on first access. On launch, check the file for a reparse point and force hydration (open and read it) before anything else. Recommend the user mark the folder as always available offline.
+- Some sync clients keep only a placeholder locally and download the file on first access. On launch, check the file's attributes for a placeholder (`Offline` or recall-on-data-access; the reparse-point flag alone proves nothing, since sync clients leave it on fully downloaded files too). The file is not read before unlock (section 9), so the first read at unlock is what hydrates it; when the launch check saw a placeholder, a balloon after that unlock says the log was downloaded and recommends marking the folder as always available offline.
 - On launch, glob the data folder for `logbook*.jsonl`, leaving out `logbook-export-*` names (the decrypted export's own default name, section 11), which are never logs. If more than one file matches (sync conflict copies, old-profile re-syncs), do not guess: show each with its header `createdAt` and line count and ask which is the real one.
 
 ## 9. Passphrase and locked state
@@ -289,7 +289,7 @@ The app has to look good before any further feature matters, and the small gramm
 
 1. Design pass over the whole app. Phase 1 restyled only the basics (text boxes, buttons, chips, list rows) and left the rest on WPF's default look, which reads as dated: the menu bar, date pickers, combo boxes, scroll bars, checkboxes, message boxes, and the window chrome of the main window and dialogs. The brief:
    - Direction: Windows 11 Fluent, as in PowerToys Command Palette (the successor of PowerToys Run): a translucent Mica or acrylic surface, rounded corners, one large input with results beneath it, generous padding, Segoe UI Variable, light or dark following the OS with the system accent colour.
-   - Base: WPF's built-in Fluent theme (first-party, so section 16's no-third-party-suite rule holds). It restyles every stock control, handles light and dark and the accent colour. The hand-rolled control templates from Phase 1 that would fight it are removed; Logbook's own tokens, chips and markers stay in the one `ResourceDictionary`, so the dark theme remains a second dictionary of tokens. Verify the theme's status on .NET 10 before building on it.
+   - Base: WPF's built-in Fluent theme (first-party, so section 16's no-third-party-suite rule holds). It restyles every stock control, handles light and dark and the accent colour. The hand-rolled control templates from Phase 1 that would fight it are removed; Logbook's own tokens, chips and markers stay in Logbook's own dictionaries (section 16), so the dark theme remains a second dictionary of colour tokens. Verify the theme's status on .NET 10 before building on it.
    - Capture box: a launcher. Mica or acrylic, rounded, centred high on the active monitor, one large input, with the chip strip and the "more" section as rows beneath it.
    - Toast: Windows 11 notification style.
    - Main window: Fluent list and detail pane in the manner of PowerToys Settings, with the count header kept prominent.
@@ -304,7 +304,7 @@ The app has to look good before any further feature matters, and the small gramm
 
 Pure UI over the existing query and renderer, plus one settings field. No risk to the data.
 
-1. Saved queries — name → filter string, one click each, stored in the settings file. The three driving scenarios become three buttons.
+1. Saved queries — name → filter string, one click each, stored in the settings file. Nothing is seeded (section 10); the three driving scenarios become buttons when you save them.
 2. Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
 3. Export toggle to include people and tags per line (useful when the filter is broader than one person).
 
@@ -361,7 +361,7 @@ Settled up front so no coding session has to guess. Change them here first, then
 
 WPF. The app must look polished, and the main window (grouped results, tag chips, a detail pane with changed-field highlighting, a fading toast) is where WinForms would turn into weeks of owner-drawn GDI+ work that still looks dated. WPF gives vector rendering, native DPI scaling, styles, templates, `ItemsControl` grouping and storyboard animations for free. The hard parts (global hotkey, tray, single instance) are Win32 P/Invoke in either framework. WinUI 3 was rejected because it needs the Windows App SDK runtime or MSIX, which fights single-exe deployment; Avalonia because it is a third-party dependency for a Windows-only app.
 
-WPF rules for this project: plain code-behind plus a hand-written `INotifyPropertyChanged` base class; no MVVM framework, no behaviors library, no third-party control suite. One `ResourceDictionary` holds the theme (colors, brushes, type scale, corner radius) so a dark theme later is a second dictionary, not a rewrite. Custom window chrome (`WindowChrome`) for the capture popup and toast; standard chrome for the main window.
+WPF rules for this project: plain code-behind plus a hand-written `INotifyPropertyChanged` base class; no MVVM framework, no behaviors library, no third-party control suite. WPF's built-in Fluent theme is the base (merged as a dictionary; the `Application.ThemeMode` API is still experimental on .NET 10 and is not used). Logbook's own theme values live in the `Theme` folder and nowhere else: `Theme.xaml` holds fonts, type scale, radii and the control styles, and `Theme.Light.xaml` and `Theme.Dark.xaml` hold the colours and brushes, so light and dark differ only in which of those two is merged (section 12 says when). Custom window chrome (`WindowChrome`) for the capture popup and toast; standard chrome for the main window.
 
 ### Projects and layout
 
@@ -392,7 +392,7 @@ Namespaces follow folders: `Logbook.Core.Grammar`, `Logbook.Core.Storage`, `Logb
 
 ### Time and formatting
 
-- Capture uses `DateTimeOffset.Now`. Storage is ISO-8601 round-trip (`"O"`) with offset.
+- Capture uses `DateTimeOffset.Now`. Storage is ISO-8601 with the offset as `System.Text.Json` writes a `DateTimeOffset`: `2026-10-06T10:14:03-05:00`, with fractional seconds only when they are not zero. Only the CSV export uses the fixed-width round-trip form `"O"` (section 11).
 - Export renders with `CultureInfo.InvariantCulture` and fixed patterns: `ddd MMM d, yyyy h:mm tt` for full, `MMM d, yyyy` for compact. Output is intentionally US-style regardless of machine locale, because the format is part of the spec.
 - `since:`/`until:` are inclusive calendar dates, compared against the date each entry carries in its own stored offset, never against a converted instant: an entry written at 00:30 in Tokyo is a Tokyo-date entry wherever the log is read. `last:Nd` = N days, `last:Nw` = 7N days, `last:Nm` = `AddMonths(-N)`, all counted back from today's date.
 - `at:` with a date and no time stores 12:00:00 in the current local offset.
