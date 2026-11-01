@@ -44,7 +44,8 @@ public sealed partial class ExportDecryptedWindow : Window
             DefaultExt = ".jsonl",
             OverwritePrompt = true,
         };
-        if (dialog.ShowDialog(this) == true)
+        // Lock now and the idle lock close this window even while the save dialog is up.
+        if (dialog.ShowDialog(this) == true && IsLoaded)
         {
             PathBox.Text = dialog.FileName;
         }
@@ -76,7 +77,8 @@ public sealed partial class ExportDecryptedWindow : Window
             return;
         }
 
-        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots))
+        // A lock while the question was up closed this window and emptied the log; there is nothing to write then.
+        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots) || !IsLoaded)
         {
             return;
         }

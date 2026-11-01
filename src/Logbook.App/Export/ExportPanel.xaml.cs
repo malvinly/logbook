@@ -108,7 +108,8 @@ public sealed partial class ExportPanel : Window
             DefaultExt = ".csv",
             OverwritePrompt = true,
         };
-        if (dialog.ShowDialog(this) != true)
+        // Lock now and the idle lock close this panel even while the save dialog is up; a closed panel writes nothing.
+        if (dialog.ShowDialog(this) != true || !IsLoaded)
         {
             return;
         }
@@ -120,7 +121,7 @@ public sealed partial class ExportPanel : Window
             return;
         }
 
-        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots))
+        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots) || !IsLoaded)
         {
             return;
         }
