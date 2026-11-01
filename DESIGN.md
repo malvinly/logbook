@@ -161,8 +161,9 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 
 - The app starts locked. The tray icon shows a lock glyph. No file is read until unlock.
 - Unlock is prompted at launch. If dismissed, the app stays in the tray locked, and the next hotkey press prompts for the passphrase before showing the capture box.
-- After unlock, the data key stays in process memory until the app exits or is locked. Idle auto-lock is Phase 5; when it arrives it reuses the same "prompt first, then capture" path.
-- "Lock now" in the tray menu returns to the startup state: the open log (data key and decrypted entries) is dropped, every window that shows entries closes, the lock glyph shows, and the next hotkey prompts first. Unsaved captures live only in the open log, so locking is refused with an explanation while anything is pending or still being written.
+- After unlock, the data key stays in process memory until the app exits or is locked, by Lock now or by idle auto-lock.
+- Idle auto-lock (Phase 5) takes the Lock now path below after `idleLockMinutes` (section 12) without input, and the next hotkey takes the same "prompt first, then capture" path. "Without input" means no keyboard or mouse input to the Windows session at all (`GetLastInputInfo`), not just to Logbook: the point is that you walked away from the machine, and locking while you work in other apps would make every capture ask for the passphrase and kill the habit the app exists for. It is checked once a minute while unlocked and the check stops on lock; due means at least N minutes since the last input, and a last input that appears to lie in the future (a clock change) is not idle. A check never shows a dialog: while anything is pending or being written it skips and tries again next minute, since the tray icon already shows the pending count, and while one of the app's modal dialogs is open it waits too, so a half-made decision there is not closed under you. Otherwise it closes what Lock now closes, so a capture box with typed text and an unsaved edit in the detail pane are lost, which is "clear the data key after N minutes" taken literally.
+- "Lock now" in the tray menu returns to the startup state: the open log (data key and decrypted entries) is dropped, every window that shows entries closes, the lock glyph shows, and the next hotkey prompts first. Unsaved captures live only in the open log, so locking is refused with an explanation while anything is pending or still being written, or while a passphrase change is rewriting the header.
 - The passphrase is never written anywhere. The derived key is never written anywhere.
 
 ## 10. Main window
@@ -234,7 +235,7 @@ The save dialog defaults to a folder **outside** the synced root and explains wh
 
 ## 12. Settings, startup, and the moving user profile
 
-- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, export toggles, saved queries (section 10). The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
+- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, `idleLockMinutes` (lock after that many minutes without input, section 9; 0 never locks; default 30; edited in the Settings window as a whole number from 0 to 1440), export toggles, saved queries (section 10). The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
 - On launch, if the app is not registered to start with Windows for the current user, it offers once to register (a shortcut in the Startup folder). A login change wipes that shortcut; the offer is how it comes back.
 - Single instance: a named mutex. A second launch activates the first instance's main window and exits.
 - `RegisterHotKey` failure is surfaced immediately with a balloon naming the hotkey and offering Settings. A silently dead hotkey means a week of nothing logged.
@@ -319,6 +320,7 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 5. A window and taskbar icon drawn from the tray icon's "L" badge; the windows still show WPF's default icon in their title bars.
 6. Export header from a saved query: when the filter came from a saved-query button, title the timeline with the button's name, so a weekly digest reads `This week — 2 entries` rather than `last:7d — 2 entries`.
 7. "Followed up by" lines in the detail pane of an original, the reverse of the Phase 4 "Follows up on" line, if following a thread forwards turns out to matter in practice.
+8. Lock when Windows locks the session (`WM_WTSSESSION_CHANGE`), alongside the Phase 5 idle lock, if locking the workstation turns out to be the moment you walk away more often than N idle minutes are.
 
 ### Not building
 
