@@ -292,6 +292,33 @@ public sealed class ChangePassphraseTests : IDisposable
     }
 
     [Fact]
+    public async Task RefusedWhileAWriteIsInFlight()
+    {
+        // An append is retrying against a held file. Whichever takes the writer lock first, the change is refused: it
+        // either sees the line already queued, or waits for the append to give up and then sees it pending.
+        IReadOnlyList<TimeSpan> slow = [.. Enumerable.Repeat(TimeSpan.FromMilliseconds(50), 6)];
+        LogFile log = LogFile.Create(_file.Path, OldPassphrase, Now, slow);
+        log.Append(NewEntry("first"));
+        byte[] before = File.ReadAllBytes(_file.Path);
+
+        using (new FileStream(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Task<bool> write = Task.Run(() => log.Append(NewEntry("in flight")));
+            for (int i = 0; i < 200 && log.PendingCount == 0; i++)
+            {
+                await Task.Delay(5);
+            }
+
+            Assert.Equal(1, log.PendingCount);
+            Assert.Throws<InvalidOperationException>(() => log.ChangePassphrase(OldPassphrase, NewPassphrase));
+            Assert.False(await write);
+        }
+
+        Assert.Equal(before, File.ReadAllBytes(_file.Path));
+        Assert.Equal(1, log.PendingCount);
+    }
+
+    [Fact]
     public void FileHeldByAnotherProcessFailsWithIOExceptionAndChangesNothing()
     {
         LogFile log = CreateWithEntries();
