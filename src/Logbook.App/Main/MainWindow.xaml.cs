@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -151,19 +150,10 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        List<string> words = [.. Filter.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries)];
-        words.RemoveAll(w => w.StartsWith("since:", StringComparison.Ordinal) || w.StartsWith("until:", StringComparison.Ordinal) || w.StartsWith("last:", StringComparison.Ordinal));
-        if (FromDate.SelectedDate is { } from)
-        {
-            words.Add("since:" + from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        }
-
-        if (ToDate.SelectedDate is { } to)
-        {
-            words.Add("until:" + to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        }
-
-        Filter.Text = string.Join(' ', words);
+        // The grammar does the rewrite, so phrases survive and a last: token is replaced by the fixed date it stood for.
+        DateOnly? since = FromDate.SelectedDate is { } from ? DateOnly.FromDateTime(from) : null;
+        DateOnly? until = ToDate.SelectedDate is { } to ? DateOnly.FromDateTime(to) : null;
+        Filter.Text = LineParser.WithDateRange(Filter.Text, since, until);
     }
 
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)

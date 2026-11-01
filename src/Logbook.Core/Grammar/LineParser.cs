@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace Logbook.Core.Grammar;
@@ -81,6 +82,53 @@ public static class LineParser
         }
 
         return new QueryLine(words, phrases, tags, people, since, until);
+    }
+
+    /// <summary>
+    /// The date-range picker's rewrite (DESIGN.md section 10): the same filter text with every <c>since:</c>,
+    /// <c>until:</c> and <c>last:</c> token removed and the given bounds appended. Phrases and other tokens are untouched.
+    /// </summary>
+    public static string WithDateRange(string text, DateOnly? since, DateOnly? until)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        StringBuilder rest = new();
+        bool removedPrevious = false;
+        foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
+        {
+            if (token.Kind == TokenKind.Keyword && token.Key is "since" or "until" or "last")
+            {
+                removedPrevious = true;
+                continue;
+            }
+
+            // The whitespace that separated a removed token from what follows goes with it.
+            string raw = removedPrevious && token.Kind == TokenKind.Text ? token.Raw.TrimStart() : token.Raw;
+            removedPrevious = false;
+            rest.Append(raw);
+        }
+
+        StringBuilder result = new(rest.ToString().Trim());
+        if (since is { } from)
+        {
+            AppendToken(result, "since:" + from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        }
+
+        if (until is { } to)
+        {
+            AppendToken(result, "until:" + to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        }
+
+        return result.ToString();
+    }
+
+    private static void AppendToken(StringBuilder text, string token)
+    {
+        if (text.Length > 0)
+        {
+            text.Append(' ');
+        }
+
+        text.Append(token);
     }
 
     private static void AddUnique(List<string> list, string value)
