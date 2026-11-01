@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Logbook.App.Settings;
+using Logbook.Core.Storage;
 using Microsoft.Win32;
 
 namespace Logbook.App.Startup;
@@ -35,7 +36,9 @@ public sealed partial class FirstRunWindow : Window
 
     public string Root { get; private set; } = "";
 
-    public Settings.Settings Settings { get; private set; } = new();
+    public string SyncRootEnvVar { get; private set; } = "";
+
+    public string DataFileRelativePath { get; private set; } = "";
 
     public string DataFilePath { get; private set; } = "";
 
@@ -103,20 +106,24 @@ public sealed partial class FirstRunWindow : Window
             return;
         }
 
-        if (!Path.GetFileName(path).StartsWith("logbook", StringComparison.OrdinalIgnoreCase) || !path.EndsWith(".jsonl", StringComparison.OrdinalIgnoreCase))
+        if (!DataFolder.IsLogFileName(Path.GetFileName(path)))
         {
-            Problem.Text = "The file name should look like logbook.jsonl so the launch checks can find it.";
+            Problem.Text = "The file name should look like logbook.jsonl so the launch checks can find it (and not logbook-export-…, which is reserved for exports).";
+            return;
+        }
+
+        string fullPath = Path.GetFullPath(path);
+        if (!DataFolder.IsUnder(fullPath, root.Path))
+        {
+            Problem.Text = "The file must be inside the synced folder; the settings file beside it names it by a relative path.";
             return;
         }
 
         Root = root.Path;
-        DataFilePath = Path.GetFullPath(path);
+        SyncRootEnvVar = root.EnvVar;
+        DataFilePath = fullPath;
+        DataFileRelativePath = Path.GetRelativePath(root.Path, fullPath);
         CreateNew = !File.Exists(DataFilePath);
-        Settings = new Settings.Settings
-        {
-            SyncRootEnvVar = root.EnvVar,
-            DataFileRelativePath = Path.GetRelativePath(root.Path, DataFilePath),
-        };
         DialogResult = true;
     }
 }

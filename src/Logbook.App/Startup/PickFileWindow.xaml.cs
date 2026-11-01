@@ -35,11 +35,14 @@ public sealed class FileCandidate
 /// <summary>Shown when several <c>logbook*.jsonl</c> files sit beside each other (DESIGN.md section 8).</summary>
 public sealed partial class PickFileWindow : Window
 {
-    public PickFileWindow(IEnumerable<string> paths)
+    /// <param name="paths">The candidates.</param>
+    /// <param name="configuredPath">The file the settings name; preselected when present, otherwise nothing is.</param>
+    public PickFileWindow(IEnumerable<string> paths, string configuredPath)
     {
         InitializeComponent();
-        Files.ItemsSource = paths.Select(p => new FileCandidate(p)).ToList();
-        Files.SelectedIndex = 0;
+        List<FileCandidate> candidates = paths.Select(p => new FileCandidate(p)).ToList();
+        Files.ItemsSource = candidates;
+        Files.SelectedItem = candidates.FirstOrDefault(c => string.Equals(c.Path, configuredPath, StringComparison.OrdinalIgnoreCase));
     }
 
     public string? ChosenPath { get; private set; }
