@@ -208,13 +208,14 @@ Rules:
 - Header line is the filter text as typed (or "All entries"), then the count and the occurredAt range of the set.
 - Each line: weekday, date, time in the entry's stored offset, em dash, summary. Refs are appended as `[INC0041233]` when present.
 - Reason, when present, is indented beneath its line.
-- Tags and people are **not** included. They are indexing for you, not information for the reader. (Phase 2 adds a toggle.)
+- Tags and people are **not** included by default. They are indexing for you, not information for the reader; the **Tags and people** toggle below adds them when the filter is broader than one person.
 
 Toggles in the export panel, remembered between uses:
 
 - **Show gaps** — appends `(N days later)` after the timestamp, computed from the previous entry in the set. Off for the first entry.
 - **Group by month** — inserts a second header line with per-month counts: `Jul (1) · Aug (3) · Sep (1) · Oct (2)`. The list below is unchanged.
 - **Compact** — drops time of day and the weekday: `• Oct 6, 2026 — …`.
+- **Tags and people** — appends the entry's tags and then its people to its line, after the refs, each with its `#` or `@` and separated by single spaces: `• Mon Oct 6, 2026 9:00 AM — Reported the printer outage [INC0040001] #reported #printer @a-smith`. Order is as stored. An entry with no tags and no people is unchanged, and the header line and the reason are unchanged.
 
 ### Export decrypted
 
