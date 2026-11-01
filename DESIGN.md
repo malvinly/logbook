@@ -184,6 +184,8 @@ Newest first, grouped under day headers. Each row: time, summary, tag chips, per
 
 All fields editable: occurredAt (date and time pickers), summary, reason, tags, people, refs. Save appends a new revision. Delete appends a tombstone after a confirm.
 
+A **Follow up** button beside Save opens the capture box pre-filled with the selected entry's tags and people as `#tag @person` text (caret at the end, so the chip strip shows them) and a caption naming the original; the new entry's `relatedTo` holds the original's id. It sits in the detail pane rather than on each row because the pane already holds the per-entry actions and a row button would need a hover template the Fluent list does not have. The pre-fill comes from an explicit button, so it is not memory in the sense of section 16: it lives only in that capture box, and Escape drops it along with the link. If a capture box is already open, it is brought forward unchanged rather than overwritten. No tag is added for the thread. A stored name that would not parse back as a token goes into the "more" section's additional tags or people instead. An entry with `relatedTo` shows one line per original under the revision caption, **Follows up on: Tue Oct 6, 2026 10:14 AM — summary**, which selects the original when clicked (clearing the filter if it hides it), or says the original has since been deleted. Nothing is shown on the row, and the original does not list its follow-ups.
+
 A **Revisions** section lists every prior revision of this entry, read-only, with its `recordedAt`. The current fields are shown against the previous revision with changed fields highlighted. The list row carries an "edited" marker only because this view exists; a marker without the history would be meaningless for the purpose this app serves.
 
 ### Autocomplete
@@ -311,6 +313,7 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 4. Grammar polish: a token that fills a whole parenthetical leaves `()` in the summary (`done (#asked)` stores `done ()`), and in a filter the leftover punctuation becomes words, so `(#asked)` or `@j-doe,` in the filter bar also requires a literal `(` or `,`. Drop punctuation-only leftovers in both.
 5. A window and taskbar icon drawn from the tray icon's "L" badge; the windows still show WPF's default icon in their title bars.
 6. Export header from a saved query: when the filter came from a saved-query button, title the timeline with the button's name, so a weekly digest reads `This week — 2 entries` rather than `last:7d — 2 entries`.
+7. "Followed up by" lines in the detail pane of an original, the reverse of the Phase 4 "Follows up on" line, if following a thread forwards turns out to matter in practice.
 
 ### Not building
 
