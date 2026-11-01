@@ -4,8 +4,6 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using Logbook.App.Diagnostics;
-using Logbook.App.Dialogs;
-using Logbook.App.Startup;
 using Logbook.Core;
 using Logbook.Core.Storage;
 using Microsoft.Win32;
@@ -21,9 +19,6 @@ public sealed partial class ExportDecryptedWindow : Window
     private readonly LogFile _log;
     private readonly string _dataFilePath;
     private readonly IReadOnlyList<string> _syncRoots;
-    // The folder is remembered per Windows profile, never in the synced settings file: it is an absolute local path
-    // that would point a reader of that file at the one plaintext copy.
-    private const string FolderMarker = "export-folder";
 
     public ExportDecryptedWindow(LogFile log, string dataFilePath, IReadOnlyList<string> syncRoots)
     {
@@ -36,28 +31,7 @@ public sealed partial class ExportDecryptedWindow : Window
 
     private static string FileName() => DateTime.Now.ToString("'logbook-export-'yyyy-MM-dd'.jsonl'", CultureInfo.InvariantCulture);
 
-    // The remembered folder, else Documents, else local app data: the first that is not inside any synced folder.
-    private string DefaultFolder()
-    {
-        string?[] candidates =
-        [
-            LocalMarker.Read(FolderMarker),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        ];
-        foreach (string? folder in candidates)
-        {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder) && !IsSynced(folder))
-            {
-                return folder;
-            }
-        }
-
-        // Everything is synced (USERPROFILE as the root does that); the warning after the write will say so.
-        return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-    }
-
-    private bool IsSynced(string path) => _syncRoots.Any(root => DataFolder.IsUnder(path, root));
+    private string DefaultFolder() => PlaintextTarget.DefaultFolder(_syncRoots);
 
     private void OnBrowseClick(object sender, RoutedEventArgs e)
     {
@@ -96,26 +70,15 @@ public sealed partial class ExportDecryptedWindow : Window
             return;
         }
 
-        // Never the encrypted log itself, nor a name the launch check would mistake for one.
-        if (string.Equals(fullPath, Path.GetFullPath(_dataFilePath), StringComparison.OrdinalIgnoreCase))
+        if (PlaintextTarget.Problem(fullPath, _dataFilePath) is { } problem)
         {
-            Report("That is the encrypted log file. Exporting over it would destroy it.", danger: true);
+            Report(problem, danger: true);
             return;
         }
 
-        if (DataFolder.IsLogFileName(Path.GetFileName(fullPath)))
+        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots))
         {
-            Report("A name like logbook*.jsonl would be taken for a log at the next launch. Keep the logbook-export- prefix.", danger: true);
             return;
-        }
-
-        if (IsSynced(fullPath))
-        {
-            bool writeThere = AppDialog.Confirm(this, "Export into a synced folder?", "This folder is synced. The export is unencrypted and others may be able to search it. Write it there anyway?", "Write it there", "Cancel", DialogTone.Warning, confirmIsDefault: false);
-            if (!writeThere)
-            {
-                return;
-            }
         }
 
         bool history = IncludeHistory.IsChecked == true;
@@ -133,7 +96,7 @@ public sealed partial class ExportDecryptedWindow : Window
             }
 
             File.WriteAllText(fullPath, text.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            LocalMarker.Set(FolderMarker, Path.GetDirectoryName(fullPath));
+            PlaintextTarget.RememberFolder(fullPath);
             Diag.Log($"Exported {count} records decrypted (history: {history})");
             Report(FormattableString.Invariant($"Wrote {count} records to {fullPath}. Delete it when you are done with it."), danger: false);
             ExportButton.IsEnabled = false;
