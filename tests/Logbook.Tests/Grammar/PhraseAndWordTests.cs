@@ -7,6 +7,7 @@ public sealed class PhraseAndWordTests
 {
     private static readonly DateOnly Today = new(2026, 10, 8);
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));
+    private static readonly TimeZoneInfo Zone = TestZones.Fixed(TimeSpan.FromHours(-5));
 
     [Fact]
     public void QuotedPhraseIsOneUnit()
@@ -49,7 +50,7 @@ public sealed class PhraseAndWordTests
     [Fact]
     public void QuotesAreOrdinaryTextInCapture()
     {
-        CaptureLine line = LineParser.ParseCapture("said \"no\" to #asked", Now);
+        CaptureLine line = LineParser.ParseCapture("said \"no\" to #asked", Now, Zone);
         Assert.Equal("said \"no\" to", line.Summary);
         Assert.Equal(["asked"], line.Tags);
     }
@@ -69,14 +70,14 @@ public sealed class PhraseAndWordTests
     [Fact]
     public void SummaryIsTrimmedWithWhitespaceCollapsed()
     {
-        CaptureLine line = LineParser.ParseCapture("  asked   #asked   for\taccess  ", Now);
+        CaptureLine line = LineParser.ParseCapture("  asked   #asked   for\taccess  ", Now, Zone);
         Assert.Equal("asked for access", line.Summary);
     }
 
     [Fact]
     public void EmptyLineParsesToNothing()
     {
-        CaptureLine capture = LineParser.ParseCapture("", Now);
+        CaptureLine capture = LineParser.ParseCapture("", Now, Zone);
         Assert.Equal("", capture.Summary);
         Assert.Empty(capture.Tags);
         QueryLine query = LineParser.ParseQuery("", Today);

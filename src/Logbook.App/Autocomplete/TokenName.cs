@@ -15,7 +15,7 @@ internal static class TokenName
 
     private static bool ParsesBack(string token, string name, Func<CaptureLine, IReadOnlyList<string>> pick)
     {
-        IReadOnlyList<string> names = pick(LineParser.ParseCapture(token, DateTimeOffset.Now));
+        IReadOnlyList<string> names = pick(LineParser.ParseCapture(token, DateTimeOffset.Now, TimeZoneInfo.Local));
         return names.Count == 1 && names[0] == name;
     }
 }

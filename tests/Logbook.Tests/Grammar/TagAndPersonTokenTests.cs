@@ -6,12 +6,13 @@ namespace Logbook.Tests.Grammar;
 public sealed class TagAndPersonTokenTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));
+    private static readonly TimeZoneInfo Zone = TestZones.Fixed(TimeSpan.FromHours(-5));
     private static readonly DateOnly Today = new(2026, 10, 8);
 
     [Fact]
     public void CaptureAttachesTagAndRemovesItFromSummary()
     {
-        CaptureLine line = LineParser.ParseCapture("Asked #asked for access", Now);
+        CaptureLine line = LineParser.ParseCapture("Asked #asked for access", Now, Zone);
         Assert.Equal(["asked"], line.Tags);
         Assert.Equal("Asked for access", line.Summary);
     }
@@ -19,7 +20,7 @@ public sealed class TagAndPersonTokenTests
     [Fact]
     public void CaptureAttachesPersonAndRemovesItFromSummary()
     {
-        CaptureLine line = LineParser.ParseCapture("Told @j-doe about it", Now);
+        CaptureLine line = LineParser.ParseCapture("Told @j-doe about it", Now, Zone);
         Assert.Equal(["j-doe"], line.People);
         Assert.Equal("Told about it", line.Summary);
     }
@@ -27,7 +28,7 @@ public sealed class TagAndPersonTokenTests
     [Fact]
     public void CaptureCollectsSeveralTagsAndPeopleInOrder()
     {
-        CaptureLine line = LineParser.ParseCapture("#asked @j-doe #staging-access @a-smith thing", Now);
+        CaptureLine line = LineParser.ParseCapture("#asked @j-doe #staging-access @a-smith thing", Now, Zone);
         Assert.Equal(["asked", "staging-access"], line.Tags);
         Assert.Equal(["j-doe", "a-smith"], line.People);
         Assert.Equal("thing", line.Summary);
@@ -39,7 +40,7 @@ public sealed class TagAndPersonTokenTests
     [InlineData("#already-kebab", "already-kebab")]
     public void TagIsLowercasedWithUnderscoresReplacedByHyphens(string input, string expected)
     {
-        Assert.Equal([expected], LineParser.ParseCapture(input, Now).Tags);
+        Assert.Equal([expected], LineParser.ParseCapture(input, Now, Zone).Tags);
     }
 
     [Theory]
@@ -47,7 +48,7 @@ public sealed class TagAndPersonTokenTests
     [InlineData("@JDOE", "jdoe")]
     public void PersonIsLowercasedWithUnderscoresReplacedByHyphens(string input, string expected)
     {
-        Assert.Equal([expected], LineParser.ParseCapture(input, Now).People);
+        Assert.Equal([expected], LineParser.ParseCapture(input, Now, Zone).People);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public sealed class TagAndPersonTokenTests
     [Fact]
     public void RepeatedTagOrPersonIsKeptOnce()
     {
-        CaptureLine line = LineParser.ParseCapture("#asked #Asked @j-doe @j-doe", Now);
+        CaptureLine line = LineParser.ParseCapture("#asked #Asked @j-doe @j-doe", Now, Zone);
         Assert.Equal(["asked"], line.Tags);
         Assert.Equal(["j-doe"], line.People);
     }
@@ -91,6 +92,6 @@ public sealed class TagAndPersonTokenTests
     [Fact]
     public void LineWithOnlyTokensHasEmptySummary()
     {
-        Assert.Equal("", LineParser.ParseCapture("#asked @j-doe", Now).Summary);
+        Assert.Equal("", LineParser.ParseCapture("#asked @j-doe", Now, Zone).Summary);
     }
 }

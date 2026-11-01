@@ -95,7 +95,7 @@ public sealed partial class CaptureWindow : Window
     private void OnLineChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
         Placeholder.Visibility = Line.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        Chips.ItemsSource = Chip.For(LineParser.ParseCapture(Line.Text, DateTimeOffset.Now));
+        Chips.ItemsSource = Chip.For(LineParser.ParseCapture(Line.Text, DateTimeOffset.Now, TimeZoneInfo.Local));
         Problem.Visibility = Visibility.Collapsed;
     }
 
@@ -150,7 +150,7 @@ public sealed partial class CaptureWindow : Window
     private void Submit()
     {
         DateTimeOffset now = DateTimeOffset.Now;
-        CaptureLine line = LineParser.ParseCapture(Line.Text, now);
+        CaptureLine line = LineParser.ParseCapture(Line.Text, now, TimeZoneInfo.Local);
         if (line.Summary.Length == 0)
         {
             Problem.Text = "Type what happened; tags and people alone are not an entry.";

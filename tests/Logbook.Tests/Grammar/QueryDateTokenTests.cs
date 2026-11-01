@@ -7,6 +7,7 @@ public sealed class QueryDateTokenTests
 {
     private static readonly DateOnly Today = new(2026, 10, 8);
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));
+    private static readonly TimeZoneInfo Zone = TestZones.Fixed(TimeSpan.FromHours(-5));
 
     [Fact]
     public void NoDateTokensLeaveBoundsNull()
@@ -125,13 +126,13 @@ public sealed class QueryDateTokenTests
     [InlineData("last:30d")]
     public void QueryOnlyKeywordsAreSummaryTextInCapture(string token)
     {
-        CaptureLine line = LineParser.ParseCapture($"thing {token}", Now);
+        CaptureLine line = LineParser.ParseCapture($"thing {token}", Now, Zone);
         Assert.Equal($"thing {token}", line.Summary);
     }
 
     [Fact]
     public void QueryOnlyKeywordInCaptureKeepsItsPunctuationAndSpace()
     {
-        Assert.Equal("thing since:2026-10-06; more", LineParser.ParseCapture("thing since:2026-10-06; more", Now).Summary);
+        Assert.Equal("thing since:2026-10-06; more", LineParser.ParseCapture("thing since:2026-10-06; more", Now, Zone).Summary);
     }
 }

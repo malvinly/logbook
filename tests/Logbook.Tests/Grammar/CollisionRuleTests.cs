@@ -7,6 +7,7 @@ namespace Logbook.Tests.Grammar;
 public sealed class CollisionRuleTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));
+    private static readonly TimeZoneInfo Zone = TestZones.Fixed(TimeSpan.FromHours(-5));
     private static readonly DateOnly Today = new(2026, 10, 8);
 
     [Theory]
@@ -23,7 +24,7 @@ public sealed class CollisionRuleTests
     [InlineData("see [#x]")] // a bracket is not opening punctuation for this rule
     public void SigilNotAtWordStartOrNotBeforeALetterIsPlainText(string text)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Empty(line.Tags);
         Assert.Empty(line.People);
         Assert.Equal(text, line.Summary);
@@ -36,7 +37,7 @@ public sealed class CollisionRuleTests
     [InlineData("x #tag y", "x y")] // mid-line
     public void SigilAtStartOfLineOrAfterWhitespaceStartsAToken(string text, string summary)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal(["tag"], line.Tags);
         Assert.Equal(summary, line.Summary);
     }
@@ -47,7 +48,7 @@ public sealed class CollisionRuleTests
     [InlineData("said \"#urgent\" twice", "urgent", "said twice")]
     public void SigilAfterAnOpeningParenOrQuoteStartsATag(string text, string tag, string summary)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal([tag], line.Tags);
         Assert.Equal(summary, line.Summary);
     }
@@ -57,7 +58,7 @@ public sealed class CollisionRuleTests
     [InlineData("(@j-doe) agreed", "agreed")]
     public void SigilAfterAnOpeningParenOrQuoteStartsAPerson(string text, string summary)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal(["j-doe"], line.People);
         Assert.Equal(summary, line.Summary);
     }
@@ -81,17 +82,17 @@ public sealed class CollisionRuleTests
     [Fact]
     public void TokenEndsAtWhitespaceOrEndOfLine()
     {
-        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a #b", Now).Tags);
-        Assert.Equal(["a#b"], LineParser.ParseCapture("#a#b", Now).Tags);
+        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a #b", Now, Zone).Tags);
+        Assert.Equal(["a#b"], LineParser.ParseCapture("#a#b", Now, Zone).Tags);
     }
 
     [Fact]
     public void TokenEndsAtACommaOrSemicolonSoAnotherMayFollow()
     {
-        CaptureLine line = LineParser.ParseCapture("asked @j-doe,@a-smith about it", Now);
+        CaptureLine line = LineParser.ParseCapture("asked @j-doe,@a-smith about it", Now, Zone);
         Assert.Equal(["j-doe", "a-smith"], line.People);
-        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a;#b", Now).Tags);
-        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a,#b", Now).Tags);
+        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a;#b", Now, Zone).Tags);
+        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a,#b", Now, Zone).Tags);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public sealed class CollisionRuleTests
     [InlineData("C#,@x")]
     public void CommaThatEndedNoTokenStartsNone(string text)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Empty(line.Tags);
         Assert.Empty(line.People);
         Assert.Equal(text, line.Summary);
@@ -129,7 +130,7 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe's.", "'s.")]
     public void TrailingPunctuationIsStrippedFromTokenAndLeftInText(string text, string leftover)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal(["j-doe"], line.People);
         Assert.Equal("asked" + leftover, line.Summary);
     }
@@ -137,7 +138,7 @@ public sealed class CollisionRuleTests
     [Fact]
     public void TrailingPunctuationIsStrippedFromTagsToo()
     {
-        CaptureLine line = LineParser.ParseCapture("done #asked.", Now);
+        CaptureLine line = LineParser.ParseCapture("done #asked.", Now, Zone);
         Assert.Equal(["asked"], line.Tags);
         Assert.Equal("done.", line.Summary);
     }
@@ -150,7 +151,7 @@ public sealed class CollisionRuleTests
     [InlineData("@j-doe, then", "then")] // with no word before it, the comma has only whitespace around it
     public void SpaceBeforeStrippedPunctuationIsDroppedFromTheSummary(string text, string summary)
     {
-        Assert.Equal(summary, LineParser.ParseCapture(text, Now).Summary);
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
     }
 
     [Theory]
@@ -163,7 +164,7 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe,@a-smith about #printer? at:yesterday.", "asked, about?.")] // the comma and "." attach to a word
     public void PunctuationATokenLeavesWithOnlyWhitespaceAroundItIsDropped(string text, string summary)
     {
-        Assert.Equal(summary, LineParser.ParseCapture(text, Now).Summary);
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
     }
 
     [Theory]
@@ -174,7 +175,7 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe , then", "asked , then")]
     public void PunctuationThatIsNotLeftAloneByATokenIsKept(string text, string? summary = null)
     {
-        Assert.Equal(summary ?? text, LineParser.ParseCapture(text, Now).Summary);
+        Assert.Equal(summary ?? text, LineParser.ParseCapture(text, Now, Zone).Summary);
     }
 
     [Theory]
@@ -207,7 +208,7 @@ public sealed class CollisionRuleTests
     [Fact]
     public void QuestionMarkExclamationAndPossessiveAreStrippedFromTagsToo()
     {
-        CaptureLine line = LineParser.ParseCapture("asked about #printer? and #printer's tray!", Now);
+        CaptureLine line = LineParser.ParseCapture("asked about #printer? and #printer's tray!", Now, Zone);
         Assert.Equal(["printer"], line.Tags);
         Assert.Equal("asked about? and's tray!", line.Summary);
     }
@@ -216,7 +217,7 @@ public sealed class CollisionRuleTests
     public void PossessiveIsLeftInTheSummaryAsTyped()
     {
         // Read literally, the rule leaves the 's behind and drops the space before it, as it does for a comma.
-        CaptureLine line = LineParser.ParseCapture("told @j-doe's manager", Now);
+        CaptureLine line = LineParser.ParseCapture("told @j-doe's manager", Now, Zone);
         Assert.Equal(["j-doe"], line.People);
         Assert.Equal("told's manager", line.Summary);
     }
@@ -230,7 +231,7 @@ public sealed class CollisionRuleTests
     [InlineData("#why?not", "why?not")] // ? and ! inside a token are kept
     public void ApostropheOrMarkThatIsNotTrailingStaysInTheToken(string text, string expected)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal([expected], [.. line.Tags, .. line.People]);
         Assert.Equal("", line.Summary);
     }
@@ -241,7 +242,7 @@ public sealed class CollisionRuleTests
     [InlineData("@j.doe", "j.doe")]
     public void PunctuationInsideATokenIsKept(string text, string expected)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Equal([expected], [.. line.Tags, .. line.People]);
     }
 
@@ -255,7 +256,7 @@ public sealed class CollisionRuleTests
     [InlineData("At:15:00")] // keywords are lowercase
     public void KeywordNotAtWordBoundaryOrWithoutAValueIsPlainText(string text)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Null(line.OccurredAt);
         Assert.Equal(text, line.Summary);
     }
@@ -279,7 +280,7 @@ public sealed class CollisionRuleTests
     [InlineData(@"done (\#asked)", "done (#asked)")] // after an opening paren a tag could start, so the escape counts
     public void BackslashEscapesSigilInCapture(string text, string summary)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Empty(line.Tags);
         Assert.Empty(line.People);
         Assert.Equal(summary, line.Summary);
@@ -293,7 +294,7 @@ public sealed class CollisionRuleTests
     [InlineData(@"\@")]
     public void BackslashThatEscapesNothingIsKeptAsTyped(string text)
     {
-        CaptureLine line = LineParser.ParseCapture(text, Now);
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
         Assert.Empty(line.Tags);
         Assert.Empty(line.People);
         Assert.Equal(text, line.Summary);

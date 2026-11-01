@@ -9,9 +9,14 @@ namespace Logbook.Core.Grammar;
 /// </summary>
 public static class LineParser
 {
-    public static CaptureLine ParseCapture(string text, DateTimeOffset now)
+    /// <summary>
+    /// <paramref name="now"/> gives today's date; <paramref name="zone"/> gives the offset an <c>at:</c> time takes,
+    /// the one in force at the date and time it names. The App passes the machine's zone; tests pass a fixed one.
+    /// </summary>
+    public static CaptureLine ParseCapture(string text, DateTimeOffset now, TimeZoneInfo zone)
     {
         ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(zone);
         MarkedText summary = new();
         List<string> tags = [];
         List<string> people = [];
@@ -29,7 +34,7 @@ public static class LineParser
                 case TokenKind.Person:
                     AddUnique(people, token.Value);
                     break;
-                case TokenKind.Keyword when token.Key == "at" && DateValues.TryParseAt(token.Value, now, out DateTimeOffset at):
+                case TokenKind.Keyword when token.Key == "at" && DateValues.TryParseAt(token.Value, now, zone, out DateTimeOffset at):
                     occurredAt = at; // The last at: on the line wins.
                     break;
                 case TokenKind.Stripped when previousRemoved:

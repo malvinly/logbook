@@ -14,6 +14,7 @@ namespace Logbook.Tests;
 public sealed class CultureTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));
+    private static readonly TimeZoneInfo Zone = TestZones.Fixed(TimeSpan.FromHours(-5));
 
     private static T Under<T>(string culture, Func<T> action)
     {
@@ -94,10 +95,10 @@ public sealed class CultureTests
     [InlineData("ja-JP")]
     public void AtTimesAndDatesParseTheSameUnderAnyCulture(string culture)
     {
-        CaptureLine line = Under(culture, () => LineParser.ParseCapture("thing at:yesterday,3pm", Now));
+        CaptureLine line = Under(culture, () => LineParser.ParseCapture("thing at:yesterday,3pm", Now, Zone));
         Assert.Equal(new DateTimeOffset(2026, 10, 7, 15, 0, 0, TimeSpan.FromHours(-5)), line.OccurredAt);
 
-        CaptureLine iso = Under(culture, () => LineParser.ParseCapture("thing at:2026-10-06,15:00", Now));
+        CaptureLine iso = Under(culture, () => LineParser.ParseCapture("thing at:2026-10-06,15:00", Now, Zone));
         Assert.Equal(new DateTimeOffset(2026, 10, 6, 15, 0, 0, TimeSpan.FromHours(-5)), iso.OccurredAt);
 
         QueryLine query = Under(culture, () => LineParser.ParseQuery("last:30d since:2026-01-05", new DateOnly(2026, 10, 8)));

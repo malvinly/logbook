@@ -15,9 +15,11 @@ internal static class DateValues
     /// <summary>
     /// <c>at:</c> value: <c>&lt;date&gt;</c>, <c>&lt;date&gt;,&lt;time&gt;</c> or <c>&lt;time&gt;</c>.
     /// A date is ISO, <c>today</c>, <c>yesterday</c> or a weekday abbreviation (the most recent one before today).
-    /// A date without a time is noon; a time without a date is today. The offset is always that of <paramref name="now"/>.
+    /// A date without a time is noon; a time without a date is today, the date of <paramref name="now"/>. The offset is
+    /// the one <paramref name="zone"/> has at the date and time named, not that of <paramref name="now"/>, so a time
+    /// on the other side of a clock change carries the offset in force then.
     /// </summary>
-    public static bool TryParseAt(string value, DateTimeOffset now, out DateTimeOffset result)
+    public static bool TryParseAt(string value, DateTimeOffset now, TimeZoneInfo zone, out DateTimeOffset result)
     {
         DateOnly today = DateOnly.FromDateTime(now.Date);
         int comma = value.IndexOf(',', StringComparison.Ordinal);
@@ -48,7 +50,11 @@ internal static class DateValues
         // The first and last days of the calendar cannot carry every offset; treat those as text rather than crash.
         try
         {
-            result = new DateTimeOffset(date, time, now.Offset);
+            // GetUtcOffset reads an unspecified-kind time as wall-clock time in the zone. A time that does not exist
+            // (the hour skipped when clocks go forward) or exists twice (the hour repeated when they go back) gets the
+            // zone's standard offset: that is the BCL's rule, and the reminder field's, which uses the same call.
+            DateTime local = date.ToDateTime(time);
+            result = new DateTimeOffset(local, zone.GetUtcOffset(local));
             return true;
         }
         catch (ArgumentOutOfRangeException)
