@@ -101,4 +101,69 @@ public sealed class IdleLockTests
         Assert.Equal(Now.AddMilliseconds(20), lastInput);
         Assert.False(IdleLock.IsDue(lastInput, Now, 1));
     }
+
+    [Fact]
+    public void AtTheLimitWithNoDialogItLocks()
+    {
+        Assert.Equal(IdleDecision.Lock, IdleLock.Decide(Now.AddMinutes(-60), Now, 60, dialogOpen: false));
+    }
+
+    [Fact]
+    public void JustUnderTheLimitWithNoDialogItIsNotDue()
+    {
+        Assert.Equal(IdleDecision.NotDue, IdleLock.Decide(Now.AddMinutes(-60).AddMilliseconds(1), Now, 60, dialogOpen: false));
+    }
+
+    [Fact]
+    public void AtTheLimitWithADialogOpenItWaits()
+    {
+        Assert.Equal(IdleDecision.WaitForDialog, IdleLock.Decide(Now.AddMinutes(-60), Now, 60, dialogOpen: true));
+    }
+
+    [Fact]
+    public void JustUnderTwiceTheLimitWithADialogOpenItStillWaits()
+    {
+        Assert.Equal(IdleDecision.WaitForDialog, IdleLock.Decide(Now.AddMinutes(-120).AddMilliseconds(1), Now, 60, dialogOpen: true));
+    }
+
+    [Fact]
+    public void AtTwiceTheLimitWithADialogOpenItLocksAnyway()
+    {
+        Assert.Equal(IdleDecision.Lock, IdleLock.Decide(Now.AddMinutes(-120), Now, 60, dialogOpen: true));
+    }
+
+    [Fact]
+    public void WellPastTwiceTheLimitWithADialogOpenItLocks()
+    {
+        Assert.Equal(IdleDecision.Lock, IdleLock.Decide(Now.AddDays(-3), Now, 60, dialogOpen: true));
+    }
+
+    [Fact]
+    public void JustUnderTheLimitWithADialogOpenItIsNotDue()
+    {
+        Assert.Equal(IdleDecision.NotDue, IdleLock.Decide(Now.AddMinutes(-60).AddMilliseconds(1), Now, 60, dialogOpen: true));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ZeroNeverLocksEvenWithADialogOpen(bool dialogOpen)
+    {
+        Assert.Equal(IdleDecision.NotDue, IdleLock.Decide(Now.AddDays(-30), Now, 0, dialogOpen));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ALastInputInTheFutureIsNotDueWithOrWithoutADialog(bool dialogOpen)
+    {
+        Assert.Equal(IdleDecision.NotDue, IdleLock.Decide(Now.AddHours(5), Now, 60, dialogOpen));
+    }
+
+    [Fact]
+    public void TheLargestSettingDoesNotOverflowTwiceTheLimit()
+    {
+        Assert.Equal(IdleDecision.WaitForDialog, IdleLock.Decide(Now.AddMinutes(-1440), Now, 1440, dialogOpen: true));
+        Assert.Equal(IdleDecision.Lock, IdleLock.Decide(Now.AddMinutes(-2880), Now, 1440, dialogOpen: true));
+    }
 }
