@@ -31,6 +31,18 @@ public sealed class Suggestions
                 Note(_people, person, entry.OccurredAt);
             }
         }
+
+        // Only names the grammar reads back are offered: accepting "123" would insert "#123 ", stored as summary text.
+        DropUnreadable(_tags, TokenName.ParsesBackAsTag);
+        DropUnreadable(_people, TokenName.ParsesBackAsPerson);
+    }
+
+    private static void DropUnreadable(Dictionary<string, (DateTimeOffset LastUsed, int Count)> index, Func<string, bool> parsesBack)
+    {
+        foreach (string name in index.Keys.Where(name => !parsesBack(name)).ToList())
+        {
+            index.Remove(name);
+        }
     }
 
     public IReadOnlyList<string> For(ChipKind kind, string prefix)

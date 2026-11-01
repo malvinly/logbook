@@ -56,7 +56,7 @@ public sealed partial class CaptureWindow : Window
         foreach (string tag in original.Tags)
         {
             // A stored name that would not parse back as a token (one starting with a digit, say) goes to the "more" box.
-            if (ParsesBackAs("#" + tag, tag, line => line.Tags))
+            if (TokenName.ParsesBackAsTag(tag))
             {
                 tokens.Add("#" + tag);
             }
@@ -68,7 +68,7 @@ public sealed partial class CaptureWindow : Window
 
         foreach (string person in original.People)
         {
-            if (ParsesBackAs("@" + person, person, line => line.People))
+            if (TokenName.ParsesBackAsPerson(person))
             {
                 tokens.Add("@" + person);
             }
@@ -90,12 +90,6 @@ public sealed partial class CaptureWindow : Window
 
         FollowUpNote.Text = $"Follows up on: {Format.DateTime(original.OccurredAt)} — {original.Summary}";
         FollowUpNote.Visibility = Visibility.Visible;
-    }
-
-    private static bool ParsesBackAs(string token, string name, Func<CaptureLine, IReadOnlyList<string>> pick)
-    {
-        IReadOnlyList<string> names = pick(LineParser.ParseCapture(token, DateTimeOffset.Now));
-        return names.Count == 1 && names[0] == name;
     }
 
     private void OnLineChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
