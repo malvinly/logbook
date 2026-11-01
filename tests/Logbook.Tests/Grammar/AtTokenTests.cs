@@ -93,14 +93,27 @@ public sealed class AtTokenTests
     [InlineData("at:foo")]
     [InlineData("at:2026-13-40")]
     [InlineData("at:25:00")]
-    [InlineData("at:2026-10-06,")]
-    [InlineData("at:mon,")]
+    [InlineData("at:foo.")] // stripping the punctuation does not make a bad value good
+    [InlineData("at:25:00,")]
     [InlineData("at:9999-12-31,23:00")] // past the last representable instant once the negative offset is applied
     public void UnparseableValueStaysInSummary(string token)
     {
         CaptureLine line = LineParser.ParseCapture($"thing {token} here", Now);
         Assert.Null(line.OccurredAt);
         Assert.Equal($"thing {token} here", line.Summary);
+    }
+
+    [Theory]
+    [InlineData("thing at:yesterday.", 7, 12, 0, "thing.")]
+    [InlineData("thing at:yesterday,3pm!", 7, 15, 0, "thing!")]
+    [InlineData("thing at:2026-10-06, here", 6, 12, 0, "thing, here")] // the space before the comma goes, as for a tag
+    [InlineData("at:mon, thing", 5, 12, 0, ", thing")]
+    [InlineData("thing at:15:00.", 8, 15, 0, "thing.")] // the colon inside the time is kept
+    public void TrailingPunctuationIsStrippedFromTheValueAndLeftInTheSummary(string text, int day, int hour, int minute, string summary)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Equal(new DateTimeOffset(2026, 10, day, hour, minute, 0, Offset), line.OccurredAt);
+        Assert.Equal(summary, line.Summary);
     }
 
     [Fact]
@@ -115,5 +128,12 @@ public sealed class AtTokenTests
     {
         QueryLine line = LineParser.ParseQuery("at:15:00 thing", new DateOnly(2026, 10, 8));
         Assert.Equal(["at:15:00", "thing"], line.Words);
+    }
+
+    [Fact]
+    public void AtInAQueryKeepsItsTrailingPunctuationInTheWord()
+    {
+        QueryLine line = LineParser.ParseQuery("at:yesterday. thing", new DateOnly(2026, 10, 8));
+        Assert.Equal(["at:yesterday.", "thing"], line.Words);
     }
 }

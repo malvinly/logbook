@@ -206,6 +206,8 @@ public sealed class CollisionRuleTests
     [InlineData("(at:15:00)")]
     [InlineData("at: 3pm")] // value does not follow the colon immediately
     [InlineData("at:")]
+    [InlineData("at:.")] // nothing is left once the trailing punctuation goes
+    [InlineData("at:?!")]
     [InlineData("At:15:00")] // keywords are lowercase
     public void KeywordNotAtWordBoundaryOrWithoutAValueIsPlainText(string text)
     {

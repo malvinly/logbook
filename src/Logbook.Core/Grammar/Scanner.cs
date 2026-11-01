@@ -69,10 +69,20 @@ internal static class Scanner
                 if (valueStart < text.Length && !char.IsWhiteSpace(text[valueStart]))
                 {
                     int end = EndOfWord(text, valueStart);
-                    Flush(tokens, plain);
-                    tokens.Add(new Token(TokenKind.Keyword, text[i..end], text[valueStart..end], key));
-                    i = end;
-                    continue;
+                    // Trailing punctuation goes as from a tag ("at:yesterday."); "at:." is left with no value and stays text.
+                    int valueEnd = StripTrailing(text, valueStart, end);
+                    if (valueEnd > valueStart)
+                    {
+                        Flush(tokens, plain);
+                        tokens.Add(new Token(TokenKind.Keyword, text[i..valueEnd], text[valueStart..valueEnd], key));
+                        if (valueEnd < end)
+                        {
+                            tokens.Add(new Token(TokenKind.Stripped, text[valueEnd..end], text[valueEnd..end]));
+                        }
+
+                        i = end;
+                        continue;
+                    }
                 }
             }
 

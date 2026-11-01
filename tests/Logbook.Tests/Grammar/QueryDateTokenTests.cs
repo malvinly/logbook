@@ -85,6 +85,33 @@ public sealed class QueryDateTokenTests
         Assert.Equal([token], line.Words);
     }
 
+    [Theory]
+    [InlineData("last:7d,", 2026, 10, 1)]
+    [InlineData("since:2026-10-06;", 2026, 10, 6)]
+    [InlineData("since:yesterday.", 2026, 10, 7)]
+    [InlineData("last:1d?!", 2026, 10, 7)]
+    public void TrailingPunctuationIsStrippedFromTheValue(string token, int year, int month, int day)
+    {
+        Assert.Equal(new DateOnly(year, month, day), LineParser.ParseQuery($"thing {token}", Today).Since);
+    }
+
+    [Fact]
+    public void UntilValueIsStrippedToo()
+    {
+        Assert.Equal(new DateOnly(2026, 10, 8), LineParser.ParseQuery("until:today.", Today).Until);
+    }
+
+    [Theory]
+    [InlineData("last:3y.")]
+    [InlineData("since:mon,")]
+    [InlineData("last:.")] // nothing is left once the punctuation goes
+    public void UnparseableValueWithTrailingPunctuationIsOneWord(string token)
+    {
+        QueryLine line = LineParser.ParseQuery(token, Today);
+        Assert.Null(line.Since);
+        Assert.Equal([token], line.Words);
+    }
+
     [Fact]
     public void LaterSinceOrLastOverridesEarlier()
     {
@@ -100,5 +127,11 @@ public sealed class QueryDateTokenTests
     {
         CaptureLine line = LineParser.ParseCapture($"thing {token}", Now);
         Assert.Equal($"thing {token}", line.Summary);
+    }
+
+    [Fact]
+    public void QueryOnlyKeywordInCaptureKeepsItsPunctuationAndSpace()
+    {
+        Assert.Equal("thing since:2026-10-06; more", LineParser.ParseCapture("thing since:2026-10-06; more", Now).Summary);
     }
 }

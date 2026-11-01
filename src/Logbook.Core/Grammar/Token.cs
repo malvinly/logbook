@@ -10,6 +10,11 @@ internal enum TokenKind
     Keyword,
     /// <summary>A <c>"quoted phrase"</c>; only produced when scanning a query.</summary>
     Phrase,
+    /// <summary>
+    /// Punctuation stripped from the end of a keyword's value (<c>at:yesterday.</c>). It is text, but kept apart so a
+    /// reader knows it belongs to the token before it.
+    /// </summary>
+    Stripped,
 }
 
 /// <summary>

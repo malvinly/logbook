@@ -16,10 +16,11 @@ public static class LineParser
         List<string> tags = [];
         List<string> people = [];
         DateTimeOffset? occurredAt = null;
-        TokenKind previous = TokenKind.Text;
+        bool previousRemoved = false;
 
         foreach (Token token in Scanner.Scan(text, quotedPhrases: false))
         {
+            bool removed = true;
             switch (token.Kind)
             {
                 case TokenKind.Tag:
@@ -32,18 +33,19 @@ public static class LineParser
                     occurredAt = at; // The last at: on the line wins.
                     break;
                 default:
-                    // Text that touches a tag or person is the punctuation stripped from it ("asked @j-doe, then"). With the
+                    // Text that touches a removed token is the punctuation stripped from it ("asked @j-doe, then"). With the
                     // token gone, the space before it would be left in front of the comma, so it goes too: "asked, then".
-                    if (previous is TokenKind.Tag or TokenKind.Person && token.Raw.Length > 0 && !char.IsWhiteSpace(token.Raw[0]))
+                    if (previousRemoved && token.Raw.Length > 0 && !char.IsWhiteSpace(token.Raw[0]))
                     {
                         TrimEnd(summary);
                     }
 
                     summary.Append(token.Raw);
+                    removed = false;
                     break;
             }
 
-            previous = token.Kind;
+            previousRemoved = removed;
         }
 
         return new CaptureLine(CollapseWhitespace(summary.ToString()), occurredAt, tags, people);
@@ -58,9 +60,12 @@ public static class LineParser
         List<string> people = [];
         DateOnly? since = null;
         DateOnly? until = null;
+        // Text since the last token the filter used, so "at:yesterday." stays one word although it scans as two tokens.
+        StringBuilder plain = new();
 
         foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
         {
+            bool used = true;
             switch (token.Kind)
             {
                 case TokenKind.Tag:
@@ -86,11 +91,18 @@ public static class LineParser
                     since = lastDate;
                     break;
                 default:
-                    words.AddRange(token.Raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                    plain.Append(token.Raw);
+                    used = false;
                     break;
+            }
+
+            if (used)
+            {
+                AddWords(words, plain);
             }
         }
 
+        AddWords(words, plain);
         return new QueryLine(words, phrases, tags, people, since, until);
     }
 
@@ -105,7 +117,8 @@ public static class LineParser
         bool removedPrevious = false;
         foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
         {
-            if (token.Kind == TokenKind.Keyword && token.Key is "since" or "until" or "last")
+            // Punctuation stripped from a removed token's value ("last:7d,") goes with the token.
+            if ((token.Kind == TokenKind.Keyword && token.Key is "since" or "until" or "last") || (removedPrevious && token.Kind == TokenKind.Stripped))
             {
                 removedPrevious = true;
                 continue;
@@ -139,6 +152,12 @@ public static class LineParser
         }
 
         text.Append(token);
+    }
+
+    private static void AddWords(List<string> words, StringBuilder plain)
+    {
+        words.AddRange(plain.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        plain.Clear();
     }
 
     private static void TrimEnd(StringBuilder text)

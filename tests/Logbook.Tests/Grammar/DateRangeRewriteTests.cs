@@ -22,6 +22,13 @@ public sealed class DateRangeRewriteTests
     }
 
     [Fact]
+    public void RemovesTheTrailingPunctuationOfARemovedToken()
+    {
+        Assert.Equal("#asked since:2026-02-02", LineParser.WithDateRange("last:30d, #asked", From, null));
+        Assert.Equal("at:15:00. since:2026-02-02", LineParser.WithDateRange("at:15:00.", From, null)); // not a date token, so kept
+    }
+
+    [Fact]
     public void ClearingBothBoundsLeavesOnlyTheRest()
     {
         Assert.Equal("", LineParser.WithDateRange("since:today", null, null));
