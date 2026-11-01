@@ -11,7 +11,7 @@
   <!-- Segoe UI Variable ships with Windows 11; WPF falls back to the next family in the list on Windows 10. -->
   <FontFamily x:Key="BodyFont">Segoe UI Variable Text, Segoe UI</FontFamily>
   <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
-  <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+  <FontFamily x:Key="MonoFont">Consolas</FontFamily>
   <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
   <sys:Double x:Key="CaptionSize">12</sys:Double>
   <sys:Double x:Key="BodySize">14</sys:Double>

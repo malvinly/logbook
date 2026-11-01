@@ -1,17 +1,21 @@
 <Window x:Class="Logbook.App.Lock.UnlockWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Unlock Logbook" Width="380" SizeToContent="Height" ResizeMode="NoResize"
+        Title="Unlock Logbook" Width="420" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen" ShowInTaskbar="True" Topmost="True"
         FocusManager.FocusedElement="{Binding ElementName=Passphrase}">
-  <StackPanel Margin="{StaticResource PagePadding}">
-    <TextBlock Style="{StaticResource TitleText}" Text="Enter your passphrase" />
-    <TextBlock x:Name="FileLabel" Style="{StaticResource CaptionText}" Margin="0,4,0,12" TextTrimming="CharacterEllipsis" />
-    <PasswordBox x:Name="Passphrase" KeyDown="OnPassphraseKeyDown" />
-    <TextBlock x:Name="Status" Margin="0,8,0,0" MinHeight="18" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-      <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" Margin="0,0,8,0" />
-      <Button x:Name="UnlockButton" Content="Unlock" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnUnlockClick" />
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogFooter}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button x:Name="UnlockButton" Content="Unlock" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnUnlockClick" />
+        <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
+      </StackPanel>
+    </Border>
+    <StackPanel Margin="{StaticResource PagePadding}">
+      <TextBlock Style="{StaticResource TitleText}" Text="Enter your passphrase" />
+      <TextBlock x:Name="FileLabel" Style="{StaticResource CaptionText}" Margin="0,4,0,16" TextTrimming="CharacterEllipsis" />
+      <PasswordBox x:Name="Passphrase" KeyDown="OnPassphraseKeyDown" />
+      <TextBlock x:Name="Status" Style="{StaticResource ProblemText}" Margin="0,8,0,0" MinHeight="18" />
     </StackPanel>
-  </StackPanel>
+  </DockPanel>
 </Window>

@@ -1,57 +1,63 @@
 <Window x:Class="Logbook.App.Settings.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Logbook settings" Width="560" SizeToContent="Height" ResizeMode="NoResize"
+        Title="Logbook settings" Width="580" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen" ShowInTaskbar="False">
-  <StackPanel Margin="{StaticResource PagePadding}">
-    <TextBlock Style="{StaticResource TitleText}" Text="Hotkeys" />
-    <Grid Margin="0,6,0,0">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="12" />
-        <ColumnDefinition Width="*" />
-      </Grid.ColumnDefinitions>
-      <StackPanel>
-        <Label Content="New entry" />
-        <TextBox x:Name="CaptureHotkey" />
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogFooter}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Content="Save" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnSaveClick" />
+        <Button Content="Cancel" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
       </StackPanel>
-      <StackPanel Grid.Column="2">
-        <Label Content="Main window" />
-        <TextBox x:Name="MainWindowHotkey" />
-      </StackPanel>
-    </Grid>
-    <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0" Text="Modifiers plus a key, for example Ctrl+Alt+L or Ctrl+Shift+F12." />
+    </Border>
+    <StackPanel Margin="{StaticResource PagePadding}">
+      <TextBlock Style="{StaticResource TitleText}" Text="Settings" />
 
-    <TextBlock Style="{StaticResource TitleText}" Text="Autocomplete" Margin="0,16,0,0" />
-    <Grid Margin="0,6,0,0">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="12" />
-        <ColumnDefinition Width="*" />
-      </Grid.ColumnDefinitions>
-      <StackPanel>
-        <Label Content="Suggestions shown" />
-        <TextBox x:Name="AutocompleteCap" />
-      </StackPanel>
-      <StackPanel Grid.Column="2">
-        <Label Content="Ranked by" />
-        <ComboBox x:Name="AutocompleteRanking">
-          <ComboBoxItem Content="most recently used" Tag="recent" />
-          <ComboBoxItem Content="most frequently used" Tag="frequent" />
-        </ComboBox>
-      </StackPanel>
-    </Grid>
+      <TextBlock Style="{StaticResource SectionText}" Text="Hotkeys" Margin="0,20,0,0" />
+      <Grid Margin="0,6,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <Label Content="New entry" />
+          <TextBox x:Name="CaptureHotkey" />
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+          <Label Content="Main window" />
+          <TextBox x:Name="MainWindowHotkey" />
+        </StackPanel>
+      </Grid>
+      <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0" Text="Modifiers plus a key, for example Ctrl+Alt+L or Ctrl+Shift+F12." />
 
-    <TextBlock Style="{StaticResource TitleText}" Text="Startup" Margin="0,16,0,0" />
-    <CheckBox x:Name="StartWithWindows" Margin="0,6,0,0" Content="Start Logbook when I sign in (a shortcut in the Startup folder)" />
+      <TextBlock Style="{StaticResource SectionText}" Text="Autocomplete" Margin="0,20,0,0" />
+      <Grid Margin="0,6,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <Label Content="Suggestions shown" />
+          <TextBox x:Name="AutocompleteCap" />
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+          <Label Content="Ranked by" />
+          <ComboBox x:Name="AutocompleteRanking" HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="most recently used" Tag="recent" />
+            <ComboBoxItem Content="most frequently used" Tag="frequent" />
+          </ComboBox>
+        </StackPanel>
+      </Grid>
 
-    <TextBlock Style="{StaticResource TitleText}" Text="Files" Margin="0,16,0,0" />
-    <TextBlock x:Name="FileInfo" Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+      <TextBlock Style="{StaticResource SectionText}" Text="Startup" Margin="0,20,0,0" />
+      <CheckBox x:Name="StartWithWindows" Margin="0,6,0,0" Content="Start Logbook when I sign in (a shortcut in the Startup folder)" />
 
-    <TextBlock x:Name="Problem" Foreground="{DynamicResource DangerBrush}" Margin="0,8,0,0" MinHeight="18" TextWrapping="Wrap" />
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-      <Button Content="Cancel" IsCancel="True" Margin="0,0,8,0" />
-      <Button Content="Save" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnSaveClick" />
+      <TextBlock Style="{StaticResource SectionText}" Text="Files" Margin="0,20,0,0" />
+      <TextBlock x:Name="FileInfo" Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+      <TextBlock x:Name="Problem" Style="{StaticResource ProblemText}" Margin="0,12,0,0" />
     </StackPanel>
-  </StackPanel>
+  </DockPanel>
 </Window>
