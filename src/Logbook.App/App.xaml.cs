@@ -56,7 +56,7 @@ public sealed partial class App : Application, IDisposable
     private bool _exiting;
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
 
-    /// <summary>Null while locked. The data key lives inside for the life of the process.</summary>
+    /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
 
     public bool IsLocked => Log is null;
