@@ -248,25 +248,50 @@ Steps 1–4 are usable from a test harness before any UI exists and are the part
 
 ## 14. Phases
 
-### Phase 1 (this document)
+Each phase is approved as a whole. Once a phase is started, every step in it is built, tested and committed without stopping for approval between steps; the summary comes at the end of the phase. Later phases are not started unasked.
+
+### Phase 1 (done)
 
 Everything above.
 
-### Phase 2 / later
+### Phase 2 — make it something you will keep using
 
-- `relatedTo` — list of ids linking follow-ups to the original entry, plus a "Follow up" button on a row that opens capture pre-filled with its tags and people. Tags conflate topic with thread; this separates them. Nullable field; the schema's unknown-property tolerance means no format bump.
-- Saved queries — name → filter string, one click each. The three driving scenarios become three buttons.
-- Follow-up reminder — a single nullable `remindAt` on an entry and a tray balloon when it passes. Nothing more elaborate.
-- Change passphrase — rewrite the header only.
-- Idle auto-lock — clear the data key after N minutes; next hotkey prompts.
-- Export toggle to include people and tags per line (useful when the filter is broader than one person).
-- HTML clipboard format alongside plain text so mail clients get bold dates and real bullets.
-- CSV export.
-- Dark theme — a second `ResourceDictionary`, switched from settings or following the OS.
-- Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
-- Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
-- Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
-- Design pass over the whole app. Phase 1 restyled only the basics (text boxes, buttons, chips, list rows) and left the rest on WPF's default look, which reads as dated: the menu bar, date pickers, combo boxes, scroll bars, checkboxes, message boxes, and the window chrome of the main window and dialogs. The pass should set a real visual direction (spacing, type scale, colour, iconography, how the capture box and toast sit on screen) and template every control the app uses, so nothing falls through to the stock theme. Everything still goes through the one `ResourceDictionary` so the dark theme stays a second dictionary. Section 16's rule stands: no third-party control suite.
+The app has to look good before any further feature matters, and the small grammar items ride along. No change to the file format.
+
+1. Design pass over the whole app. Phase 1 restyled only the basics (text boxes, buttons, chips, list rows) and left the rest on WPF's default look, which reads as dated: the menu bar, date pickers, combo boxes, scroll bars, checkboxes, message boxes, and the window chrome of the main window and dialogs. The pass sets a real visual direction (spacing, type scale, colour, iconography, how the capture box and toast sit on screen) and templates every control the app uses, so nothing falls through to the stock theme. Message boxes come from Windows, so they become a small dialog window of the app's own. Everything still goes through the one `ResourceDictionary` so the dark theme stays a second dictionary. Section 16's rule stands: no third-party control suite. The pass starts from a short written brief: a direction, a reference or two for the feel, and what done looks like.
+2. "Lock now" in the tray menu: drop the data key, show the lock glyph, and reuse the "prompt first, then capture" path on the next hotkey.
+3. Grammar: let `#` and `@` start a token after opening punctuation (`(`, `"`) as well as after whitespace, so `(#asked)` and `"@j-doe"` are tokens. Today they are plain text under the whitespace-only rule in section 6.
+4. Grammar: when trailing punctuation is stripped from a token, drop the space before it in the summary, so `asked @j-doe, then` stores `asked, then` rather than `asked , then`.
+
+### Phase 3 — the three driving scenarios as buttons
+
+Pure UI over the existing query and renderer, plus one settings field. No risk to the data.
+
+1. Saved queries — name → filter string, one click each, stored in the settings file. The three driving scenarios become three buttons.
+2. Weekly digest = saved query `last:7d` + export; falls out of saved queries for free.
+3. Export toggle to include people and tags per line (useful when the filter is broader than one person).
+
+### Phase 4 — the first format additions
+
+Both items add a nullable field to the record. The schema's unknown-property tolerance means no format bump, but it is the first time the model changes, so they land together with their own Core tests.
+
+1. `relatedTo` — list of ids linking follow-ups to the original entry, plus a "Follow up" button on a row that opens capture pre-filled with its tags and people. Tags conflate topic with thread; this separates them.
+2. Follow-up reminder — a single nullable `remindAt` on an entry and a tray balloon when it passes. Nothing more elaborate.
+
+### Phase 5 — security housekeeping
+
+Both touch the key hierarchy and the lock path, so they get a review of their own rather than riding beside UI work.
+
+1. Change passphrase — rewrite the header only.
+2. Idle auto-lock — clear the data key after N minutes; next hotkey prompts.
+
+### Phase 6 — outputs and themes
+
+Independent items, none urgent. The dark theme is much cheaper after Phase 2 has templated every control.
+
+1. HTML clipboard format alongside plain text so mail clients get bold dates and real bullets.
+2. CSV export.
+3. Dark theme — a second `ResourceDictionary`, switched from settings or following the OS.
 
 ### Not building
 

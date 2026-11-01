@@ -4,10 +4,10 @@ Logbook is a personal Windows tray app for logging decisions and events with a h
 
 ## How to work in this repo
 
-- Build one step of DESIGN.md section 13 at a time. When the step is done and its tests pass, stop and summarize what was built and any judgment calls made. Do not start the next step unasked.
+- Work is approved per phase of DESIGN.md section 14, not per step. Once a phase is started, build every step in it in order, each with its tests green and committed, without stopping for approval between steps. When the phase is done, stop and summarize what was built, the commit list, and any judgment calls made. Do not start the next phase unasked.
 - Core before UI. Steps 1–4 (`Logbook.Core` and its tests) must be complete and green before any WPF code exists.
 - Tests first for Core. Every parser rule in section 6, every file-format rule in section 8, and every export toggle in section 11 has a test. A behavior without a test is not done.
-- Build only what DESIGN.md specifies. If something seems missing or a better idea comes up, add a line under Phase 2 in DESIGN.md and say so; do not implement it. If the doc is silent on a detail that matters, ask rather than guess.
+- Build only what DESIGN.md specifies. If something seems missing or a better idea comes up, add it to the right later phase in DESIGN.md section 14 and say so; do not implement it. If the doc is silent on a detail that matters, ask rather than guess.
 - If a decision in section 16 turns out to be wrong in practice, say so and propose the change; do not quietly work around it.
 - The author intends to understand every line. Prefer the boring, explicit implementation over the clever one. No framework-style indirection, no DI container, no reflection tricks. A non-obvious block gets a short comment explaining why.
 - No new NuGet packages in `Logbook.Core` or `Logbook.App`. The test project has only xUnit and the test SDK.
