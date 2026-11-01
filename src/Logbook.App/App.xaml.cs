@@ -469,5 +469,10 @@ public sealed partial class App : Application, IDisposable
         Diag.Log("Unhandled exception", e.Exception);
         MessageBox.Show("Something went wrong. Details were written to the diagnostics log:\n" + Diag.LogFolder, "Logbook", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
+        if (_tray is null)
+        {
+            // Startup never finished, so there is no tray icon to exit from; a silent zombie process would be worse.
+            Shutdown();
+        }
     }
 }
