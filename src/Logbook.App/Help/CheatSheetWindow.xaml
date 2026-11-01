@@ -29,7 +29,7 @@ anything else   capture: the summary · filter: words ANDed over summary and rea
 
       <TextBlock Style="{StaticResource SectionText}" Text="Things that stay plain text" Margin="0,20,0,0" />
       <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
-                 Text="ticket #12345, C#, name@example.com and @ 3pm are not tokens: # and @ only count after a space and before a letter. Trailing , . ; : ) are dropped from a token. A date without a time is stored at noon; use the compact export when the time is not meaningful." />
+                 Text="ticket #12345, C#, name@example.com and @ 3pm are not tokens: # and @ only count after a space or an opening ( or &quot;, and before a letter. Trailing , . ; : ) &quot; are dropped from a token. A date without a time is stored at noon; use the compact export when the time is not meaningful." />
 
       <TextBlock Style="{StaticResource SectionText}" Text="Conventions worth keeping" Margin="0,20,0,0" />
       <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"

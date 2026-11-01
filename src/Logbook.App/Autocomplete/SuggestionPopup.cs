@@ -79,7 +79,8 @@ public sealed class SuggestionPopup
         _popup.IsOpen = true;
     }
 
-    // The token is the run of non-space characters around the caret, when it starts with # or @ at a word start.
+    // The token is the run of non-space characters around the caret, when it starts with # or @ at a word start
+    // (or just after an opening paren or quote).
     private bool FindToken(out int start, out int end, out char sigil)
     {
         string text = _box.Text;
@@ -96,8 +97,14 @@ public sealed class SuggestionPopup
             end++;
         }
 
+        // As in the grammar, a sigil may follow an opening paren or quote: "(#as" suggests tags too.
+        while (start < end && text[start] is '(' or '"')
+        {
+            start++;
+        }
+
         sigil = start < text.Length ? text[start] : '\0';
-        return (sigil == '#' || sigil == '@') && (start == 0 || char.IsWhiteSpace(text[start - 1]));
+        return (sigil == '#' || sigil == '@') && (start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"');
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
