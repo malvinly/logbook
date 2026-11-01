@@ -51,6 +51,20 @@
         </StackPanel>
       </Grid>
 
+      <TextBlock Style="{StaticResource SectionText}" Text="Lock" Margin="0,20,0,0" />
+      <Grid Margin="0,6,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <Label Content="Lock after (minutes)" />
+          <TextBox x:Name="IdleLockMinutes" />
+        </StackPanel>
+      </Grid>
+      <TextBlock Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap" Text="Lock after N minutes without any input to Windows; 0 never locks. Working in other apps keeps Logbook unlocked." />
+
       <TextBlock Style="{StaticResource SectionText}" Text="Startup" Margin="0,20,0,0" />
       <CheckBox x:Name="StartWithWindows" Margin="0,6,0,0" Content="Start Logbook when I sign in (a shortcut in the Startup folder)" />
 

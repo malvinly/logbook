@@ -45,6 +45,12 @@ public sealed class Settings
     /// <summary><c>recent</c> or <c>frequent</c>.</summary>
     public string AutocompleteRanking { get; set; } = "recent";
 
+    /// <summary>
+    /// Lock after this many minutes without any input to Windows (DESIGN.md section 9); 0 never locks. A settings
+    /// file written before this existed has no such property and gets the default.
+    /// </summary>
+    public int IdleLockMinutes { get; set; } = 30;
+
     public ExportSettings Export { get; set; } = new();
 
     /// <summary>In the order they were saved, which is the order of the buttons.</summary>

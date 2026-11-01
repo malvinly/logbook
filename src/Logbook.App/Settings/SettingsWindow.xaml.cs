@@ -11,6 +11,8 @@ namespace Logbook.App.Settings;
 /// <summary>Edits the settings file in place (DESIGN.md section 12). The app re-registers hotkeys after a save.</summary>
 public sealed partial class SettingsWindow : Window
 {
+    private const int MaxIdleLockMinutes = 1440; // a day; beyond that, 0 says what is meant
+
     private readonly Settings _settings;
 
     public SettingsWindow(Settings settings, string settingsPath, string dataFilePath)
@@ -21,6 +23,7 @@ public sealed partial class SettingsWindow : Window
         MainWindowHotkey.Text = settings.MainWindowHotkey;
         AutocompleteCap.Text = settings.AutocompleteCap.ToString(CultureInfo.InvariantCulture);
         AutocompleteRanking.SelectedIndex = string.Equals(settings.AutocompleteRanking, "frequent", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        IdleLockMinutes.Text = settings.IdleLockMinutes.ToString(CultureInfo.InvariantCulture);
         StartWithWindows.IsChecked = StartupShortcut.IsRegistered();
         FileInfo.Text = $"Data file: {dataFilePath}\nSettings: {settingsPath}\nDiagnostics: {Diag.LogFolder}";
     }
@@ -51,6 +54,12 @@ public sealed partial class SettingsWindow : Window
             return;
         }
 
+        if (!int.TryParse(IdleLockMinutes.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int idleMinutes) || idleMinutes > MaxIdleLockMinutes)
+        {
+            Problem.Text = $"Lock after must be a whole number of minutes from 0 to {MaxIdleLockMinutes}; 0 never locks.";
+            return;
+        }
+
         try
         {
             if (StartWithWindows.IsChecked == true)
@@ -72,6 +81,7 @@ public sealed partial class SettingsWindow : Window
         _settings.CaptureHotkey = capture.ToString();
         _settings.MainWindowHotkey = main.ToString();
         _settings.AutocompleteCap = cap;
+        _settings.IdleLockMinutes = idleMinutes;
         _settings.AutocompleteRanking = (string)((ComboBoxItem)AutocompleteRanking.SelectedItem).Tag;
         DialogResult = true;
     }
