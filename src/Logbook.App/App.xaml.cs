@@ -45,6 +45,7 @@ public sealed partial class App : Application, IDisposable
     private CaptureWindow? _capture;
     private MainWindow? _main;
     private UnlockWindow? _unlockPrompt;
+    private SettingsWindow? _settingsWindow;
     private Suggestions? _suggestions;
     private LogFile? _suggestionsFor;
     private Settings.Settings _settings = new();
@@ -769,10 +770,26 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowSettings()
     {
-        SettingsWindow window = new(_settings, SettingsStore.SettingsPath(_root), _dataFilePath) { Owner = VisibleMain };
-        if (window.ShowDialog() != true)
+        // The main window's menu and the tray menu both open Settings, and the tray still works while a dialog is up;
+        // two windows editing the same settings would each save over the other.
+        if (_settingsWindow is { } open)
         {
+            open.Activate();
             return;
+        }
+
+        SettingsWindow window = new(_settings, SettingsStore.SettingsPath(_root), _dataFilePath) { Owner = VisibleMain };
+        _settingsWindow = window;
+        try
+        {
+            if (window.ShowDialog() != true)
+            {
+                return;
+            }
+        }
+        finally
+        {
+            _settingsWindow = null;
         }
 
         SaveSettings();
