@@ -65,7 +65,7 @@
         <ColumnDefinition Width="2*" MinWidth="320" />
       </Grid.ColumnDefinitions>
 
-      <ListBox x:Name="Results" BorderThickness="0" Margin="8" SelectionChanged="OnSelectionChanged"
+      <ListBox x:Name="Results" BorderThickness="0" Margin="8" SelectionChanged="OnSelectionChanged" IsSynchronizedWithCurrentItem="False"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
         <ListBox.GroupStyle>
           <GroupStyle>

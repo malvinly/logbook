@@ -75,21 +75,19 @@ public sealed partial class MainWindow : Window
         Header.Text = range.Length == 0 ? RangeText.Count(_filtered.Count) : $"{RangeText.Count(_filtered.Count)} · {range}";
         ShowWarnings();
 
-        if (selectedId is not null)
-        {
-            Select(selectedId);
-        }
+        // Keep the same entry selected if the new filter still shows it; otherwise the pane simply closes.
+        Results.SelectedItem = selectedId is null ? null : RowFor(selectedId);
     }
 
-    /// <summary>Selects the entry with this id, clearing the filter if the filter hides it.</summary>
+    /// <summary>Selects the entry with this id, clearing the filter if the filter hides it (the toast's click).</summary>
     public void Select(string id)
     {
-        EntryRow? row = Results.Items.OfType<EntryRow>().FirstOrDefault(r => r.Id == id);
+        EntryRow? row = RowFor(id);
         if (row is null && Filter.Text.Length > 0)
         {
             Filter.Text = "";
             Refresh();
-            row = Results.Items.OfType<EntryRow>().FirstOrDefault(r => r.Id == id);
+            row = RowFor(id);
         }
 
         Results.SelectedItem = row;
@@ -98,6 +96,8 @@ public sealed partial class MainWindow : Window
             Results.ScrollIntoView(row);
         }
     }
+
+    private EntryRow? RowFor(string id) => Results.Items.OfType<EntryRow>().FirstOrDefault(r => r.Id == id);
 
     private void ShowWarnings()
     {
