@@ -13,6 +13,29 @@ public static class TimelineExport
     private const string CompactPattern = "MMM d, yyyy";
     private const string ReasonIndent = "      ";
 
+    // The pieces below are shared with TimelineHtml, so the two formats always say the same thing.
+
+    /// <summary>Oldest first; the id breaks ties so the order never depends on the input order.</summary>
+    internal static List<Entry> Order(IEnumerable<Entry> entries)
+        => [.. entries.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id, StringComparer.Ordinal)];
+
+    /// <summary>"#staging-access — 3 entries, Oct 6 – Oct 20, 2026"; the range is left out of an empty set.</summary>
+    internal static string Header(string filterText, List<Entry> ordered)
+    {
+        string title = string.IsNullOrWhiteSpace(filterText) ? "All entries" : filterText.Trim();
+        string header = $"{title} — {RangeText.Count(ordered.Count)}";
+        if (ordered.Count > 0)
+        {
+            header += ", " + RangeText.Range(ordered);
+        }
+
+        return header;
+    }
+
+    /// <summary>The date part of a line: full or compact, in the entry's own offset.</summary>
+    internal static string When(Entry entry, ExportOptions options)
+        => entry.OccurredAt.ToString(options.Compact ? CompactPattern : FullPattern, CultureInfo.InvariantCulture);
+
     /// <param name="filterText">The filter as typed; blank means "All entries".</param>
     /// <param name="entries">The filtered set in any order.</param>
     /// <param name="options">The four toggles.</param>
@@ -22,16 +45,10 @@ public static class TimelineExport
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentNullException.ThrowIfNull(options);
 
-        List<Entry> ordered = [.. entries.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id, StringComparer.Ordinal)];
+        List<Entry> ordered = Order(entries);
         List<string> lines = [];
 
-        string title = string.IsNullOrWhiteSpace(filterText) ? "All entries" : filterText.Trim();
-        string header = $"{title} — {RangeText.Count(ordered.Count)}";
-        if (ordered.Count > 0)
-        {
-            header += ", " + RangeText.Range(ordered);
-        }
-
+        string header = Header(filterText, ordered);
         lines.Add(header);
         if (ordered.Count == 0)
         {
@@ -50,7 +67,7 @@ public static class TimelineExport
         {
             DateOnly date = RangeText.StoredDate(entry);
             StringBuilder line = new("• ");
-            line.Append(entry.OccurredAt.ToString(options.Compact ? CompactPattern : FullPattern, CultureInfo.InvariantCulture));
+            line.Append(When(entry, options));
             if (options.ShowGaps && previousDate is { } previous)
             {
                 line.Append(" (").Append(GapText(date.DayNumber - previous.DayNumber)).Append(')');
@@ -94,7 +111,7 @@ public static class TimelineExport
     }
 
     // Gaps are whole calendar days, so Oct 15 2:30 PM to Oct 20 9:02 AM is 5 days, as in the design sample.
-    private static string GapText(int days) => days switch
+    internal static string GapText(int days) => days switch
     {
         0 => "same day",
         1 => "1 day later",
@@ -102,7 +119,7 @@ public static class TimelineExport
     };
 
     // "Jul (1) · Aug (3) · Oct (2)"; the year is added only when the set spans more than one.
-    private static string MonthCounts(List<Entry> ordered)
+    internal static string MonthCounts(List<Entry> ordered)
     {
         var groups = ordered
             .GroupBy(e => (RangeText.StoredDate(e).Year, RangeText.StoredDate(e).Month))
