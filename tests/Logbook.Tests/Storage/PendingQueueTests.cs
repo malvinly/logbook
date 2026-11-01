@@ -87,6 +87,18 @@ public sealed class PendingQueueTests : IDisposable
     }
 
     [Fact]
+    public void DeletedDataFileIsNotRecreatedAndTheCaptureStaysPending()
+    {
+        File.Delete(_file.Path);
+
+        Assert.False(_log.Append(NewEntry("first")));
+
+        Assert.Equal(1, _log.PendingCount);
+        Assert.Equal("first", Assert.Single(_log.Live).Summary);
+        Assert.False(File.Exists(_file.Path));
+    }
+
+    [Fact]
     public void RetryWithNothingPendingSucceeds()
     {
         Assert.True(_log.RetryPending());

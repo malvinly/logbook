@@ -13,10 +13,20 @@ public sealed class LineAppenderTests : IDisposable
     public void Dispose() => _file.Dispose();
 
     [Fact]
-    public void CreatesTheFileAndWritesLineWithNewline()
+    public void WritesLineWithNewline()
     {
+        File.WriteAllText(_file.Path, "");
         new LineAppender(_file.Path, NoDelays).Append("first");
         Assert.Equal("first\n", File.ReadAllText(_file.Path));
+    }
+
+    [Fact]
+    public void MissingFileIsAnIOExceptionAfterTheRetriesAndIsNeverCreated()
+    {
+        // A file deleted or moved away mid-session must not come back headerless; the write fails so the user hears of it.
+        IReadOnlyList<TimeSpan> threeDelays = [TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero];
+        Assert.ThrowsAny<IOException>(() => new LineAppender(_file.Path, threeDelays).Append("line"));
+        Assert.False(File.Exists(_file.Path));
     }
 
     [Fact]
@@ -30,6 +40,7 @@ public sealed class LineAppenderTests : IDisposable
     [Fact]
     public void UsesLineFeedOnlyAndUtf8()
     {
+        File.WriteAllText(_file.Path, "");
         new LineAppender(_file.Path, NoDelays).Append("café");
         byte[] bytes = File.ReadAllBytes(_file.Path);
         Assert.Equal("café\n"u8.ToArray(), bytes);

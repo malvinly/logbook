@@ -3,8 +3,8 @@ using System.Text;
 namespace Logbook.Core.Storage;
 
 /// <summary>
-/// Appends one line to the data file per the write rules of DESIGN.md section 8: open for append with write-through,
-/// write the line and its newline in one call, flush, close. The file is never held open between writes.
+/// Appends one line to the data file per the write rules of DESIGN.md section 8: open the existing file with
+/// write-through, seek to its end, write the line and its newline in one call, flush, close. The file is never held open between writes.
 /// A sync client may briefly lock the file during upload, so a failed open is retried with backoff.
 /// </summary>
 public sealed class LineAppender
@@ -61,7 +61,11 @@ public sealed class LineAppender
 
     private void WriteOnce(byte[] bytes)
     {
-        using FileStream stream = new(_path, FileMode.Append, FileAccess.Write, FileShare.Read, bufferSize: 4096, FileOptions.WriteThrough);
+        // FileMode.Open, not Append: Append would create a missing file, and a data file deleted or moved away mid-session
+        // must never come back without its header. The FileNotFoundException is an IOException, so it is retried and
+        // then queued like any other failure, and the user hears about it.
+        using FileStream stream = new(_path, FileMode.Open, FileAccess.Write, FileShare.Read, bufferSize: 4096, FileOptions.WriteThrough);
+        stream.Seek(0, SeekOrigin.End);
         stream.Write(bytes);
         stream.Flush();
     }
