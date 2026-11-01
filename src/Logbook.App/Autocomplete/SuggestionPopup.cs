@@ -79,20 +79,21 @@ public sealed class SuggestionPopup
         _popup.IsOpen = true;
     }
 
-    // The token is the run of non-space characters around the caret, when it starts with # or @ at a word start
-    // (or just after an opening paren or quote).
+    // The token is the run around the caret up to whitespace, "," or ";", when it starts with # or @ at a word start
+    // (or just after an opening paren or quote, or after a "," or ";" that ended another token). Its end leaves out
+    // trailing punctuation, which the grammar strips (DESIGN.md section 6), so "@j-d?" suggests for "j-d" and keeps the "?".
     private bool FindToken(out int start, out int end, out char sigil)
     {
         string text = _box.Text;
         int caret = _box.CaretIndex;
         start = caret;
-        while (start > 0 && !char.IsWhiteSpace(text[start - 1]))
+        while (start > 0 && !IsTokenEnd(text[start - 1]))
         {
             start--;
         }
 
         end = caret;
-        while (end < text.Length && !char.IsWhiteSpace(text[end]))
+        while (end < text.Length && !IsTokenEnd(text[end]))
         {
             end++;
         }
@@ -103,8 +104,50 @@ public sealed class SuggestionPopup
             start++;
         }
 
+        while (end > start + 1)
+        {
+            if (text[end - 1] is ',' or '.' or ';' or ':' or ')' or '"' or '?' or '!')
+            {
+                end--;
+            }
+            else if (end - 2 > start && text[end - 2] == '\'' && text[end - 1] == 's')
+            {
+                end -= 2; // a possessive 's
+            }
+            else
+            {
+                break;
+            }
+        }
+
         sigil = start < text.Length ? text[start] : '\0';
-        return (sigil == '#' || sigil == '@') && (start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"');
+        bool mayStart = start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"' || FollowsTokenSeparator(text, start);
+        return (sigil == '#' || sigil == '@') && mayStart;
+    }
+
+    private static bool IsTokenEnd(char c) => char.IsWhiteSpace(c) || c is ',' or ';';
+
+    // "@j-doe,@a" suggests for "a": the comma ended a token. This only checks that the piece before the comma starts
+    // with # or @; the parser has the final say on longer chains.
+    private static bool FollowsTokenSeparator(string text, int start)
+    {
+        if (start == 0 || text[start - 1] is not (',' or ';'))
+        {
+            return false;
+        }
+
+        int previous = start - 1;
+        while (previous > 0 && !IsTokenEnd(text[previous - 1]))
+        {
+            previous--;
+        }
+
+        while (previous < start - 1 && text[previous] is '(' or '"')
+        {
+            previous++;
+        }
+
+        return text[previous] is '#' or '@';
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -145,7 +188,9 @@ public sealed class SuggestionPopup
             return;
         }
 
-        string replacement = _sigil + name + " ";
+        // No space when punctuation or another token already follows: "@j-d?" becomes "@j-doe?", not "@j-doe ?".
+        bool followedByText = _tokenEnd < _box.Text.Length && !char.IsWhiteSpace(_box.Text[_tokenEnd]);
+        string replacement = _sigil + name + (followedByText ? "" : " ");
         _box.Text = string.Concat(_box.Text.AsSpan(0, _tokenStart), replacement, _box.Text.AsSpan(_tokenEnd));
         _box.CaretIndex = _tokenStart + replacement.Length;
         Hide();
