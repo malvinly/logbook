@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using Logbook.App.Autocomplete;
 using Logbook.App.Chips;
 using Logbook.Core;
 using Logbook.Core.Grammar;
@@ -14,10 +15,13 @@ public sealed partial class CaptureWindow : Window
 {
     private readonly Rect _workArea;
 
-    public CaptureWindow(Rect workArea)
+    public CaptureWindow(Rect workArea, Func<Suggestions> suggestions)
     {
         InitializeComponent();
         _workArea = workArea;
+        SuggestionPopup.Attach(Line, suggestions);
+        SuggestionPopup.Attach(ExtraTags, suggestions);
+        SuggestionPopup.Attach(ExtraPeople, suggestions);
         Left = workArea.Left + (workArea.Width - Width) / 2;
         Top = workArea.Top + workArea.Height * 0.3;
         Loaded += (_, _) => Line.Focus();

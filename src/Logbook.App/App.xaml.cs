@@ -1,8 +1,10 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
 using Logbook.App.Diagnostics;
+using Logbook.App.Main;
 using Logbook.App.Hotkeys;
 using Logbook.App.Interop;
 using Logbook.App.Lock;
@@ -25,6 +27,9 @@ public sealed partial class App : Application, IDisposable
     private TrayIcon? _tray;
     private Timer? _retryTimer;
     private CaptureWindow? _capture;
+    private MainWindow? _main;
+    private Suggestions? _suggestions;
+    private LogFile? _suggestionsFor;
     private Settings.Settings _settings = new();
     private string _root = "";
     private string _dataFilePath = "";
@@ -174,7 +179,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        _capture = new CaptureWindow(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice));
+        _capture = new CaptureWindow(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions);
         _capture.Captured += entry => _ = SaveCapturedAsync(entry, _capture.WorkArea);
         _capture.Closed += (_, _) => _capture = null;
         _capture.Show();
@@ -186,6 +191,12 @@ public sealed partial class App : Application, IDisposable
     {
         LogFile log = Log!;
         bool saved = await Task.Run(() => log.Append(entry)).ConfigureAwait(true);
+        _suggestions = null; // the new entry may introduce a tag or person
+        if (_main is { IsVisible: true })
+        {
+            _main.Refresh();
+        }
+
         if (saved)
         {
             ToastWindow toast = new(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5));
@@ -210,8 +221,60 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        // Built in step 7.
-        Diag.Log($"Main window requested, select {selectId ?? "nothing"}");
+        if (_main is null)
+        {
+            _main = new MainWindow(Log!, BuildSuggestions);
+            _main.SettingsRequested += ShowSettings;
+            _main.CopyTimelineRequested += ShowExportPanel;
+            _main.ExportDecryptedRequested += ShowExportDecrypted;
+            _main.CheatSheetRequested += ShowCheatSheet;
+        }
+        else
+        {
+            _main.Refresh();
+        }
+
+        if (_main.WindowState == WindowState.Minimized)
+        {
+            _main.WindowState = WindowState.Normal;
+        }
+
+        _main.Show();
+        _main.Activate();
+        if (selectId is not null)
+        {
+            _main.Select(selectId);
+        }
+    }
+
+    private Suggestions BuildSuggestions()
+    {
+        // Rebuilt on demand; a few thousand entries make this trivial.
+        if (_suggestionsFor != Log || _suggestions is null)
+        {
+            _suggestions = new Suggestions(Log?.Live ?? [], _settings.AutocompleteCap, _settings.AutocompleteRanking);
+            _suggestionsFor = Log;
+        }
+
+        return _suggestions;
+    }
+
+    private void ShowExportPanel(string filterText, IReadOnlyList<Entry> entries)
+    {
+        // Built in step 8.
+        Diag.Log($"Export panel requested for '{filterText}' with {entries.Count} entries");
+    }
+
+    private void ShowExportDecrypted()
+    {
+        // Built in step 8.
+        Diag.Log("Decrypted export requested");
+    }
+
+    private void ShowCheatSheet()
+    {
+        // Built in step 9.
+        Diag.Log("Cheat sheet requested");
     }
 
     private void ShowSettings()
