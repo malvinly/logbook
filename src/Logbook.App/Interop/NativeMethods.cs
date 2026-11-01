@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Logbook.App.Interop;
 
-/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, foreground focus, idle time, and DWM backdrops.</summary>
+/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, foreground focus, idle time, session notifications, and DWM backdrops.</summary>
 internal static class NativeMethods
 {
     public const int WmHotkey = 0x0312;
@@ -97,6 +97,21 @@ internal static class NativeMethods
     [DllImport("user32.dll", ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetLastInputInfo(ref LastInputInfo info);
+
+    // Workstation lock and sign-out lock the log (DESIGN.md section 9). Windows sends WM_WTSSESSION_CHANGE only to a
+    // window that has asked for it, so the hidden message window registers for its own session.
+    public const int WmWtsSessionChange = 0x02B1;
+    public const int WtsSessionLogoff = 0x6;
+    public const int WtsSessionLock = 0x7;
+    public const int NotifyForThisSession = 0;
+
+    [DllImport("wtsapi32.dll", SetLastError = true, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WTSRegisterSessionNotification(IntPtr hWnd, int flags);
+
+    [DllImport("wtsapi32.dll", ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WTSUnRegisterSessionNotification(IntPtr hWnd);
 
     // DWM window attributes for the borderless capture box. WPF has no API for Mica, acrylic or rounded corners on a
     // window it does not frame itself, so the window asks the compositor directly. Each attribute is ignored or

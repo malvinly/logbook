@@ -41,6 +41,9 @@ public sealed partial class App : Application, IDisposable
     private readonly DispatcherTimer _reminderTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly HashSet<Reminders.Shown> _remindersShown = []; // since the last unlock; dropped on lock with the log
     private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromMinutes(1) }; // runs only while unlocked
+
+    // Runs only while a workstation lock or sign-out found an entry not on disk yet; takes that lock once it is.
+    private readonly DispatcherTimer _postponedLockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private CaptureWindow? _capture;
     private MainWindow? _main;
     private UnlockWindow? _unlockPrompt;
@@ -88,6 +91,15 @@ public sealed partial class App : Application, IDisposable
 
         _messageWindow = new MessageWindow();
         _messageWindow.AddHook(OnMessage);
+        if (_messageWindow.RegisterForSessionNotifications())
+        {
+            Diag.Log("Registered for session lock and sign-out notifications");
+        }
+        else
+        {
+            Diag.Log($"Could not register for session notifications (error {Marshal.GetLastWin32Error()}); a workstation lock will not lock the log");
+        }
+
         _hotkeys = new HotkeyManager(_messageWindow);
         _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
         _tray.OpenRequested += ShowMainWindow;
@@ -100,6 +112,7 @@ public sealed partial class App : Application, IDisposable
         _retryTimer = new Timer(_ => RetryPending(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         _reminderTimer.Tick += (_, _) => ShowDueReminder();
         _idleTimer.Tick += (_, _) => LockIfIdle();
+        _postponedLockTimer.Tick += (_, _) => TakePostponedLock();
 
         if (_placeholderSeen)
         {
@@ -528,6 +541,48 @@ public sealed partial class App : Application, IDisposable
             : $"Locked after {_settings.IdleLockMinutes} minutes without input");
     }
 
+    /// <summary>
+    /// Windows locked the session or is signing the user out (DESIGN.md section 9): lock the log as Lock now does, since
+    /// walking away is usually what locking the workstation means. While an entry is not on disk yet, a write is in
+    /// flight or a passphrase change is rewriting the header, the lock is postponed and taken as soon as that is done.
+    /// A sign-out with unsaved entries is refused separately (OnSessionEnding); a postponed lock cannot hide them,
+    /// because it is only taken once nothing is unsaved.
+    /// </summary>
+    private void LockForSession(string what)
+    {
+        if (Log is not { } log)
+        {
+            return;
+        }
+
+        if (WriteInProgress(log))
+        {
+            Diag.Log($"{what}; lock postponed: an entry is not on disk yet");
+            _postponedLockTimer.Start();
+            return;
+        }
+
+        Lock($"{what}; locked");
+    }
+
+    // Polled rather than hooked into every place a write can finish (a capture, a detail-pane save, the 30-second
+    // retry, a passphrase change), so no settling path can be missed.
+    private void TakePostponedLock()
+    {
+        if (Log is not { } log)
+        {
+            _postponedLockTimer.Stop();
+            return;
+        }
+
+        if (WriteInProgress(log))
+        {
+            return;
+        }
+
+        Lock("Took the lock postponed from a workstation lock or sign-out");
+    }
+
     // Drops the open log and everything that shows it. Callers have already checked that nothing is unsaved.
     private void Lock(string reason)
     {
@@ -573,6 +628,7 @@ public sealed partial class App : Application, IDisposable
             Log = null;
             _reminderTimer.Stop();
             _idleTimer.Stop();
+            _postponedLockTimer.Stop();
             _remindersShown.Clear();
             _tray?.SetLocked(true);
             log?.Close(); // zeroes the data key and empties the entries; callers checked nothing is pending
@@ -908,6 +964,13 @@ public sealed partial class App : Application, IDisposable
         {
             handled = true;
             Dispatcher.BeginInvoke(ShowMainWindow);
+        }
+        else if (msg == NativeMethods.WmWtsSessionChange && wParam.ToInt32() is NativeMethods.WtsSessionLock or NativeMethods.WtsSessionLogoff)
+        {
+            string what = wParam.ToInt32() == NativeMethods.WtsSessionLock ? "Windows locked the session" : "Windows is signing the user out";
+
+            // Not inside the message hook: the lock closes windows.
+            Dispatcher.BeginInvoke(() => LockForSession(what));
         }
         else if (msg == NativeMethods.WmSettingChange && lParam != IntPtr.Zero && Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")
         {
