@@ -15,6 +15,10 @@ namespace Logbook.App.Lock;
 /// </summary>
 public sealed partial class ChangePassphraseWindow : Window
 {
+    // LogFile.ChangePassphrase throws CryptographicException both for a wrong current passphrase and, with exactly this
+    // message, when the new header fails its in-memory check; only the message tells them apart. Keep it in step with Core.
+    private const string NewHeaderDidNotVerify = "The new header did not verify. The passphrase is unchanged.";
+
     private readonly LogFile _log;
     private readonly Func<bool> _writeInProgress;
 
@@ -86,6 +90,12 @@ public sealed partial class ChangePassphraseWindow : Window
             await Task.Run(() => _log.ChangePassphrase(current, next)).ConfigureAwait(true);
             Diag.Log("Passphrase changed; the header was rewritten in place");
             changed = true;
+        }
+        catch (CryptographicException ex) when (ex.Message == NewHeaderDidNotVerify)
+        {
+            // Not the user's typing: the header built for the new passphrase failed its own check, and nothing was written.
+            Diag.Log("The new header did not verify", ex);
+            ShowProblem("Unexpected error; see the diagnostics log. " + ex.Message);
         }
         catch (CryptographicException)
         {
