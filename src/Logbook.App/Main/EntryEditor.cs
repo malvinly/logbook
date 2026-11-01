@@ -21,6 +21,8 @@ public sealed class EntryEditor : ObservableObject
     private string _tags;
     private string _people;
     private string _refs;
+    private DateTime? _remindDate;
+    private string _remindTime;
     private string _problem = "";
 
     public EntryEditor(Entry current, Entry? previous)
@@ -34,6 +36,10 @@ public sealed class EntryEditor : ObservableObject
         _tags = string.Join(' ', current.Tags);
         _people = string.Join(' ', current.People);
         _refs = string.Join(Environment.NewLine, current.Refs);
+        // Shown in the reminder's own stored offset, like occurredAt.
+        _remindDate = current.RemindAt?.DateTime.Date;
+        _remindTime = current.RemindAt is { } remindAt ? Format.Time(remindAt) : "";
+        ReminderPassed = current.RemindAt is { } due && due <= DateTimeOffset.Now;
 
         if (previous is not null)
         {
@@ -43,6 +49,7 @@ public sealed class EntryEditor : ObservableObject
             TagsChanged = !previous.Tags.SequenceEqual(current.Tags);
             PeopleChanged = !previous.People.SequenceEqual(current.People);
             RefsChanged = !previous.Refs.SequenceEqual(current.Refs);
+            RemindAtChanged = previous.RemindAt != current.RemindAt;
         }
     }
 
@@ -94,6 +101,21 @@ public sealed class EntryEditor : ObservableObject
         set => Set(ref _refs, value);
     }
 
+    public DateTime? RemindDate
+    {
+        get => _remindDate;
+        set => Set(ref _remindDate, value);
+    }
+
+    public string RemindTime
+    {
+        get => _remindTime;
+        set => Set(ref _remindTime, value);
+    }
+
+    /// <summary>True when the stored reminder is due; the pane then says how to stop the balloon.</summary>
+    public bool ReminderPassed { get; }
+
     public string Problem
     {
         get => _problem;
@@ -112,6 +134,15 @@ public sealed class EntryEditor : ObservableObject
 
     public bool RefsChanged { get; }
 
+    public bool RemindAtChanged { get; }
+
+    /// <summary>Empties the reminder fields; saving then writes a revision without a reminder.</summary>
+    public void ClearReminder()
+    {
+        RemindDate = null;
+        RemindTime = "";
+    }
+
     /// <summary>The next revision, or null with <see cref="Problem"/> set when a field does not parse.</summary>
     public Entry? ToRevision(DateTimeOffset now)
     {
@@ -124,6 +155,11 @@ public sealed class EntryEditor : ObservableObject
         if (!TimeOnly.TryParseExact(_time.Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly time))
         {
             Problem = "The time should look like 2:30 PM or 14:30.";
+            return null;
+        }
+
+        if (!TryReadReminder(out DateTimeOffset? remindAt))
+        {
             return null;
         }
 
@@ -152,8 +188,47 @@ public sealed class EntryEditor : ObservableObject
             Tags = TokenNormalizer.NormalizeList(_tags),
             People = TokenNormalizer.NormalizeList(_people),
             Refs = [.. _refs.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
+            RemindAt = remindAt,
             Deleted = false,
         };
+    }
+
+    // Both boxes empty means no reminder. An unchanged reminder keeps its stored value exactly, an edited one keeps its
+    // stored offset (as occurredAt does), and a new one takes the local offset at that date and time, so a reminder set
+    // across a daylight-saving change still fires at the wall-clock time typed.
+    private bool TryReadReminder(out DateTimeOffset? remindAt)
+    {
+        remindAt = null;
+        if (_remindDate is null && string.IsNullOrWhiteSpace(_remindTime))
+        {
+            return true;
+        }
+
+        if (_remindDate is null)
+        {
+            Problem = "Pick a date for the reminder, or clear it.";
+            return false;
+        }
+
+        if (!TimeOnly.TryParseExact(_remindTime.Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly time))
+        {
+            Problem = "The reminder time should look like 9:00 AM or 09:00.";
+            return false;
+        }
+
+        DateOnly date = DateOnly.FromDateTime(_remindDate.Value);
+        if (_current.RemindAt is { } stored)
+        {
+            bool unchanged = DateOnly.FromDateTime(stored.DateTime) == date && stored.Hour == time.Hour && stored.Minute == time.Minute;
+            remindAt = unchanged ? stored : new DateTimeOffset(date, time, stored.Offset);
+        }
+        else
+        {
+            DateTime local = date.ToDateTime(time);
+            remindAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+        }
+
+        return true;
     }
 
     /// <summary>A tombstone revision: the same fields, marked deleted.</summary>

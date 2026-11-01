@@ -223,6 +223,8 @@ public sealed partial class MainWindow : Window
         Select(revision.Id);
     }
 
+    private void OnClearReminderClick(object sender, RoutedEventArgs e) => _editor?.ClearReminder();
+
     private void OnFollowUpClick(object sender, RoutedEventArgs e)
     {
         if (_editor is not null)

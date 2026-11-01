@@ -44,5 +44,10 @@ public sealed class RevisionRow
         {
             yield return "refs: " + string.Join(", ", e.Refs);
         }
+
+        if (e.RemindAt is { } remindAt)
+        {
+            yield return "reminder " + Format.DateTime(remindAt);
+        }
     }
 }

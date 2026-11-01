@@ -200,6 +200,22 @@
                 <Label Content="Refs (one per line)" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
                 <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" />
               </StackPanel>
+              <StackPanel Style="{StaticResource Field}">
+                <Label Content="Reminder" Style="{StaticResource ChangedLabel}" Tag="{Binding RemindAtChanged}" />
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <DatePicker SelectedDate="{Binding RemindDate, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder date" />
+                  <TextBox Grid.Column="2" Text="{Binding RemindTime, UpdateSourceTrigger=PropertyChanged}" ToolTip="Reminder time, like 9:00 AM" />
+                  <Button Grid.Column="3" Content="Clear" Margin="8,0,0,0" Click="OnClearReminderClick" ToolTip="Remove the reminder; save to keep the change" />
+                </Grid>
+                <TextBlock Text="This reminder has passed. Clear it and save to stop the tray balloon." Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                           Margin="0,4,0,0" Visibility="{Binding ReminderPassed, Converter={StaticResource BoolToVisibility}}" />
+              </StackPanel>
               <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,8,0,0" />
               <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                 <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
