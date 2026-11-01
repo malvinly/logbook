@@ -10,6 +10,8 @@ public sealed class ExportSettings
     public bool GroupByMonth { get; set; }
 
     public bool Compact { get; set; }
+
+    public bool TagsAndPeople { get; set; }
 }
 
 /// <summary>A filter string saved under a name, shown as a button above the results (DESIGN.md section 10).</summary>

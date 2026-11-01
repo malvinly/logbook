@@ -37,7 +37,7 @@ public sealed class CultureTests
     [InlineData("ar-SA")]
     public void TimelineIsUsStyleUnderAnyCulture(string culture)
     {
-        string text = Under(culture, () => TimelineExport.Render("#staging-access", SampleEntries.Sample, new ExportOptions(true, true, false)));
+        string text = Under(culture, () => TimelineExport.Render("#staging-access", SampleEntries.Sample, new ExportOptions(true, true, false, false)));
         Assert.Contains("#staging-access — 3 entries, Oct 6 – Oct 20, 2026", text, StringComparison.Ordinal);
         Assert.Contains("Oct (3)", text, StringComparison.Ordinal);
         Assert.Contains("• Thu Oct 15, 2026 2:30 PM (9 days later) — ", text, StringComparison.Ordinal);

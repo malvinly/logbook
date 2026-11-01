@@ -9,7 +9,7 @@ using Logbook.Core.Export;
 namespace Logbook.App.Export;
 
 /// <summary>
-/// The "Copy as timeline" panel (DESIGN.md section 11): the three toggles, a preview, and one button that puts the
+/// The "Copy as timeline" panel (DESIGN.md section 11): the four toggles, a preview, and one button that puts the
 /// plain text on the clipboard. Toggles are read from and written back to settings so they are remembered.
 /// </summary>
 public sealed partial class ExportPanel : Window
@@ -30,6 +30,7 @@ public sealed partial class ExportPanel : Window
         ShowGaps.IsChecked = settings.ShowGaps;
         GroupByMonth.IsChecked = settings.GroupByMonth;
         Compact.IsChecked = settings.Compact;
+        TagsAndPeople.IsChecked = settings.TagsAndPeople;
         _loading = false;
         Render();
     }
@@ -44,13 +45,14 @@ public sealed partial class ExportPanel : Window
         _settings.ShowGaps = ShowGaps.IsChecked == true;
         _settings.GroupByMonth = GroupByMonth.IsChecked == true;
         _settings.Compact = Compact.IsChecked == true;
+        _settings.TagsAndPeople = TagsAndPeople.IsChecked == true;
         _saveSettings();
         Render();
     }
 
     private void Render()
     {
-        ExportOptions options = new(_settings.ShowGaps, _settings.GroupByMonth, _settings.Compact);
+        ExportOptions options = new(_settings.ShowGaps, _settings.GroupByMonth, _settings.Compact, _settings.TagsAndPeople);
         Preview.Text = TimelineExport.Render(_filterText, _entries, options);
         Copied.Text = "";
     }

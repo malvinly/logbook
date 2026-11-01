@@ -7,10 +7,12 @@ namespace Logbook.Tests.Export;
 /// <summary>Every toggle rendered against the fixed sample set. Expected text is exact, line for line.</summary>
 public sealed class TimelineExportTests
 {
-    private static readonly ExportOptions Gaps = new(ShowGaps: true, GroupByMonth: false, Compact: false);
-    private static readonly ExportOptions Months = new(ShowGaps: false, GroupByMonth: true, Compact: false);
-    private static readonly ExportOptions Compact = new(ShowGaps: false, GroupByMonth: false, Compact: true);
-    private static readonly ExportOptions Everything = new(ShowGaps: true, GroupByMonth: true, Compact: true);
+    private static readonly ExportOptions Gaps = new(ShowGaps: true, GroupByMonth: false, Compact: false, TagsAndPeople: false);
+    private static readonly ExportOptions Months = new(ShowGaps: false, GroupByMonth: true, Compact: false, TagsAndPeople: false);
+    private static readonly ExportOptions Compact = new(ShowGaps: false, GroupByMonth: false, Compact: true, TagsAndPeople: false);
+    private static readonly ExportOptions Everything = new(ShowGaps: true, GroupByMonth: true, Compact: true, TagsAndPeople: false);
+    private static readonly ExportOptions TagsAndPeople = new(ShowGaps: false, GroupByMonth: false, Compact: false, TagsAndPeople: true);
+    private static readonly ExportOptions CompactTagsAndPeople = new(ShowGaps: false, GroupByMonth: false, Compact: true, TagsAndPeople: true);
 
     private static string Render(IEnumerable<Entry> entries, ExportOptions options, string filter = "#staging-access")
         => TimelineExport.Render(filter, entries, options);
@@ -118,6 +120,102 @@ public sealed class TimelineExportTests
         Assert.DoesNotContain("j-doe", text, StringComparison.Ordinal);
         Assert.DoesNotContain("#asked", text, StringComparison.Ordinal);
         Assert.DoesNotContain("staging-access", text["All entries".Length..], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TagsAndPeopleOffIsTheOutputFromBeforeTheToggle()
+    {
+        // Pinned from the renderer as it was before the toggle existed: off must stay byte-identical.
+        const string none =
+            "All entries — 9 entries, Jul 14 – Oct 20, 2026\n" +
+            "\n" +
+            "• Tue Jul 14, 2026 9:00 AM — Reported the printer outage to facilities [INC0040001]\n" +
+            "• Mon Aug 3, 2026 11:05 AM — Asked for staging access\n" +
+            "• Thu Aug 20, 2026 4:45 PM — Told a-smith the outage count so far\n" +
+            "      Reason: They asked for Numbers before the budget meeting\n" +
+            "• Fri Aug 28, 2026 8:30 AM — Decided to escalate the printer issue\n" +
+            "• Wed Sep 9, 2026 1:00 PM — Followed up on staging access\n" +
+            "• Thu Oct 1, 2026 12:30 AM — Late night note from the Tokyo trip\n" +
+            "• Tue Oct 6, 2026 10:14 AM — Asked for access to the staging environment; told it would be looked into.\n" +
+            "• Thu Oct 15, 2026 2:30 PM — Followed up; no response to the first ask.\n" +
+            "• Tue Oct 20, 2026 9:02 AM — Asked again in standup; told it would be this week.\n" +
+            "      Reason: wanted it on record before the release freeze.";
+        const string everything =
+            "All entries — 9 entries, Jul 14 – Oct 20, 2026\n" +
+            "Jul (1) · Aug (3) · Sep (1) · Oct (4)\n" +
+            "\n" +
+            "• Jul 14, 2026 — Reported the printer outage to facilities [INC0040001]\n" +
+            "• Aug 3, 2026 (20 days later) — Asked for staging access\n" +
+            "• Aug 20, 2026 (17 days later) — Told a-smith the outage count so far\n" +
+            "      Reason: They asked for Numbers before the budget meeting\n" +
+            "• Aug 28, 2026 (8 days later) — Decided to escalate the printer issue\n" +
+            "• Sep 9, 2026 (12 days later) — Followed up on staging access\n" +
+            "• Oct 1, 2026 (22 days later) — Late night note from the Tokyo trip\n" +
+            "• Oct 6, 2026 (5 days later) — Asked for access to the staging environment; told it would be looked into.\n" +
+            "• Oct 15, 2026 (9 days later) — Followed up; no response to the first ask.\n" +
+            "• Oct 20, 2026 (5 days later) — Asked again in standup; told it would be this week.\n" +
+            "      Reason: wanted it on record before the release freeze.";
+        Assert.Equal(none, Render(SampleEntries.All, ExportOptions.None, filter: ""));
+        Assert.Equal(everything, Render(SampleEntries.All, Everything, filter: ""));
+    }
+
+    [Fact]
+    public void TagsAndPeopleAppendsTagsThenPeopleToEachLine()
+    {
+        const string expected =
+            "#staging-access — 3 entries, Oct 6 – Oct 20, 2026\n" +
+            "\n" +
+            "• Tue Oct 6, 2026 10:14 AM — Asked for access to the staging environment; told it would be looked into. #asked #staging-access @j-doe\n" +
+            "• Thu Oct 15, 2026 2:30 PM — Followed up; no response to the first ask. #asked #staging-access @j-doe\n" +
+            "• Tue Oct 20, 2026 9:02 AM — Asked again in standup; told it would be this week. #asked #staging-access @j-doe\n" +
+            "      Reason: wanted it on record before the release freeze.";
+        Assert.Equal(expected, Render(SampleEntries.Sample, TagsAndPeople));
+    }
+
+    [Fact]
+    public void TagsAndPeopleComeAfterTheRefs()
+    {
+        string[] lines = Render([SampleEntries.PrinterOutage], TagsAndPeople, filter: "#printer").Split('\n');
+        Assert.Equal("• Tue Jul 14, 2026 9:00 AM — Reported the printer outage to facilities [INC0040001] #reported #printer @a-smith", lines[2]);
+    }
+
+    [Fact]
+    public void TagsAndPeopleLeavesAnEntryWithNeitherUnchanged()
+    {
+        Entry bare = SampleEntries.Make("01K000000000000000000000W1", new DateTimeOffset(2026, 10, 6, 9, 0, 0, TimeSpan.FromHours(-5)), "Nothing to index", null, [], [], []);
+        Assert.Equal(Render([bare], ExportOptions.None), Render([bare], TagsAndPeople));
+        Assert.EndsWith("— Nothing to index", Render([bare], TagsAndPeople), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TagsAndPeopleRendersOnlyWhatTheEntryHas()
+    {
+        // Escalated has tags and no people; the second entry has people and no tags.
+        string[] tagsOnly = Render([SampleEntries.Escalated], TagsAndPeople).Split('\n');
+        Assert.Equal("• Fri Aug 28, 2026 8:30 AM — Decided to escalate the printer issue #decided #escalated #printer", tagsOnly[2]);
+
+        Entry peopleOnly = SampleEntries.Make("01K000000000000000000000W2", new DateTimeOffset(2026, 10, 6, 9, 0, 0, TimeSpan.FromHours(-5)), "Met", null, [], ["j-doe", "a-smith"], []);
+        string[] people = Render([peopleOnly], TagsAndPeople).Split('\n');
+        Assert.Equal("• Tue Oct 6, 2026 9:00 AM — Met @j-doe @a-smith", people[2]);
+    }
+
+    [Fact]
+    public void TagsAndPeopleCombinesWithCompact()
+    {
+        string[] lines = Render(SampleEntries.Sample, CompactTagsAndPeople).Split('\n');
+        Assert.Equal("• Oct 6, 2026 — Asked for access to the staging environment; told it would be looked into. #asked #staging-access @j-doe", lines[2]);
+        Assert.Equal("      Reason: wanted it on record before the release freeze.", lines[5]);
+    }
+
+    [Fact]
+    public void TagsAndPeopleCombinesWithEveryOtherToggle()
+    {
+        ExportOptions all = Everything with { TagsAndPeople = true };
+        string[] on = Render(SampleEntries.Sample, all).Split('\n');
+        string[] off = Render(SampleEntries.Sample, Everything).Split('\n');
+        Assert.Equal(off[..3], on[..3]); // header, month counts and the blank line are unchanged
+        Assert.Equal(off[4] + " #asked #staging-access @j-doe", on[4]);
+        Assert.Equal(off[^1], on[^1]); // the reason line is unchanged
     }
 
     [Fact]

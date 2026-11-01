@@ -5,7 +5,7 @@ namespace Logbook.Core.Export;
 
 /// <summary>
 /// Renders a filtered set as the plain-text timeline of DESIGN.md section 11: oldest first, Unicode bullets,
-/// fixed US-style dates in each entry's own offset, no markdown. Tags and people are deliberately left out.
+/// fixed US-style dates in each entry's own offset, no markdown. Tags and people are left out unless asked for.
 /// </summary>
 public static class TimelineExport
 {
@@ -15,7 +15,7 @@ public static class TimelineExport
 
     /// <param name="filterText">The filter as typed; blank means "All entries".</param>
     /// <param name="entries">The filtered set in any order.</param>
-    /// <param name="options">The three toggles.</param>
+    /// <param name="options">The four toggles.</param>
     public static string Render(string filterText, IEnumerable<Entry> entries, ExportOptions options)
     {
         ArgumentNullException.ThrowIfNull(filterText);
@@ -60,6 +60,19 @@ public static class TimelineExport
             foreach (string reference in entry.Refs)
             {
                 line.Append(" [").Append(reference).Append(']');
+            }
+
+            if (options.TagsAndPeople)
+            {
+                foreach (string tag in entry.Tags)
+                {
+                    line.Append(" #").Append(tag);
+                }
+
+                foreach (string person in entry.People)
+                {
+                    line.Append(" @").Append(person);
+                }
             }
 
             lines.Add(line.ToString());
