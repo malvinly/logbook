@@ -15,6 +15,8 @@ internal static class Scanner
         List<Token> tokens = [];
         StringBuilder plain = new();
         int i = 0;
+        // The index just past a "," or ";" that ended a tag or person; another may start there ("@j-doe,@a-smith").
+        int afterSeparator = -1;
         while (i < text.Length)
         {
             char c = text[i];
@@ -30,10 +32,10 @@ internal static class Scanner
             }
 
             // A tag or person may also open right after "(" or a quote, so (#asked) and "@j-doe" are tokens.
-            bool sigilMayStart = atWordStart || text[i - 1] is '(' or '"';
+            bool sigilMayStart = atWordStart || text[i - 1] is '(' or '"' || i == afterSeparator;
             if ((c == '#' || c == '@') && sigilMayStart && i + 1 < text.Length && char.IsLetter(text[i + 1]))
             {
-                int end = EndOfWord(text, i);
+                int end = EndOfName(text, i);
                 // Trailing punctuation belongs to the sentence, not the token: "asked @j-doe." names j-doe.
                 int nameEnd = end;
                 while (nameEnd > i + 1 && IsTrailingPunctuation(text[nameEnd - 1]))
@@ -44,6 +46,11 @@ internal static class Scanner
                 Flush(tokens, plain);
                 tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..nameEnd], TokenNormalizer.Normalize(text[(i + 1)..nameEnd])));
                 plain.Append(text, nameEnd, end - nameEnd);
+                if (end < text.Length && text[end] is ',' or ';')
+                {
+                    afterSeparator = end + 1;
+                }
+
                 i = end;
                 continue;
             }
@@ -98,6 +105,18 @@ internal static class Scanner
     }
 
     private static bool IsTrailingPunctuation(char c) => c is ',' or '.' or ';' or ':' or ')' or '"';
+
+    // A tag or person ends at whitespace or at a "," or ";", so a list of them needs no spaces.
+    private static int EndOfName(string text, int start)
+    {
+        int end = start;
+        while (end < text.Length && !char.IsWhiteSpace(text[end]) && text[end] is not (',' or ';'))
+        {
+            end++;
+        }
+
+        return end;
+    }
 
     private static int EndOfWord(string text, int start)
     {

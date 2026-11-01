@@ -85,6 +85,35 @@ public sealed class CollisionRuleTests
         Assert.Equal(["a#b"], LineParser.ParseCapture("#a#b", Now).Tags);
     }
 
+    [Fact]
+    public void TokenEndsAtACommaOrSemicolonSoAnotherMayFollow()
+    {
+        CaptureLine line = LineParser.ParseCapture("asked @j-doe,@a-smith about it", Now);
+        Assert.Equal(["j-doe", "a-smith"], line.People);
+        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a;#b", Now).Tags);
+        Assert.Equal(["a", "b"], LineParser.ParseCapture("#a,#b", Now).Tags);
+    }
+
+    [Fact]
+    public void TokenEndsAtACommaOrSemicolonInAQueryToo()
+    {
+        QueryLine line = LineParser.ParseQuery("@j-doe,@a-smith #a;#b", Today);
+        Assert.Equal(["j-doe", "a-smith"], line.People);
+        Assert.Equal(["a", "b"], line.Tags);
+    }
+
+    [Theory]
+    [InlineData("ticket #12345,")] // the comma does not make a digit-led name a token
+    [InlineData("ticket #12345,#a")] // nor does a comma that ended no token open one
+    [InlineData("C#,@x")]
+    public void CommaThatEndedNoTokenStartsNone(string text)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Empty(line.Tags);
+        Assert.Empty(line.People);
+        Assert.Equal(text, line.Summary);
+    }
+
     [Theory]
     [InlineData("asked @j-doe,", ",")]
     [InlineData("asked @j-doe.", ".")]
