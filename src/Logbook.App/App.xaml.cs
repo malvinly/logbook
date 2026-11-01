@@ -626,23 +626,35 @@ public sealed partial class App : Application, IDisposable
             _writesInFlight--;
         }
 
-        _suggestions = null; // the new entry may introduce a tag or person
-        _tray?.SetPending(log.PendingCount);
-        if (_main is { IsVisible: true })
-        {
-            _main.Refresh();
-        }
-
-        ToastWindow toast = saved
-            ? new ToastWindow(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5))
-            : new ToastWindow(workArea, "Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds; the tray icon shows the count.", danger: true, TimeSpan.FromSeconds(15));
         if (!saved)
         {
             Diag.Log("Capture could not be written; it is pending");
         }
 
-        toast.Clicked += () => ShowMainWindow(entry.Id);
-        toast.Show();
+        // Nothing awaits this task, so an exception from here on would vanish, and with it the "Not saved yet" toast.
+        try
+        {
+            _suggestions = null; // the new entry may introduce a tag or person
+            _tray?.SetPending(log.PendingCount);
+            if (_main is { IsVisible: true })
+            {
+                _main.Refresh();
+            }
+
+            ToastWindow toast = saved
+                ? new ToastWindow(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5))
+                : new ToastWindow(workArea, "Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds; the tray icon shows the count.", danger: true, TimeSpan.FromSeconds(15));
+            toast.Clicked += () => ShowMainWindow(entry.Id);
+            toast.Show();
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Diag.Log("Could not finish showing a capture's result", e);
+            if (!saved)
+            {
+                _tray?.ShowBalloon("Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds; the tray icon shows the count.", warning: true);
+            }
+        }
     }
 
     private void ShowMainWindow() => ShowMainWindow(null);
