@@ -8,13 +8,13 @@
   <WindowChrome.WindowChrome>
     <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
   </WindowChrome.WindowChrome>
-  <Border x:Name="Body" Background="{StaticResource ToastBrush}" CornerRadius="{StaticResource MediumRadius}" Margin="8" Padding="14,10">
+  <Border x:Name="Body" Background="{DynamicResource FlyoutBrush}" CornerRadius="{StaticResource MediumRadius}" Margin="8" Padding="14,10">
     <Border.Effect>
       <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.3" />
     </Border.Effect>
     <StackPanel>
-      <TextBlock x:Name="Headline" Foreground="{StaticResource ToastTextBrush}" FontWeight="SemiBold" />
-      <TextBlock x:Name="Detail" Foreground="{StaticResource ToastTextBrush}" Opacity="0.85" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+      <TextBlock x:Name="Headline" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" />
+      <TextBlock x:Name="Detail" Foreground="{DynamicResource TextBrush}" Opacity="0.85" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
     </StackPanel>
   </Border>
 </Window>

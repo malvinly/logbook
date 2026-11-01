@@ -8,7 +8,7 @@
     <TextBlock Style="{StaticResource TitleText}" Text="Enter your passphrase" />
     <TextBlock x:Name="FileLabel" Style="{StaticResource CaptionText}" Margin="0,4,0,12" TextTrimming="CharacterEllipsis" />
     <PasswordBox x:Name="Passphrase" KeyDown="OnPassphraseKeyDown" />
-    <TextBlock x:Name="Status" Margin="0,8,0,0" MinHeight="18" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" />
+    <TextBlock x:Name="Status" Margin="0,8,0,0" MinHeight="18" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
       <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" Margin="0,0,8,0" />
       <Button x:Name="UnlockButton" Content="Unlock" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnUnlockClick" />

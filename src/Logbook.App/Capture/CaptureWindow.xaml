@@ -8,7 +8,7 @@
   <WindowChrome.WindowChrome>
     <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
   </WindowChrome.WindowChrome>
-  <Border Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+  <Border Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
           CornerRadius="{StaticResource MediumRadius}" Margin="8" Padding="{StaticResource PagePadding}">
     <Border.Effect>
       <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.25" />
@@ -17,7 +17,7 @@
       <Grid>
         <TextBox x:Name="Line" FontSize="{StaticResource CaptureSize}" TextChanged="OnLineChanged" />
         <TextBlock x:Name="Placeholder" Text="What happened?  #tag  @person  at:yesterday,3pm" IsHitTestVisible="False"
-                   FontSize="{StaticResource CaptureSize}" Foreground="{StaticResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                   FontSize="{StaticResource CaptureSize}" Foreground="{DynamicResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
       </Grid>
       <Grid Margin="0,8,0,0">
         <Grid.ColumnDefinitions>
@@ -27,7 +27,7 @@
         <ItemsControl x:Name="Chips" ItemsPanel="{StaticResource ChipPanel}" VerticalAlignment="Center" MinHeight="22" />
         <Button x:Name="MoreButton" Grid.Column="1" Style="{StaticResource LinkButton}" Content="More  ˅" Click="OnMoreClick" ToolTip="Ctrl+Enter" />
       </Grid>
-      <TextBlock x:Name="Problem" Style="{StaticResource CaptionText}" Foreground="{StaticResource DangerBrush}" Margin="0,4,0,0" Visibility="Collapsed" />
+      <TextBlock x:Name="Problem" Style="{StaticResource CaptionText}" Foreground="{DynamicResource DangerBrush}" Margin="0,4,0,0" Visibility="Collapsed" />
       <StackPanel x:Name="More" Visibility="Collapsed" Margin="0,12,0,0">
         <Label Content="Reason" />
         <TextBox x:Name="Reason" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="160" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top" />

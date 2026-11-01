@@ -11,7 +11,7 @@
     <PasswordBox x:Name="First" />
     <Label Content="Again" Margin="0,8,0,0" />
     <PasswordBox x:Name="Second" />
-    <Border Background="{StaticResource SurfaceBrush}" CornerRadius="{StaticResource SmallRadius}" Padding="12" Margin="0,14,0,0">
+    <Border Background="{DynamicResource CardBrush}" CornerRadius="{StaticResource SmallRadius}" Padding="12" Margin="0,14,0,0">
       <StackPanel>
         <TextBlock FontWeight="SemiBold" Text="There is no recovery." />
         <TextBlock Margin="0,4,0,0" TextWrapping="Wrap"
@@ -19,7 +19,7 @@
         <CheckBox x:Name="Understood" Margin="0,8,0,0" Content="I have written it down and I understand there is no recovery." />
       </StackPanel>
     </Border>
-    <TextBlock x:Name="Problem" Foreground="{StaticResource DangerBrush}" Margin="0,8,0,0" MinHeight="18" TextWrapping="Wrap" />
+    <TextBlock x:Name="Problem" Foreground="{DynamicResource DangerBrush}" Margin="0,8,0,0" MinHeight="18" TextWrapping="Wrap" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
       <Button Content="Back" IsCancel="True" Margin="0,0,8,0" />
       <Button Content="Create the log" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnCreateClick" />

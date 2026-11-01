@@ -3,166 +3,116 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:chips="clr-namespace:Logbook.App.Chips">
 
-  <!-- The one place colors, fonts, sizes and radii live (DESIGN.md section 16). A dark theme is a second copy of this file. -->
+  <!-- The one place fonts, sizes, radii, paddings and Logbook's own styles live (DESIGN.md section 16). Colors are in
+       Theme.Light.xaml and Theme.Dark.xaml, swapped by AppTheme, so every brush here is a DynamicResource.
+       Stock controls (text boxes, buttons, check boxes, combo boxes, date pickers, menus, scroll bars) are styled by WPF's
+       Fluent theme, merged before this file in App.xaml; the styles below only add to it and are based on its styles. -->
 
-  <Color x:Key="BackgroundColor">#FFFFFFFF</Color>
-  <Color x:Key="SurfaceColor">#FFF4F4F6</Color>
-  <Color x:Key="BorderColor">#FFD6D6DC</Color>
-  <Color x:Key="TextColor">#FF1E1E24</Color>
-  <Color x:Key="TextMutedColor">#FF6E6E78</Color>
-  <Color x:Key="AccentColor">#FF2F6FED</Color>
-  <Color x:Key="AccentTextColor">#FFFFFFFF</Color>
-  <Color x:Key="SelectionColor">#FFE4ECFD</Color>
-  <Color x:Key="DangerColor">#FFC43C3C</Color>
-  <Color x:Key="DangerTextColor">#FFFFFFFF</Color>
-  <Color x:Key="TagChipColor">#FFE4ECFD</Color>
-  <Color x:Key="TagChipTextColor">#FF2250B8</Color>
-  <Color x:Key="PersonChipColor">#FFFCEBD2</Color>
-  <Color x:Key="PersonChipTextColor">#FF8A4B08</Color>
-  <Color x:Key="DateChipColor">#FFE2F3E8</Color>
-  <Color x:Key="DateChipTextColor">#FF1F6B3A</Color>
-  <Color x:Key="ChangedColor">#FFFFF4CC</Color>
-  <Color x:Key="ToastColor">#FF2B2B33</Color>
-  <Color x:Key="ToastTextColor">#FFFFFFFF</Color>
-
-  <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}" />
-  <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
-  <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
-  <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
-  <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
-  <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
-  <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource AccentTextColor}" />
-  <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource SelectionColor}" />
-  <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
-  <SolidColorBrush x:Key="DangerTextBrush" Color="{StaticResource DangerTextColor}" />
-  <SolidColorBrush x:Key="TagChipBrush" Color="{StaticResource TagChipColor}" />
-  <SolidColorBrush x:Key="TagChipTextBrush" Color="{StaticResource TagChipTextColor}" />
-  <SolidColorBrush x:Key="PersonChipBrush" Color="{StaticResource PersonChipColor}" />
-  <SolidColorBrush x:Key="PersonChipTextBrush" Color="{StaticResource PersonChipTextColor}" />
-  <SolidColorBrush x:Key="DateChipBrush" Color="{StaticResource DateChipColor}" />
-  <SolidColorBrush x:Key="DateChipTextBrush" Color="{StaticResource DateChipTextColor}" />
-  <SolidColorBrush x:Key="ChangedBrush" Color="{StaticResource ChangedColor}" />
-  <SolidColorBrush x:Key="ToastBrush" Color="{StaticResource ToastColor}" />
-  <SolidColorBrush x:Key="ToastTextBrush" Color="{StaticResource ToastTextColor}" />
-
-  <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>
-  <FontFamily x:Key="MonoFont">Consolas</FontFamily>
-  <sys:Double x:Key="CaptionSize">11.5</sys:Double>
-  <sys:Double x:Key="BodySize">13</sys:Double>
-  <sys:Double x:Key="TitleSize">16</sys:Double>
-  <sys:Double x:Key="DisplaySize">20</sys:Double>
-  <sys:Double x:Key="CaptureSize">18</sys:Double>
+  <!-- Segoe UI Variable ships with Windows 11; WPF falls back to the next family in the list on Windows 10. -->
+  <FontFamily x:Key="BodyFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+  <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+  <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+  <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+  <sys:Double x:Key="CaptionSize">12</sys:Double>
+  <sys:Double x:Key="BodySize">14</sys:Double>
+  <sys:Double x:Key="TitleSize">20</sys:Double>
+  <sys:Double x:Key="DisplaySize">28</sys:Double>
+  <sys:Double x:Key="CaptureSize">20</sys:Double>
+  <sys:Double x:Key="IconSize">16</sys:Double>
+  <sys:Double x:Key="DialogIconSize">28</sys:Double>
+  <sys:Double x:Key="FooterButtonWidth">96</sys:Double>
 
   <CornerRadius x:Key="SmallRadius">4</CornerRadius>
   <CornerRadius x:Key="MediumRadius">8</CornerRadius>
   <CornerRadius x:Key="ChipRadius">10</CornerRadius>
-  <Thickness x:Key="PagePadding">16</Thickness>
-  <Thickness x:Key="ControlPadding">8,5</Thickness>
+  <Thickness x:Key="PagePadding">24</Thickness>
+  <Thickness x:Key="CardPadding">16</Thickness>
+  <Thickness x:Key="FooterPadding">24,16</Thickness>
   <Thickness x:Key="ChipPadding">8,2</Thickness>
 
-  <Style TargetType="Window">
-    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  <!-- WPF's Fluent theme applies its Window style to every window, derived types included; this one adds the fonts. -->
+  <Style TargetType="Window" BasedOn="{StaticResource {x:Type Window}}">
     <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource BodySize}" />
     <Setter Property="UseLayoutRounding" Value="True" />
-    <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
   </Style>
 
-  <Style TargetType="TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  <!-- A context menu has no window above it to inherit fonts from (the tray menu, a text box's menu). -->
+  <Style TargetType="ContextMenu" BasedOn="{StaticResource {x:Type ContextMenu}}">
     <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource BodySize}" />
   </Style>
 
   <Style x:Key="CaptionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     <Setter Property="FontSize" Value="{StaticResource CaptionSize}" />
   </Style>
 
+  <!-- A group heading inside a page or pane, as in Windows Settings: body size, semibold. -->
+  <Style x:Key="SectionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <Style x:Key="TitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
     <Setter Property="FontSize" Value="{StaticResource TitleSize}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
   <Style x:Key="DisplayText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
     <Setter Property="FontSize" Value="{StaticResource DisplaySize}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
-  <Style TargetType="TextBox">
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="{StaticResource ControlPadding}" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="TextBox">
-          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource SmallRadius}">
-            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
-          </Border>
-          <ControlTemplate.Triggers>
-            <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-            </Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
+  <Style x:Key="ProblemText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
-  <Style TargetType="PasswordBox">
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="{StaticResource ControlPadding}" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="PasswordBox">
-          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource SmallRadius}">
-            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
-          </Border>
-          <ControlTemplate.Triggers>
-            <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-            </Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
+  <Style x:Key="IconText" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+    <Setter Property="FontSize" Value="{StaticResource IconSize}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <Style TargetType="Button">
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="12,5" />
-    <Setter Property="MinWidth" Value="80" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
+  <!-- Field captions above inputs. -->
+  <Style TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource CaptionSize}" />
+  </Style>
+
+  <!-- Buttons in a dialog footer share a minimum width, as in a Windows 11 content dialog. -->
+  <Style x:Key="FooterButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="MinWidth" Value="{StaticResource FooterButtonWidth}" />
+  </Style>
+
+  <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+    <Setter Property="MinWidth" Value="{StaticResource FooterButtonWidth}" />
+  </Style>
+
+  <!-- Destructive actions keep the standard button and say so in the text color, as Windows Settings does. -->
+  <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource FooterButton}">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+  </Style>
+
+  <!-- A text-only button (the capture box's "More"); Fluent has no hyperlink button for WPF. -->
+  <Style x:Key="LinkButton" TargetType="Button">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource DefaultControlFocusVisualStyle}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource SmallRadius}" Padding="{TemplateBinding Padding}">
-            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{StaticResource SmallRadius}" Padding="{TemplateBinding Padding}">
+            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-            </Trigger>
-            <Trigger Property="IsEnabled" Value="False">
-              <Setter Property="Opacity" Value="0.5" />
+              <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -170,73 +120,29 @@
     </Setter>
   </Style>
 
-  <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-  </Style>
-
-  <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-    <Setter Property="Background" Value="{StaticResource DangerBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
-  </Style>
-
-  <Style x:Key="LinkButton" TargetType="Button">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="2" />
-    <Setter Property="Cursor" Value="Hand" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="Button">
-          <ContentPresenter Margin="{TemplateBinding Padding}" />
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
-  </Style>
-
-  <Style TargetType="CheckBox">
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
-
-  <Style TargetType="Label">
-    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource CaptionSize}" />
-    <Setter Property="Padding" Value="0,0,0,2" />
-  </Style>
-
-  <Style TargetType="ListBox">
-    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-  </Style>
-
-  <Style TargetType="ListBoxItem">
-    <Setter Property="Padding" Value="8,6" />
+  <!-- A list row in the manner of Windows 11 lists: a subtle fill on hover and selection, and an accent pill on the
+       selected row. Fluent's own ListBoxItem fills the whole row with the accent, which is too loud for a log. -->
+  <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Margin" Value="4,1" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ListBoxItem">
-          <Border x:Name="Row" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="{StaticResource SmallRadius}">
-            <ContentPresenter />
-          </Border>
+          <Grid>
+            <Border x:Name="Row" Background="Transparent" CornerRadius="{StaticResource SmallRadius}" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <Border x:Name="Pill" Width="3" Height="16" CornerRadius="1.5" HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Background="{DynamicResource AccentBrush}" Visibility="Collapsed" />
+          </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Row" Property="Background" Value="{StaticResource SurfaceBrush}" />
+              <Setter TargetName="Row" Property="Background" Value="{DynamicResource HoverBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-              <Setter TargetName="Row" Property="Background" Value="{StaticResource SelectionBrush}" />
+              <Setter TargetName="Row" Property="Background" Value="{DynamicResource SelectionBrush}" />
+              <Setter TargetName="Pill" Property="Visibility" Value="Visible" />
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -244,20 +150,38 @@
     </Setter>
   </Style>
 
-  <Style TargetType="ComboBox">
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
-    <Setter Property="Padding" Value="{StaticResource ControlPadding}" />
+  <!-- A translucent card on the Mica surface: the results list, the detail pane, a revision. -->
+  <Style x:Key="Card" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource MediumRadius}" />
   </Style>
 
-  <Style TargetType="DatePicker">
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
+  <!-- The band under a dialog's content that holds its buttons, as in a Windows 11 content dialog. -->
+  <Style x:Key="DialogFooter" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource LayerBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="{StaticResource FooterPadding}" />
   </Style>
 
-  <Style TargetType="ContextMenu">
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-    <Setter Property="FontSize" Value="{StaticResource BodySize}" />
+  <!-- An opaque floating surface: the autocomplete list. It has no window above it, so it sets its own fonts. -->
+  <Style x:Key="Flyout" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource FlyoutBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FlyoutStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource MediumRadius}" />
+    <Setter Property="Padding" Value="0,4" />
+    <Setter Property="Margin" Value="0,4,12,12" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="TextElement.FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="TextElement.FontSize" Value="{StaticResource BodySize}" />
+    <Setter Property="Effect">
+      <Setter.Value>
+        <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.22" />
+      </Setter.Value>
+    </Setter>
   </Style>
 
   <Style x:Key="Chip" TargetType="Border">
@@ -268,18 +192,18 @@
   </Style>
 
   <Style x:Key="TagChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-    <Setter Property="Background" Value="{StaticResource TagChipBrush}" />
-    <Setter Property="TextElement.Foreground" Value="{StaticResource TagChipTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource TagChipBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TagChipTextBrush}" />
   </Style>
 
   <Style x:Key="PersonChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-    <Setter Property="Background" Value="{StaticResource PersonChipBrush}" />
-    <Setter Property="TextElement.Foreground" Value="{StaticResource PersonChipTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PersonChipBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource PersonChipTextBrush}" />
   </Style>
 
   <Style x:Key="DateChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-    <Setter Property="Background" Value="{StaticResource DateChipBrush}" />
-    <Setter Property="TextElement.Foreground" Value="{StaticResource DateChipTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource DateChipBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource DateChipTextBrush}" />
   </Style>
 
   <!-- The text inherits TextElement.Foreground from the chip border, so no Foreground setter here. -->

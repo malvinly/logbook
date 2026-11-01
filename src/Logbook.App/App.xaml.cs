@@ -13,6 +13,7 @@ using Logbook.App.Lock;
 using Logbook.App.Main;
 using Logbook.App.Settings;
 using Logbook.App.Startup;
+using Logbook.App.Theme;
 using Logbook.App.Tray;
 using Logbook.Core;
 using Logbook.Core.Export;
@@ -53,6 +54,7 @@ public sealed partial class App : Application, IDisposable
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AppTheme.FollowWindows(this);
         Diag.Prune();
         Diag.Log("Starting");
         DispatcherUnhandledException += OnUnhandledException;
@@ -75,7 +77,7 @@ public sealed partial class App : Application, IDisposable
         _messageWindow = new MessageWindow();
         _messageWindow.AddHook(OnMessage);
         _hotkeys = new HotkeyManager(_messageWindow);
-        _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentColor"), ThemeColor("TextMutedColor"), ThemeColor("DangerColor"));
+        _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
         _tray.OpenRequested += ShowMainWindow;
         _tray.CaptureRequested += ShowCapture;
         _tray.SettingsRequested += ShowSettings;
@@ -142,9 +144,9 @@ public sealed partial class App : Application, IDisposable
         _instance = null;
     }
 
-    private System.Drawing.Color ThemeColor(string key)
+    private System.Drawing.Color ThemeColor(string brushKey)
     {
-        System.Windows.Media.Color c = (System.Windows.Media.Color)FindResource(key);
+        System.Windows.Media.Color c = ((System.Windows.Media.SolidColorBrush)FindResource(brushKey)).Color;
         return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
     }
 

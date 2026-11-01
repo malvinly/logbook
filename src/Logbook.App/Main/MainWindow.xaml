@@ -8,15 +8,15 @@
     <Style x:Key="ChangedLabel" TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
       <Style.Triggers>
         <Trigger Property="Tag" Value="True">
-          <Setter Property="Background" Value="{StaticResource ChangedBrush}" />
-          <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+          <Setter Property="Background" Value="{DynamicResource ChangedBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
           <Setter Property="Padding" Value="4,0,4,2" />
         </Trigger>
       </Style.Triggers>
     </Style>
   </Window.Resources>
   <DockPanel>
-    <Menu DockPanel.Dock="Top" Background="{StaticResource BackgroundBrush}">
+    <Menu DockPanel.Dock="Top">
       <MenuItem Header="_Tools">
         <MenuItem Header="Copy as _timeline…" Click="OnCopyTimelineClick" />
         <MenuItem Header="Export _decrypted…" Click="OnExportDecryptedClick" />
@@ -29,7 +29,7 @@
       </MenuItem>
     </Menu>
 
-    <Border DockPanel.Dock="Top" Padding="{StaticResource PagePadding}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+    <Border DockPanel.Dock="Top" Padding="{StaticResource PagePadding}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
       <StackPanel>
         <Grid>
           <Grid.ColumnDefinitions>
@@ -41,7 +41,7 @@
           <Grid>
             <TextBox x:Name="Filter" TextChanged="OnFilterChanged" />
             <TextBlock x:Name="FilterPlaceholder" Text="Filter: words  #tag  @person  since:2026-01-01  last:30d  &quot;exact phrase&quot;" IsHitTestVisible="False"
-                       Foreground="{StaticResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                       Foreground="{DynamicResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
           </Grid>
           <DatePicker x:Name="FromDate" Grid.Column="1" Margin="8,0,0,0" Width="130" SelectedDateChanged="OnRangeChanged" ToolTip="since:" />
           <DatePicker x:Name="ToDate" Grid.Column="2" Margin="4,0,0,0" Width="130" SelectedDateChanged="OnRangeChanged" ToolTip="until:" />
@@ -53,7 +53,7 @@
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
           <TextBlock x:Name="Header" Style="{StaticResource TitleText}" Text="0 entries" />
-          <TextBlock x:Name="Warnings" Grid.Column="1" Style="{StaticResource CaptionText}" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center" />
+          <TextBlock x:Name="Warnings" Grid.Column="1" Style="{StaticResource CaptionText}" Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
         </Grid>
       </StackPanel>
     </Border>
@@ -101,7 +101,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}" />
+      <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource DividerBrush}" />
 
       <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
         <Grid>
@@ -144,7 +144,7 @@
             </Grid>
             <Label Content="Refs (one per line)" Margin="0,8,0,0" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
             <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" VerticalContentAlignment="Top" />
-            <TextBlock Text="{Binding Problem}" Foreground="{StaticResource DangerBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Problem}" Foreground="{DynamicResource DangerBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
               <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
               <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
@@ -155,7 +155,7 @@
             <ItemsControl x:Name="Revisions">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type main:RevisionRow}">
-                  <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,6">
+                  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,6">
                     <StackPanel>
                       <TextBlock Text="{Binding Heading}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" />
