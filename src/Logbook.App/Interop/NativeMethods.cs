@@ -6,6 +6,7 @@ namespace Logbook.App.Interop;
 internal static class NativeMethods
 {
     public const int WmHotkey = 0x0312;
+    public const int WmSettingChange = 0x001A;
     public const uint ModAlt = 0x0001;
     public const uint ModControl = 0x0002;
     public const uint ModShift = 0x0004;

@@ -618,6 +618,11 @@ public sealed partial class App : Application, IDisposable
             handled = true;
             Dispatcher.BeginInvoke(ShowMainWindow);
         }
+        else if (msg == NativeMethods.WmSettingChange && lParam != IntPtr.Zero && Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")
+        {
+            // Windows broadcasts this when light or dark mode (or the accent) changes; follow it without a restart.
+            Dispatcher.BeginInvoke(() => AppTheme.FollowWindows(this));
+        }
 
         return IntPtr.Zero;
     }

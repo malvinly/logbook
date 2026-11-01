@@ -22,7 +22,8 @@ internal static class AppTheme
     public static bool IsDark { get; private set; }
 
     /// <summary>
-    /// Reads the Windows setting and swaps the two dictionaries if it changed. App.xaml merges the light pair first
+    /// Reads the Windows setting and swaps the two dictionaries if it changed. Called at startup and again whenever
+    /// Windows broadcasts a color-set change, so open windows repaint (views use DynamicResource for brushes). App.xaml merges the light pair first
     /// and Theme.xaml after them; only the first two entries are ever replaced, so Theme.xaml's styles stay put.
     /// </summary>
     public static void FollowWindows(Application app)
