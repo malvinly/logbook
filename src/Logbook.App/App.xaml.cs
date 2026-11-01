@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
 using Logbook.App.Diagnostics;
+using Logbook.App.Export;
 using Logbook.App.Main;
 using Logbook.App.Hotkeys;
 using Logbook.App.Interop;
@@ -261,14 +262,27 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowExportPanel(string filterText, IReadOnlyList<Entry> entries)
     {
-        // Built in step 8.
-        Diag.Log($"Export panel requested for '{filterText}' with {entries.Count} entries");
+        ExportPanel panel = new(filterText, entries, _settings.Export, SaveSettings) { Owner = _main };
+        panel.ShowDialog();
     }
 
     private void ShowExportDecrypted()
     {
-        // Built in step 8.
-        Diag.Log("Decrypted export requested");
+        ExportDecryptedWindow window = new(Log!, _root, _settings, SaveSettings) { Owner = _main };
+        window.ShowDialog();
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            Settings.SettingsStore.Save(_root, _settings);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Diag.Log("Could not save settings", e);
+            _tray?.ShowBalloon("Settings not saved", "The settings file could not be written: " + e.Message, warning: true);
+        }
     }
 
     private void ShowCheatSheet()

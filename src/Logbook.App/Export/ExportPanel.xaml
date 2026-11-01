@@ -1,0 +1,22 @@
+<Window x:Class="Logbook.App.Export.ExportPanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Copy as timeline" Width="760" Height="520" MinWidth="560" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <DockPanel Margin="{StaticResource PagePadding}">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+      <CheckBox x:Name="ShowGaps" Content="Show gaps" Margin="0,0,16,0" Checked="OnToggle" Unchecked="OnToggle" />
+      <CheckBox x:Name="GroupByMonth" Content="Group by month" Margin="0,0,16,0" Checked="OnToggle" Unchecked="OnToggle" />
+      <CheckBox x:Name="Compact" Content="Compact" Checked="OnToggle" Unchecked="OnToggle" />
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="Copied" Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="0,0,12,0" />
+      <Button Content="Close" IsCancel="True" Margin="0,0,8,0" />
+      <Button Content="Copy to clipboard" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnCopyClick" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" Margin="0,8,0,6"
+               Text="Plain text, oldest first. Tags and people are not included; they index for you, not for the reader." />
+    <TextBox x:Name="Preview" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="{StaticResource MonoFont}"
+             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" VerticalContentAlignment="Top" />
+  </DockPanel>
+</Window>
