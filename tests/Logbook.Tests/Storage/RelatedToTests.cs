@@ -42,7 +42,7 @@ public sealed class RelatedToTests : IDisposable
     public void RelatedToIsWrittenAsACamelCaseListAfterRefs()
     {
         string json = LogbookJson.Serialize(FollowUp());
-        Assert.Contains("\"refs\":[],\"relatedTo\":[\"01K0000000000000000000000G\"],\"deleted\":false", json, StringComparison.Ordinal);
+        Assert.Contains("\"refs\":[],\"relatedTo\":[\"01K0000000000000000000000G\"],", json, StringComparison.Ordinal);
     }
 
     [Fact]

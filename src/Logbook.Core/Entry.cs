@@ -14,6 +14,7 @@ namespace Logbook.Core;
 /// <param name="People">Normalised person names (lowercase kebab-case). May be empty.</param>
 /// <param name="Refs">Free-form references: ticket numbers, URLs, paths, links. Rendered verbatim.</param>
 /// <param name="RelatedTo">Ids of the entries this one follows up on. Empty for most entries and for lines written before the field existed.</param>
+/// <param name="RemindAt">When to show a reminder for this entry, with its own offset; null when none is set.</param>
 /// <param name="Deleted">True on a tombstone revision. Tombstoned ids are hidden everywhere except the revision view.</param>
 public sealed record Entry(
     string Id,
@@ -26,4 +27,5 @@ public sealed record Entry(
     IReadOnlyList<string> People,
     IReadOnlyList<string> Refs,
     IReadOnlyList<string> RelatedTo,
+    DateTimeOffset? RemindAt,
     bool Deleted);

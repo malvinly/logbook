@@ -44,5 +44,5 @@ internal static class SampleEntries
     public static readonly IReadOnlyList<Entry> Sample = [SampleAsk, SampleFollowUp, SampleStandup];
 
     public static Entry Make(string id, DateTimeOffset occurredAt, string summary, string? reason, string[] tags, string[] people, string[] refs)
-        => new(id, 1, occurredAt, occurredAt.AddSeconds(6), summary, reason, tags, people, refs, [], false);
+        => new(id, 1, occurredAt, occurredAt.AddSeconds(6), summary, reason, tags, people, refs, [], null, false);
 }

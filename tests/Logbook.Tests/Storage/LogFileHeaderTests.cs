@@ -13,7 +13,7 @@ public sealed class LogFileHeaderTests : IDisposable
 
     public void Dispose() => _file.Dispose();
 
-    private static Entry NewEntry(string summary) => new(Ulid.Generate(), 1, Now, Now, summary, null, [], [], [], [], false);
+    private static Entry NewEntry(string summary) => new(Ulid.Generate(), 1, Now, Now, summary, null, [], [], [], [], null, false);
 
     [Fact]
     public void ReadHeaderNeedsNoPassphraseAndMatchesCreate()

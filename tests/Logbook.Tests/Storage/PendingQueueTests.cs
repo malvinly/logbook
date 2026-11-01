@@ -21,7 +21,7 @@ public sealed class PendingQueueTests : IDisposable
     public void Dispose() => _file.Dispose();
 
     private static Entry NewEntry(string summary) => new(
-        Ulid.Generate(), 1, Now, Now, summary, null, [], [], [], [], false);
+        Ulid.Generate(), 1, Now, Now, summary, null, [], [], [], [], null, false);
 
     private FileStream HoldFile() => new(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None);
 

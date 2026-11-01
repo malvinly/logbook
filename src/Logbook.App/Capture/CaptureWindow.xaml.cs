@@ -176,6 +176,7 @@ public sealed partial class CaptureWindow : Window
             TokenNormalizer.NormalizeList(ExtraPeople.Text, existing: line.People),
             Lines(Refs.Text),
             _followUpOf is null ? [] : [_followUpOf.Id],
+            null,
             false);
 
         Captured?.Invoke(entry);

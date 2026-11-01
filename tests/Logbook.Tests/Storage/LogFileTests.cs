@@ -28,6 +28,7 @@ public sealed class LogFileTests : IDisposable
         ["j-doe"],
         [],
         [],
+        null,
         deleted);
 
     private LogFile Create() => LogFile.Create(_file.Path, Passphrase, Now, NoDelays);
