@@ -2,7 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:main="clr-namespace:Logbook.App.Main"
-        Title="Logbook" Width="1100" Height="720" MinWidth="820" MinHeight="480" WindowStartupLocation="CenterScreen">
+        Title="Logbook" Width="1120" Height="760" MinWidth="860" MinHeight="520" WindowStartupLocation="CenterScreen">
+  <!-- Laid out as a Windows 11 list and detail page: the filter and the count on the Mica surface, then the results and
+       the selected entry as two cards side by side. -->
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <Style x:Key="ChangedLabel" TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
@@ -14,9 +16,12 @@
         </Trigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="Field" TargetType="StackPanel">
+      <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
   </Window.Resources>
   <DockPanel>
-    <Menu DockPanel.Dock="Top">
+    <Menu DockPanel.Dock="Top" Margin="12,0,0,0">
       <MenuItem Header="_Tools">
         <MenuItem Header="Copy as _timeline…" Click="OnCopyTimelineClick" />
         <MenuItem Header="Export _decrypted…" Click="OnExportDecryptedClick" />
@@ -29,145 +34,154 @@
       </MenuItem>
     </Menu>
 
-    <Border DockPanel.Dock="Top" Padding="{StaticResource PagePadding}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
-      <StackPanel>
+    <StackPanel DockPanel.Dock="Top" Margin="24,8,24,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
         <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-          <Grid>
-            <TextBox x:Name="Filter" TextChanged="OnFilterChanged" />
-            <TextBlock x:Name="FilterPlaceholder" Text="Filter: words  #tag  @person  since:2026-01-01  last:30d  &quot;exact phrase&quot;" IsHitTestVisible="False"
-                       Foreground="{DynamicResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
-          </Grid>
-          <DatePicker x:Name="FromDate" Grid.Column="1" Margin="8,0,0,0" Width="130" SelectedDateChanged="OnRangeChanged" ToolTip="since:" />
-          <DatePicker x:Name="ToDate" Grid.Column="2" Margin="4,0,0,0" Width="130" SelectedDateChanged="OnRangeChanged" ToolTip="until:" />
-          <Button x:Name="CopyButton" Grid.Column="3" Margin="8,0,0,0" Content="Copy as timeline" Click="OnCopyTimelineClick" />
+          <TextBox x:Name="Filter" TextChanged="OnFilterChanged" />
+          <TextBlock x:Name="FilterPlaceholder" Text="Filter: words  #tag  @person  since:2026-01-01  last:30d  &quot;exact phrase&quot;" IsHitTestVisible="False"
+                     Foreground="{DynamicResource TextMutedBrush}" Margin="12,0,0,0" VerticalAlignment="Center" />
         </Grid>
-        <Grid Margin="0,8,0,0">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-          <TextBlock x:Name="Header" Style="{StaticResource TitleText}" Text="0 entries" />
-          <TextBlock x:Name="Warnings" Grid.Column="1" Style="{StaticResource CaptionText}" Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
-        </Grid>
-      </StackPanel>
-    </Border>
+        <DatePicker x:Name="FromDate" Grid.Column="1" Margin="8,0,0,0" Width="150" SelectedDateChanged="OnRangeChanged" ToolTip="since:" />
+        <DatePicker x:Name="ToDate" Grid.Column="2" Margin="8,0,0,0" Width="150" SelectedDateChanged="OnRangeChanged" ToolTip="until:" />
+        <Button x:Name="CopyButton" Grid.Column="3" Margin="8,0,0,0" Content="Copy as timeline" Click="OnCopyTimelineClick" />
+      </Grid>
+      <!-- "How many times" is a driving question, so the count is the largest text on the page (DESIGN.md section 10). -->
+      <Grid Margin="0,20,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="Header" Style="{StaticResource DisplayText}" Text="0 entries" />
+        <TextBlock x:Name="Warnings" Grid.Column="1" Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
+      </Grid>
+    </StackPanel>
 
-    <Grid>
+    <Grid Margin="24,16,24,24">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="3*" MinWidth="360" />
         <ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="2*" MinWidth="320" />
+        <ColumnDefinition Width="2*" MinWidth="340" />
       </Grid.ColumnDefinitions>
 
-      <ListBox x:Name="Results" BorderThickness="0" Margin="8" SelectionChanged="OnSelectionChanged" IsSynchronizedWithCurrentItem="False"
-               ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
-        <ListBox.GroupStyle>
-          <GroupStyle>
-            <GroupStyle.HeaderTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="8,12,0,4" />
-              </DataTemplate>
-            </GroupStyle.HeaderTemplate>
-          </GroupStyle>
-        </ListBox.GroupStyle>
-        <ListBox.ItemTemplate>
-          <DataTemplate DataType="{x:Type main:EntryRow}">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="72" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding Time}" Style="{StaticResource CaptionText}" VerticalAlignment="Top" Margin="0,2,0,0" />
-              <StackPanel Grid.Column="1">
-                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                  <ItemsControl ItemsSource="{Binding Chips}" ItemsPanel="{StaticResource ChipPanel}" />
-                  <TextBlock Text="reason" Style="{StaticResource CaptionText}" Margin="0,0,8,0" VerticalAlignment="Center"
-                             Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}" />
-                  <TextBlock Text="refs" Style="{StaticResource CaptionText}" Margin="0,0,8,0" VerticalAlignment="Center"
-                             Visibility="{Binding HasRefs, Converter={StaticResource BoolToVisibility}}" />
-                  <TextBlock Text="edited" Style="{StaticResource CaptionText}" FontStyle="Italic" VerticalAlignment="Center"
-                             Visibility="{Binding IsEdited, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-              </StackPanel>
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-
-      <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource DividerBrush}" />
-
-      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-        <Grid>
-          <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource PagePadding}" />
-          <StackPanel x:Name="Detail" Margin="{StaticResource PagePadding}" Visibility="Collapsed">
-            <TextBlock Text="{Binding RevisionText}" Style="{StaticResource CaptionText}" />
-            <Grid Margin="0,8,0,0">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="110" />
-              </Grid.ColumnDefinitions>
-              <StackPanel>
-                <Label Content="Date" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
-                <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2">
-                <Label Content="Time" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
-                <TextBox Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-            </Grid>
-            <Label Content="Summary" Margin="0,8,0,0" Style="{StaticResource ChangedLabel}" Tag="{Binding SummaryChanged}" />
-            <TextBox Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="False" />
-            <Label Content="Reason" Margin="0,8,0,0" Style="{StaticResource ChangedLabel}" Tag="{Binding ReasonChanged}" />
-            <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" VerticalContentAlignment="Top" />
-            <Grid Margin="0,8,0,0">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <StackPanel>
-                <Label Content="Tags" Style="{StaticResource ChangedLabel}" Tag="{Binding TagsChanged}" />
-                <TextBox x:Name="TagsBox" Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2">
-                <Label Content="People" Style="{StaticResource ChangedLabel}" Tag="{Binding PeopleChanged}" />
-                <TextBox x:Name="PeopleBox" Text="{Binding People, UpdateSourceTrigger=PropertyChanged}" />
-              </StackPanel>
-            </Grid>
-            <Label Content="Refs (one per line)" Margin="0,8,0,0" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
-            <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" VerticalContentAlignment="Top" />
-            <TextBlock Text="{Binding Problem}" Foreground="{DynamicResource DangerBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-              <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
-              <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
-            </StackPanel>
-
-            <TextBlock Text="Revisions" Style="{StaticResource TitleText}" Margin="0,20,0,4" />
-            <TextBlock x:Name="NoRevisions" Text="This entry has never been edited." Style="{StaticResource CaptionText}" />
-            <ItemsControl x:Name="Revisions">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type main:RevisionRow}">
-                  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,6">
-                    <StackPanel>
-                      <TextBlock Text="{Binding Heading}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                      <TextBlock Text="{Binding Detail}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                    </StackPanel>
-                  </Border>
+      <Border Style="{StaticResource Card}">
+        <ListBox x:Name="Results" Background="Transparent" Padding="0,4" SelectionChanged="OnSelectionChanged" IsSynchronizedWithCurrentItem="False"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
+          <ListBox.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.HeaderTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" Margin="16,14,0,4" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </Grid>
-      </ScrollViewer>
+              </GroupStyle.HeaderTemplate>
+            </GroupStyle>
+          </ListBox.GroupStyle>
+          <ListBox.ItemTemplate>
+            <DataTemplate DataType="{x:Type main:EntryRow}">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="76" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Time}" Style="{StaticResource CaptionText}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                  <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                  <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <ItemsControl ItemsSource="{Binding Chips}" ItemsPanel="{StaticResource ChipPanel}" />
+                    <TextBlock Text="reason" Style="{StaticResource CaptionText}" Margin="0,0,8,0" VerticalAlignment="Center"
+                               Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="refs" Style="{StaticResource CaptionText}" Margin="0,0,8,0" VerticalAlignment="Center"
+                               Visibility="{Binding HasRefs, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="edited" Style="{StaticResource CaptionText}" FontStyle="Italic" VerticalAlignment="Center"
+                               Visibility="{Binding IsEdited, Converter={StaticResource BoolToVisibility}}" />
+                  </WrapPanel>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Width="12" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch" />
+
+      <Border Grid.Column="2" Style="{StaticResource Card}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Grid>
+            <TextBlock x:Name="NoSelection" Text="Select an entry to see and edit it." Style="{StaticResource CaptionText}" Margin="{StaticResource CardPadding}" />
+            <StackPanel x:Name="Detail" Margin="20,16,20,20" Visibility="Collapsed">
+              <TextBlock Text="{Binding RevisionText}" Style="{StaticResource CaptionText}" />
+              <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="12" />
+                  <ColumnDefinition Width="120" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                  <Label Content="Date" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
+                  <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                  <Label Content="Time" Style="{StaticResource ChangedLabel}" Tag="{Binding OccurredAtChanged}" />
+                  <TextBox Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+              </Grid>
+              <StackPanel Style="{StaticResource Field}">
+                <Label Content="Summary" Style="{StaticResource ChangedLabel}" Tag="{Binding SummaryChanged}" />
+                <TextBox Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="False" />
+              </StackPanel>
+              <StackPanel Style="{StaticResource Field}">
+                <Label Content="Reason" Style="{StaticResource ChangedLabel}" Tag="{Binding ReasonChanged}" />
+                <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+              </StackPanel>
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="12" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                  <Label Content="Tags" Style="{StaticResource ChangedLabel}" Tag="{Binding TagsChanged}" />
+                  <TextBox x:Name="TagsBox" Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                  <Label Content="People" Style="{StaticResource ChangedLabel}" Tag="{Binding PeopleChanged}" />
+                  <TextBox x:Name="PeopleBox" Text="{Binding People, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+              </Grid>
+              <StackPanel Style="{StaticResource Field}">
+                <Label Content="Refs (one per line)" Style="{StaticResource ChangedLabel}" Tag="{Binding RefsChanged}" />
+                <TextBox Text="{Binding Refs, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="44" />
+              </StackPanel>
+              <TextBlock Text="{Binding Problem}" Style="{StaticResource ProblemText}" Margin="0,8,0,0" />
+              <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <Button x:Name="SaveButton" Content="Save as new revision" Style="{StaticResource AccentButton}" Click="OnSaveClick" />
+                <Button x:Name="DeleteButton" Content="Delete" Style="{StaticResource DangerButton}" Margin="8,0,0,0" Click="OnDeleteClick" />
+              </StackPanel>
+
+              <TextBlock Text="Revisions" Style="{StaticResource SectionText}" Margin="0,28,0,8" />
+              <TextBlock x:Name="NoRevisions" Text="This entry has never been edited." Style="{StaticResource CaptionText}" />
+              <ItemsControl x:Name="Revisions">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="{x:Type main:RevisionRow}">
+                    <Border Style="{StaticResource Card}" Padding="12,10" Margin="0,0,0,6">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Heading}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+        </ScrollViewer>
+      </Border>
     </Grid>
   </DockPanel>
 </Window>
