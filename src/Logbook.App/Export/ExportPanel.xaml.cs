@@ -10,7 +10,7 @@ namespace Logbook.App.Export;
 
 /// <summary>
 /// The "Copy as timeline" panel (DESIGN.md section 11): the four toggles, a preview, and one button that puts the
-/// plain text on the clipboard. Toggles are read from and written back to settings so they are remembered.
+/// plain text and the same timeline as HTML on the clipboard. Toggles are read from and written back to settings so they are remembered.
 /// </summary>
 public sealed partial class ExportPanel : Window
 {
@@ -50,10 +50,11 @@ public sealed partial class ExportPanel : Window
         Render();
     }
 
+    private ExportOptions Options => new(_settings.ShowGaps, _settings.GroupByMonth, _settings.Compact, _settings.TagsAndPeople);
+
     private void Render()
     {
-        ExportOptions options = new(_settings.ShowGaps, _settings.GroupByMonth, _settings.Compact, _settings.TagsAndPeople);
-        Preview.Text = TimelineExport.Render(_filterText, _entries, options);
+        Preview.Text = TimelineExport.Render(_filterText, _entries, Options);
         Copied.Text = "";
     }
 
@@ -62,6 +63,10 @@ public sealed partial class ExportPanel : Window
         // Windows text on the clipboard is conventionally CRLF; the renderer itself stays LF for portability.
         DataObject data = new();
         data.SetText(Preview.Text.Replace("\n", "\r\n", StringComparison.Ordinal), TextDataFormat.UnicodeText);
+
+        // The same timeline as HTML beside the text, so mail clients paste bold dates and a real list; plain-text
+        // targets keep taking the text. WPF puts an HTML string on the clipboard as UTF-8, which the offsets count.
+        data.SetData(DataFormats.Html, ClipboardHtml.Wrap(TimelineHtml.Render(_filterText, _entries, Options)));
 
         // Ask clipboard history and cross-device clipboard sync to leave this out: it is decrypted entry text.
         byte[] no = [0, 0, 0, 0];
