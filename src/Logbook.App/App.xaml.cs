@@ -32,7 +32,6 @@ namespace Logbook.App;
 public sealed partial class App : Application, IDisposable
 {
     private const string StartupOfferMarker = "startup-offered";
-    private const int BalloonSummaryLength = 120; // the balloon's text is capped by Windows at 255 characters
 
     private SingleInstance? _instance;
     private MessageWindow? _messageWindow;
@@ -850,9 +849,9 @@ public sealed partial class App : Application, IDisposable
         }
 
         _remindersShown.Add(Reminders.Shown.Of(due));
-        string summary = due.Summary.Length > BalloonSummaryLength ? due.Summary[..BalloonSummaryLength] + "…" : due.Summary;
         string id = due.Id;
-        _tray.ShowBalloon("Reminder", $"{summary}\nDue {Format.DateTime(due.RemindAt!.Value)}. Click to open it; clear the reminder there to stop it.", warning: false, () => ShowMainWindow(id));
+        // Never the summary: Windows keeps balloon text in its notification history long after the app has locked.
+        _tray.ShowBalloon("Reminder", $"A reminder is due; it was due {Format.DateTime(due.RemindAt!.Value)}. Click to open its entry; clear the reminder there to stop it.", warning: false, () => ShowMainWindow(id));
         Diag.Log("Reminder balloon shown");
     }
 
