@@ -765,7 +765,7 @@ public sealed partial class App : Application, IDisposable
         ChangePassphraseWindow window = new(log, _dataFilePath, () => WriteInProgress(log)) { Owner = VisibleMain };
         if (window.ShowDialog() == true)
         {
-            AppDialog.Inform(VisibleMain, "Passphrase changed", "Use the new passphrase from now on; the old one no longer opens the log. Logbook stays unlocked, and every entry is unchanged.", DialogTone.Information);
+            AppDialog.Inform(VisibleMain, "Passphrase changed", "Use the new passphrase from now on; this file no longer opens with the old one. Copies made before the change (sync version history, backups) still do, because the entries themselves are not re-encrypted. Logbook stays unlocked, and every entry is unchanged.", DialogTone.Information);
         }
     }
 
