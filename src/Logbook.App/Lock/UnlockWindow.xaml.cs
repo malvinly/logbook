@@ -57,6 +57,7 @@ public sealed partial class UnlockWindow : Window
         try
         {
             Opened = await Task.Run(() => LogFile.Open(_path, passphrase)).ConfigureAwait(true);
+            SetBusy(false); // before DialogResult, since closing is refused while busy
             DialogResult = true;
         }
         catch (CryptographicException)
@@ -85,6 +86,18 @@ public sealed partial class UnlockWindow : Window
         {
             SetBusy(false);
         }
+    }
+
+    // Closing is refused while the file is being opened: setting DialogResult on a closed window throws, and the log
+    // that was just opened would be thrown away with the result.
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (_busy)
+        {
+            e.Cancel = true;
+        }
+
+        base.OnClosing(e);
     }
 
     private void ShowError(string message)
