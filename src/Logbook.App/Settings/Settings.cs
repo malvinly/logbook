@@ -12,6 +12,15 @@ public sealed class ExportSettings
     public bool Compact { get; set; }
 }
 
+/// <summary>A filter string saved under a name, shown as a button above the results (DESIGN.md section 10).</summary>
+public sealed class SavedQuery
+{
+    public string Name { get; set; } = "";
+
+    /// <summary>The filter text exactly as typed; clicking the button puts it back into the filter bar.</summary>
+    public string Filter { get; set; } = "";
+}
+
 /// <summary>
 /// The plain JSON settings file beside the data file (DESIGN.md section 12). No secrets, no absolute user paths.
 /// Mutable because the settings window edits it in place and then saves.
@@ -35,6 +44,9 @@ public sealed class Settings
     public string AutocompleteRanking { get; set; } = "recent";
 
     public ExportSettings Export { get; set; } = new();
+
+    /// <summary>In the order they were saved, which is the order of the buttons.</summary>
+    public List<SavedQuery> SavedQueries { get; set; } = [];
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]

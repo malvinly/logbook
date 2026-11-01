@@ -170,6 +170,10 @@ One text box using the section 6 grammar. Results update live as you type (debou
 
 The header above the results always shows the count and range: **12 entries · Jul 14 – Oct 28, 2026**. "How many times" is a driving question; the number must never be hidden in the export.
 
+### Saved queries
+
+A row of buttons under the filter bar, one per saved query (a name and a filter string), in the order they were saved. Clicking one puts its filter into the box exactly as if typed, so the results, the count header and the export follow it. "Save filter as button" saves the current filter text under a name you type (the filter itself is offered as the name); saving under a name already in use replaces that button's filter in place. Right-clicking a button offers Remove. Nothing is seeded: tag names are your own, so the three driving scenarios become buttons when you save them (for example `#asked @j-doe`, `#reported #printer`, `last:7d`).
+
 ### Results list
 
 Newest first, grouped under day headers. Each row: time, summary, tag chips, person chips, and a small marker if a reason or refs exist. Selecting a row opens the detail pane.
@@ -220,7 +224,7 @@ The save dialog defaults to a folder **outside** the synced root and explains wh
 
 ## 12. Settings, startup, and the moving user profile
 
-- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, export toggles. The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
+- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, export toggles, saved queries (section 10). The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
 - On launch, if the app is not registered to start with Windows for the current user, it offers once to register (a shortcut in the Startup folder). A login change wipes that shortcut; the offer is how it comes back.
 - Single instance: a named mutex. A second launch activates the first instance's main window and exits.
 - `RegisterHotKey` failure is surfaced immediately with a balloon naming the hotkey and offering Settings. A silently dead hotkey means a week of nothing logged.
