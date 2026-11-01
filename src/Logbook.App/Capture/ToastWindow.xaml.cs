@@ -13,6 +13,7 @@ public sealed partial class ToastWindow : Window
 {
     private readonly DispatcherTimer _timer = new();
     private bool _fading;
+    private bool _closed;
 
     public ToastWindow(Rect workArea, string headline, string detail, bool danger, TimeSpan lifetime)
     {
@@ -40,8 +41,19 @@ public sealed partial class ToastWindow : Window
 
     private void OnClick(object sender, MouseButtonEventArgs e)
     {
+        // Clicked can open the modal unlock prompt, and while it is up the fade or a lock may close this toast.
         Clicked?.Invoke();
-        Close();
+        if (!_closed)
+        {
+            Close();
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _closed = true;
+        _timer.Stop();
+        base.OnClosed(e);
     }
 
     private void OnMouseEnter(object sender, MouseEventArgs e)
@@ -64,7 +76,7 @@ public sealed partial class ToastWindow : Window
         DoubleAnimation fade = new(1, 0, TimeSpan.FromMilliseconds(600)) { FillBehavior = FillBehavior.Stop };
         fade.Completed += (_, _) =>
         {
-            if (_fading)
+            if (_fading && !_closed)
             {
                 Close();
             }
