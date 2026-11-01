@@ -18,7 +18,9 @@ public sealed class CollisionRuleTests
     [InlineData("#-x")] // punctuation after #
     [InlineData("#_x")]
     [InlineData("tag,#b")] // after a comma, not whitespace
-    [InlineData("done (#asked)")] // after an opening paren, not whitespace
+    [InlineData("done (#12345)")] // after an opening paren, but a digit follows
+    [InlineData("say \"@ 3pm\"")] // after an opening quote, but a space follows
+    [InlineData("see [#x]")] // a bracket is not opening punctuation for this rule
     public void SigilNotAtWordStartOrNotBeforeALetterIsPlainText(string text)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
@@ -39,6 +41,43 @@ public sealed class CollisionRuleTests
         Assert.Equal(summary, line.Summary);
     }
 
+    [Theory]
+    [InlineData("done (#asked)", "asked", "done ()")]
+    [InlineData("(#asked) done", "asked", "() done")]
+    [InlineData("said \"#urgent\" twice", "urgent", "said \"\" twice")]
+    public void SigilAfterAnOpeningParenOrQuoteStartsATag(string text, string tag, string summary)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Equal([tag], line.Tags);
+        Assert.Equal(summary, line.Summary);
+    }
+
+    [Theory]
+    [InlineData("told \"@j-doe\" first", "told \"\" first")]
+    [InlineData("(@j-doe) agreed", "() agreed")]
+    public void SigilAfterAnOpeningParenOrQuoteStartsAPerson(string text, string summary)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now);
+        Assert.Equal(["j-doe"], line.People);
+        Assert.Equal(summary, line.Summary);
+    }
+
+    [Fact]
+    public void OpeningParenStartsATokenInAQueryToo()
+    {
+        QueryLine line = LineParser.ParseQuery("(#asked) (@j-doe)", Today);
+        Assert.Equal(["asked"], line.Tags);
+        Assert.Equal(["j-doe"], line.People);
+    }
+
+    [Fact]
+    public void InAQueryAnOpeningQuoteIsAPhraseNotAToken()
+    {
+        QueryLine line = LineParser.ParseQuery("\"@j-doe\"", Today);
+        Assert.Empty(line.People);
+        Assert.Equal(["@j-doe"], line.Phrases);
+    }
+
     [Fact]
     public void TokenEndsAtWhitespaceOrEndOfLine()
     {
@@ -53,6 +92,7 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe:", ":")]
     [InlineData("asked @j-doe)", ")")]
     [InlineData("asked @j-doe).", ").")]
+    [InlineData("asked @j-doe\"", "\"")]
     public void TrailingPunctuationIsStrippedFromTokenAndLeftInText(string text, string leftover)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
