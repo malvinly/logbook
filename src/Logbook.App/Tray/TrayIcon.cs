@@ -47,8 +47,10 @@ internal sealed class TrayIcon : IDisposable
         _icon = new NotifyIcon { Visible = true };
         _icon.MouseUp += OnMouseUp;
         _icon.DoubleClick += (_, _) => OpenRequested?.Invoke();
+        // The action stays until the next balloon replaces it, not only while the balloon is up: Windows may time a balloon
+        // out at once (do not disturb) or let it be clicked later from the notification list, and a reminder's click
+        // must still open its entry then.
         _icon.BalloonTipClicked += (_, _) => _balloonAction?.Invoke();
-        _icon.BalloonTipClosed += (_, _) => _balloonAction = null;
         Redraw();
     }
 
