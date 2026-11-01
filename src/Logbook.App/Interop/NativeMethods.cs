@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Logbook.App.Interop;
 
-/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, and foreground focus.</summary>
+/// <summary>The handful of Win32 calls the app needs: hotkeys, the single-instance message, foreground focus, and DWM backdrops.</summary>
 internal static class NativeMethods
 {
     public const int WmHotkey = 0x0312;
@@ -73,4 +73,16 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetMonitorInfoW(IntPtr monitor, ref MonitorInfo info);
+
+    // DWM window attributes for the borderless capture box. WPF has no API for Mica, acrylic or rounded corners on a
+    // window it does not frame itself, so the window asks the compositor directly. Each attribute is ignored or
+    // refused on Windows versions that do not know it; Backdrop checks the version and the HRESULT.
+    public const int DwmwaUseImmersiveDarkMode = 20; // Windows 10 20H1 and later: dark tint for the backdrop
+    public const int DwmwaWindowCornerPreference = 33; // Windows 11
+    public const int DwmwaSystemBackdropType = 38; // Windows 11 22H2
+    public const int DwmwcpRound = 2;
+    public const int DwmsbtTransientWindow = 3; // acrylic, as used by flyouts and the PowerToys launcher
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 }
