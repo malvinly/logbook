@@ -7,6 +7,10 @@
     <UseWPF>true</UseWPF>
     <!-- Only for NotifyIcon (DESIGN.md section 16). The WinForms implicit usings clash with WPF, so they are removed. -->
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- WPF ships native DLLs; bundling them keeps the publish output to one Logbook.exe (DESIGN.md section 16). -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- WPF text layout needs culture data and throws under invariant globalization, so the shared setting is undone here. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
