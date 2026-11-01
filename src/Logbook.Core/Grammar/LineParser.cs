@@ -12,7 +12,7 @@ public static class LineParser
     public static CaptureLine ParseCapture(string text, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(text);
-        StringBuilder summary = new();
+        MarkedText summary = new();
         List<string> tags = [];
         List<string> people = [];
         DateTimeOffset? occurredAt = null;
@@ -32,15 +32,19 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "at" && DateValues.TryParseAt(token.Value, now, out DateTimeOffset at):
                     occurredAt = at; // The last at: on the line wins.
                     break;
+                case TokenKind.Stripped when previousRemoved:
+                    // With the token gone, the space before it would be left in front of its punctuation
+                    // ("asked @j-doe, then"), so it goes too: "asked, then".
+                    summary.TrimEnd();
+                    summary.Append(token.Raw, fromToken: true);
+                    removed = false;
+                    break;
+                case TokenKind.Opening:
+                    summary.Append(token.Raw, fromToken: true);
+                    removed = false;
+                    break;
                 default:
-                    // Text that touches a removed token is the punctuation stripped from it ("asked @j-doe, then"). With the
-                    // token gone, the space before it would be left in front of the comma, so it goes too: "asked, then".
-                    if (previousRemoved && token.Raw.Length > 0 && !char.IsWhiteSpace(token.Raw[0]))
-                    {
-                        TrimEnd(summary);
-                    }
-
-                    summary.Append(token.Raw);
+                    summary.Append(token.Raw, fromToken: false);
                     removed = false;
                     break;
             }
@@ -48,7 +52,7 @@ public static class LineParser
             previousRemoved = removed;
         }
 
-        return new CaptureLine(CollapseWhitespace(summary.ToString()), occurredAt, tags, people);
+        return new CaptureLine(string.Join(' ', summary.Words()), occurredAt, tags, people);
     }
 
     public static QueryLine ParseQuery(string text, DateOnly today)
@@ -61,7 +65,8 @@ public static class LineParser
         DateOnly? since = null;
         DateOnly? until = null;
         // Text since the last token the filter used, so "at:yesterday." stays one word although it scans as two tokens.
-        StringBuilder plain = new();
+        MarkedText plain = new();
+        bool previousUsed = false;
 
         foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
         {
@@ -90,19 +95,28 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "last" && DateValues.TryParseLast(token.Value, today, out DateOnly lastDate):
                     since = lastDate;
                     break;
+                case TokenKind.Stripped when previousUsed:
+                case TokenKind.Opening:
+                    plain.Append(token.Raw, fromToken: true);
+                    used = false;
+                    break;
                 default:
-                    plain.Append(token.Raw);
+                    plain.Append(token.Raw, fromToken: false);
                     used = false;
                     break;
             }
 
+            // A token the filter used ends the word before it, as whitespace would.
             if (used)
             {
-                AddWords(words, plain);
+                words.AddRange(plain.Words());
+                plain.Clear();
             }
+
+            previousUsed = used;
         }
 
-        AddWords(words, plain);
+        words.AddRange(plain.Words());
         return new QueryLine(words, phrases, tags, people, since, until);
     }
 
@@ -154,20 +168,6 @@ public static class LineParser
         text.Append(token);
     }
 
-    private static void AddWords(List<string> words, StringBuilder plain)
-    {
-        words.AddRange(plain.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        plain.Clear();
-    }
-
-    private static void TrimEnd(StringBuilder text)
-    {
-        while (text.Length > 0 && char.IsWhiteSpace(text[^1]))
-        {
-            text.Length--;
-        }
-    }
-
     private static void AddUnique(List<string> list, string value)
     {
         if (!list.Contains(value))
@@ -176,29 +176,65 @@ public static class LineParser
         }
     }
 
-    // Removing tokens leaves double spaces behind; the summary is what the user would have typed without them.
-    private static string CollapseWhitespace(string text)
+    /// <summary>
+    /// Text left over once tokens are taken out, with a flag per character saying whether it is punctuation a token
+    /// left behind (<see cref="TokenKind.Stripped"/> or <see cref="TokenKind.Opening"/>). DESIGN.md section 6 drops
+    /// such punctuation when nothing but whitespace is around it: "done (#asked)" stores "done", not "done ()".
+    /// </summary>
+    private sealed class MarkedText
     {
-        StringBuilder result = new(text.Length);
-        bool pendingSpace = false;
-        foreach (char c in text)
-        {
-            if (char.IsWhiteSpace(c))
-            {
-                pendingSpace = result.Length > 0;
-            }
-            else
-            {
-                if (pendingSpace)
-                {
-                    result.Append(' ');
-                    pendingSpace = false;
-                }
+        private readonly StringBuilder _text = new();
+        private readonly List<bool> _fromToken = [];
 
-                result.Append(c);
+        public void Append(string text, bool fromToken)
+        {
+            _text.Append(text);
+            _fromToken.AddRange(Enumerable.Repeat(fromToken, text.Length));
+        }
+
+        public void TrimEnd()
+        {
+            while (_text.Length > 0 && char.IsWhiteSpace(_text[^1]))
+            {
+                _text.Length--;
+                _fromToken.RemoveAt(_fromToken.Count - 1);
             }
         }
 
-        return result.ToString();
+        public void Clear()
+        {
+            _text.Clear();
+            _fromToken.Clear();
+        }
+
+        /// <summary>The whitespace-separated words, leaving out each word made only of punctuation a token left behind.</summary>
+        public List<string> Words()
+        {
+            List<string> words = [];
+            int i = 0;
+            while (i < _text.Length)
+            {
+                if (char.IsWhiteSpace(_text[i]))
+                {
+                    i++;
+                    continue;
+                }
+
+                int start = i;
+                bool onlyFromToken = true;
+                while (i < _text.Length && !char.IsWhiteSpace(_text[i]))
+                {
+                    onlyFromToken &= _fromToken[i];
+                    i++;
+                }
+
+                if (!onlyFromToken)
+                {
+                    words.Add(_text.ToString(start, i - start));
+                }
+            }
+
+            return words;
+        }
     }
 }

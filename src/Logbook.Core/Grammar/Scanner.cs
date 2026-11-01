@@ -37,16 +37,34 @@ internal static class Scanner
             {
                 int end = EndOfName(text, i);
                 int nameEnd = StripTrailing(text, i + 1, end);
+                // The "," or ";" that ended the name, and any punctuation right after it, is stripped like a trailing ".".
+                int strippedEnd = end;
+                while (strippedEnd < text.Length && IsTrailingPunctuation(text[strippedEnd]))
+                {
+                    strippedEnd++;
+                }
+
+                // The "(" or quote that let the token open is kept apart too, so "done (#asked)" can drop the "()" it leaves.
+                if (!atWordStart && plain.Length > 0 && text[i - 1] is '(' or '"')
+                {
+                    plain.Length--;
+                    Flush(tokens, plain);
+                    tokens.Add(new Token(TokenKind.Opening, text[(i - 1)..i], text[(i - 1)..i]));
+                }
 
                 Flush(tokens, plain);
                 tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..nameEnd], TokenNormalizer.Normalize(text[(i + 1)..nameEnd])));
-                plain.Append(text, nameEnd, end - nameEnd);
-                if (end < text.Length && text[end] is ',' or ';')
+                if (nameEnd < strippedEnd)
                 {
-                    afterSeparator = end + 1;
+                    tokens.Add(new Token(TokenKind.Stripped, text[nameEnd..strippedEnd], text[nameEnd..strippedEnd]));
                 }
 
-                i = end;
+                if (strippedEnd > end)
+                {
+                    afterSeparator = strippedEnd;
+                }
+
+                i = strippedEnd;
                 continue;
             }
 

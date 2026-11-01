@@ -107,7 +107,7 @@ public sealed class AtTokenTests
     [InlineData("thing at:yesterday.", 7, 12, 0, "thing.")]
     [InlineData("thing at:yesterday,3pm!", 7, 15, 0, "thing!")]
     [InlineData("thing at:2026-10-06, here", 6, 12, 0, "thing, here")] // the space before the comma goes, as for a tag
-    [InlineData("at:mon, thing", 5, 12, 0, ", thing")]
+    [InlineData("at:mon, thing", 5, 12, 0, "thing")] // nothing before the comma to keep it, so it is dropped
     [InlineData("thing at:15:00.", 8, 15, 0, "thing.")] // the colon inside the time is kept
     public void TrailingPunctuationIsStrippedFromTheValueAndLeftInTheSummary(string text, int day, int hour, int minute, string summary)
     {

@@ -42,9 +42,9 @@ public sealed class CollisionRuleTests
     }
 
     [Theory]
-    [InlineData("done (#asked)", "asked", "done ()")]
-    [InlineData("(#asked) done", "asked", "() done")]
-    [InlineData("said \"#urgent\" twice", "urgent", "said \"\" twice")]
+    [InlineData("done (#asked)", "asked", "done")]
+    [InlineData("(#asked) done", "asked", "done")]
+    [InlineData("said \"#urgent\" twice", "urgent", "said twice")]
     public void SigilAfterAnOpeningParenOrQuoteStartsATag(string text, string tag, string summary)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
@@ -53,8 +53,8 @@ public sealed class CollisionRuleTests
     }
 
     [Theory]
-    [InlineData("told \"@j-doe\" first", "told \"\" first")]
-    [InlineData("(@j-doe) agreed", "() agreed")]
+    [InlineData("told \"@j-doe\" first", "told first")]
+    [InlineData("(@j-doe) agreed", "agreed")]
     public void SigilAfterAnOpeningParenOrQuoteStartsAPerson(string text, string summary)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now);
@@ -147,10 +147,54 @@ public sealed class CollisionRuleTests
     [InlineData("asked #staging-access; no reply", "asked; no reply")]
     [InlineData("told @j-doe and @a-smith.", "told and.")]
     [InlineData("asked @j-doe , then", "asked , then")] // a space the user typed before the comma is theirs
-    [InlineData("@j-doe, then", ", then")]
+    [InlineData("@j-doe, then", "then")] // with no word before it, the comma has only whitespace around it
     public void SpaceBeforeStrippedPunctuationIsDroppedFromTheSummary(string text, string summary)
     {
         Assert.Equal(summary, LineParser.ParseCapture(text, Now).Summary);
+    }
+
+    [Theory]
+    [InlineData("done (#asked) now", "done now")]
+    [InlineData("done (#asked).", "done")]
+    [InlineData("(#a #b) done", "done")]
+    [InlineData("#a;#b", "")]
+    [InlineData("@j-doe, @a-smith: noted", "noted")]
+    [InlineData("done (#asked and more)", "done and more)")] // read literally: the "(" alone is left behind with spaces around it
+    [InlineData("asked @j-doe,@a-smith about #printer? at:yesterday.", "asked, about?.")] // the comma and "." attach to a word
+    public void PunctuationATokenLeavesWithOnlyWhitespaceAroundItIsDropped(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now).Summary);
+    }
+
+    [Theory]
+    [InlineData("done (really)")] // no token, so the parens are the user's
+    [InlineData("why?")]
+    [InlineData("x ( #a ) y", "x ( ) y")] // punctuation typed apart from the token is not left by it
+    [InlineData("see foo(#a)", "see foo()")] // the "(" touches a word, so the pair is kept
+    [InlineData("asked @j-doe , then", "asked , then")]
+    public void PunctuationThatIsNotLeftAloneByATokenIsKept(string text, string? summary = null)
+    {
+        Assert.Equal(summary ?? text, LineParser.ParseCapture(text, Now).Summary);
+    }
+
+    [Theory]
+    [InlineData("(#asked)")]
+    [InlineData("@j-doe,")]
+    [InlineData("(@j-doe) #a;#b")]
+    [InlineData("last:7d,")]
+    public void FilterRequiresNoPunctuationATokenLeftAlone(string text)
+    {
+        Assert.Empty(LineParser.ParseQuery(text, Today).Words);
+    }
+
+    [Theory]
+    [InlineData("asked @j-doe, then", new[] { "asked", "then" })]
+    [InlineData("why? (really)", new[] { "why?", "(really)" })]
+    [InlineData("asked , then", new[] { "asked", ",", "then" })] // typed by the user, not left by a token
+    [InlineData("at:yesterday.", new[] { "at:yesterday." })] // at: is a word in a filter, punctuation and all
+    public void FilterKeepsWordsThatAreNotLeftoverPunctuation(string text, string[] words)
+    {
+        Assert.Equal(words, LineParser.ParseQuery(text, Today).Words);
     }
 
     [Fact]
