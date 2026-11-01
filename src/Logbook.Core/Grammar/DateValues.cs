@@ -14,7 +14,7 @@ internal static class DateValues
 
     /// <summary>
     /// <c>at:</c> value: <c>&lt;date&gt;</c>, <c>&lt;date&gt;,&lt;time&gt;</c> or <c>&lt;time&gt;</c>.
-    /// A date is ISO, <c>today</c>, <c>yesterday</c> or a weekday abbreviation (most recent, today included).
+    /// A date is ISO, <c>today</c>, <c>yesterday</c> or a weekday abbreviation (the most recent one before today).
     /// A date without a time is noon; a time without a date is today. The offset is always that of <paramref name="now"/>.
     /// </summary>
     public static bool TryParseAt(string value, DateTimeOffset now, out DateTimeOffset result)
@@ -120,7 +120,14 @@ internal static class DateValues
             return false;
         }
 
+        // Someone who types a weekday means a past day; for today they would type a time or nothing. So on a
+        // Monday, at:mon is last Monday.
         int daysBack = ((int)today.DayOfWeek - weekday + 7) % 7;
+        if (daysBack == 0)
+        {
+            daysBack = 7;
+        }
+
         date = today.AddDays(-daysBack);
         return true;
     }

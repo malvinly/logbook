@@ -56,7 +56,7 @@ One grammar serves both capture and query. Learn it once.
 
 - `#tag` — a tag. Lowercase-kebab; the parser lowercases and replaces whitespace/underscores with hyphens. In capture it attaches the tag; in query it filters to entries having that tag (exact match; multiple `#` tokens are ANDed).
 - `@person` — a person. Same normalisation as tags. In capture it attaches the person; in query it filters.
-- `at:<when>` — capture only. Sets `occurredAt`. Forms: `at:2026-10-06`, `at:2026-10-06,15:00`, `at:yesterday`, `at:yesterday,3pm`, `at:15:00` (today at that time), `at:mon` (most recent Monday). Date without time stores 12:00 local; use the compact export when the time isn't meaningful.
+- `at:<when>` — capture only. Sets `occurredAt`. Forms: `at:2026-10-06`, `at:2026-10-06,15:00`, `at:yesterday`, `at:yesterday,3pm`, `at:15:00` (today at that time), `at:mon` (the most recent Monday before today; on a Monday that is last week). Date without time stores 12:00 local; use the compact export when the time isn't meaningful.
 - `since:<date>` / `until:<date>` — query only. Inclusive bounds on `occurredAt`. Date forms: ISO `2026-10-06`, `today`, `yesterday`.
 - `last:<n><unit>` — query only. `last:30d`, `last:12w`, `last:6m`. Shorthand for `since:`.
 - `"quoted phrase"` — query only. Substring match on the exact phrase.

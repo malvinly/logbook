@@ -65,10 +65,10 @@ public sealed class AtTokenTests
     [Theory]
     [InlineData("mon", 5)]
     [InlineData("wed", 7)]
-    [InlineData("thu", 8)] // Today counts as the most recent Thursday.
+    [InlineData("thu", 1)] // Today is Thursday; a weekday name always means a past day, so last Thursday.
     [InlineData("fri", 2)]
     [InlineData("sun", 4)]
-    public void WeekdayMeansMostRecentSuchDayAtNoon(string weekday, int expectedDay)
+    public void WeekdayMeansMostRecentSuchDayBeforeTodayAtNoon(string weekday, int expectedDay)
     {
         CaptureLine line = LineParser.ParseCapture($"thing at:{weekday}", Now);
         Assert.Equal(new DateTimeOffset(2026, 10, expectedDay, 12, 0, 0, Offset), line.OccurredAt);
