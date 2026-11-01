@@ -248,7 +248,7 @@ The save dialog defaults to a folder **outside** the synced root and explains wh
 
 ## 12. Settings, startup, and the moving user profile
 
-- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, `idleLockMinutes` (lock after that many minutes without input, section 9; 0 never locks; default 30; edited in the Settings window as a whole number from 0 to 1440), export toggles, saved queries (section 10). The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
+- Settings are a plain JSON file **beside the data file** in the synced folder, not in `%APPDATA%`. They contain no secrets. Contents: data file path (relative to the sync root), the environment variable to resolve the sync root from (configurable, since each sync client exposes its own), hotkeys, autocomplete cap and ranking, `idleLockMinutes` (lock after that many minutes without input, section 9; 0 never locks; default 30; edited in the Settings window as a whole number from 0 to 1440), `theme` (`system`, the default and what a file without the property gets, follows the Windows light or dark setting; `light` or `dark` forces one; edited in the Settings window as "Theme: Follow Windows / Light / Dark"; applied at startup and when Settings is saved, and open windows repaint at once; a forced theme ignores Windows changing mode), export toggles, saved queries (section 10). The last export folder is remembered per Windows profile in `%LOCALAPPDATA%` instead, because it is an absolute local path that would point a reader of the synced file at the plaintext copy.
 - On launch, if the app is not registered to start with Windows for the current user, it offers once to register (a shortcut in the Startup folder). A login change wipes that shortcut; the offer is how it comes back.
 - Single instance: a named mutex. A second launch activates the first instance's main window and exits.
 - `RegisterHotKey` failure is surfaced immediately with a balloon naming the hotkey and offering Settings. A silently dead hotkey means a week of nothing logged.
@@ -328,12 +328,14 @@ Independent items, none urgent. The dark theme is much cheaper after Phase 2 has
 
 1. HTML clipboard format alongside plain text so mail clients get bold dates and real bullets.
 2. CSV export.
-3. Dark theme override in settings. Phase 2 already follows the Windows light or dark setting with a second token dictionary (`Theme.Dark.xaml`); what is left is a setting to force one or the other.
+3. Dark theme override in settings. Phase 2 already follows the Windows light or dark setting with a second token dictionary (`Theme.Dark.xaml`); what is left is a setting to force one or the other. Built as the `theme` setting in section 12: forcing merges WPF's `Fluent.Light.xaml` or `Fluent.Dark.xaml` in place of `Fluent.xaml` together with the matching token dictionary, only at startup and on Settings save, never from the Windows theme-change message.
 4. Grammar polish: a token that fills a whole parenthetical leaves `()` in the summary (`done (#asked)` stores `done ()`), and in a filter the leftover punctuation becomes words, so `(#asked)` or `@j-doe,` in the filter bar also requires a literal `(` or `,`. Drop punctuation-only leftovers in both.
 5. A window and taskbar icon drawn from the tray icon's "L" badge; the windows still show WPF's default icon in their title bars.
 6. Export header from a saved query: when the filter came from a saved-query button, title the timeline with the button's name, so a weekly digest reads `This week — 2 entries` rather than `last:7d — 2 entries`.
 7. "Followed up by" lines in the detail pane of an original, the reverse of the Phase 4 "Follows up on" line, if following a thread forwards turns out to matter in practice.
 8. Lock when Windows locks the session (`WM_WTSSESSION_CHANGE`), alongside the Phase 5 idle lock, if locking the workstation turns out to be the moment you walk away more often than N idle minutes are.
+9. CSV cells that start with `=`, `+`, `-` or `@` are read as formulas by spreadsheet apps; decide whether the CSV export should neutralise them (for example with a leading `'`), at the cost of no longer writing the text verbatim.
+10. The tray icon is drawn once from the tokens at startup, so it keeps the old colors until the next start after the theme setting is changed live, as it already did when Windows changes mode while the app runs; redraw it on a theme change if that turns out to be noticeable.
 
 ### Not building
 
