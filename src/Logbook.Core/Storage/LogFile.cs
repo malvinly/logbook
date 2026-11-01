@@ -213,6 +213,36 @@ public sealed class LogFile
         }
     }
 
+    /// <summary>
+    /// Reads only the header, without a passphrase, so several candidate files can be described before one is chosen
+    /// (DESIGN.md section 8). Throws <see cref="InvalidDataException"/> as <see cref="Open"/> does.
+    /// </summary>
+    public static FileHeader ReadHeader(string path)
+    {
+        string text = File.ReadAllText(path, Encoding.UTF8);
+        int headerEnd = text.IndexOf('\n', StringComparison.Ordinal);
+        if (headerEnd < 0)
+        {
+            throw new InvalidDataException("The file has no complete header line.");
+        }
+
+        return ParseHeader(text[..headerEnd]);
+    }
+
+    /// <summary>The number of record lines after the header, complete or not.</summary>
+    public static int CountRecordLines(string path)
+    {
+        string text = File.ReadAllText(path, Encoding.UTF8);
+        int headerEnd = text.IndexOf('\n', StringComparison.Ordinal);
+        if (headerEnd < 0)
+        {
+            return 0;
+        }
+
+        string[] lines = text[(headerEnd + 1)..].Split('\n');
+        return lines[^1].Length == 0 ? lines.Length - 1 : lines.Length;
+    }
+
     private static FileHeader ParseHeader(string line)
     {
         FileHeader header;
