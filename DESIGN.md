@@ -156,7 +156,8 @@ Each line is `base64(nonce ‖ ciphertext ‖ tag)` of the UTF-8 JSON record, en
 
 - The app starts locked. The tray icon shows a lock glyph. No file is read until unlock.
 - Unlock is prompted at launch. If dismissed, the app stays in the tray locked, and the next hotkey press prompts for the passphrase before showing the capture box.
-- After unlock, the data key stays in process memory for the life of the process. Idle auto-lock is Phase 2; when it arrives it reuses the same "prompt first, then capture" path.
+- After unlock, the data key stays in process memory until the app exits or is locked. Idle auto-lock is Phase 5; when it arrives it reuses the same "prompt first, then capture" path.
+- "Lock now" in the tray menu returns to the startup state: the open log (data key and decrypted entries) is dropped, every window that shows entries closes, the lock glyph shows, and the next hotkey prompts first. Unsaved captures live only in the open log, so locking is refused with an explanation while anything is pending or still being written.
 - The passphrase is never written anywhere. The derived key is never written anywhere.
 
 ## 10. Main window

@@ -25,6 +25,7 @@ internal sealed class TrayIcon : IDisposable
     private bool _locked = true;
     private int _pending;
     private Action? _balloonAction;
+    private readonly MenuItem _lockItem;
 
     public TrayIcon(IntPtr focusHandle, Color accent, Color muted, Color danger)
     {
@@ -36,6 +37,8 @@ internal sealed class TrayIcon : IDisposable
         _menu = new ContextMenu();
         _menu.Items.Add(MenuItem("Open Logbook", () => OpenRequested?.Invoke()));
         _menu.Items.Add(MenuItem("New entry", () => CaptureRequested?.Invoke()));
+        _lockItem = MenuItem("Lock now", () => LockRequested?.Invoke());
+        _menu.Items.Add(_lockItem);
         _menu.Items.Add(new Separator());
         _menu.Items.Add(MenuItem("Settings", () => SettingsRequested?.Invoke()));
         _menu.Items.Add(new Separator());
@@ -52,6 +55,8 @@ internal sealed class TrayIcon : IDisposable
     public event Action? OpenRequested;
 
     public event Action? CaptureRequested;
+
+    public event Action? LockRequested;
 
     public event Action? SettingsRequested;
 
@@ -79,6 +84,7 @@ internal sealed class TrayIcon : IDisposable
 
     private void Redraw()
     {
+        _lockItem.IsEnabled = !_locked;
         if (_locked)
         {
             _icon.Icon = _lockedIcon;

@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<Entry> _filtered = [];
     private EntryEditor? _editor;
     private bool _updatingRange;
+    private bool _closingForLock;
 
     public MainWindow(LogFile log, Func<Suggestions> suggestions)
     {
@@ -215,6 +216,7 @@ public sealed partial class MainWindow : Window
         LogFile log = _log;
         SaveButton.IsEnabled = false;
         DeleteButton.IsEnabled = false;
+        IsSaving = true;
         bool saved;
         try
         {
@@ -229,6 +231,7 @@ public sealed partial class MainWindow : Window
         {
             SaveButton.IsEnabled = true;
             DeleteButton.IsEnabled = true;
+            IsSaving = false;
         }
 
         Changed?.Invoke();
@@ -259,11 +262,26 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>True while an edit or delete is being written; locking waits for it.</summary>
+    public bool IsSaving { get; private set; }
+
+    /// <summary>Really closes the window, for Lock now: it holds the open log, which locking must let go of.</summary>
+    public void CloseForLock()
+    {
+        _closingForLock = true;
+        _debounce.Stop();
+        Close();
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         // The tray app lives on; the window just hides so it reopens instantly with its filter intact.
-        e.Cancel = true;
-        Hide();
+        if (!_closingForLock)
+        {
+            e.Cancel = true;
+            Hide();
+        }
+
         base.OnClosing(e);
     }
 }

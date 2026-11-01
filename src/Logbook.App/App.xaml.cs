@@ -46,6 +46,7 @@ public sealed partial class App : Application, IDisposable
     private bool _firstRun;
     private bool _placeholderSeen;
     private bool _exiting;
+    private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
 
     /// <summary>Null while locked. The data key lives inside for the life of the process.</summary>
     public LogFile? Log { get; private set; }
@@ -82,6 +83,7 @@ public sealed partial class App : Application, IDisposable
         _tray.OpenRequested += ShowMainWindow;
         _tray.CaptureRequested += ShowCapture;
         _tray.SettingsRequested += ShowSettings;
+        _tray.LockRequested += LockNow;
         _tray.ExitRequested += RequestExit;
         RegisterHotkeys();
 
@@ -409,6 +411,51 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
+    /// <summary>
+    /// Tray → Lock now: back to the state the app starts in (DESIGN.md section 9). The open log, and with it the data
+    /// key and every decrypted entry, is dropped; the next hotkey prompts for the passphrase and opens the file afresh.
+    /// Unsaved captures live only inside the open log, so locking is refused until they are on disk.
+    /// </summary>
+    private void LockNow()
+    {
+        if (Log is not { } log)
+        {
+            return;
+        }
+
+        if (log.PendingCount > 0 || _writesInFlight > 0 || _main is { IsSaving: true })
+        {
+            int waiting = Math.Max(log.PendingCount, 1);
+            AppDialog.Inform(
+                VisibleMain,
+                "Not locked yet",
+                $"{RangeText.Count(waiting)} not on disk yet, and locking would lose it. Logbook keeps retrying every 30 seconds; lock again once the tray icon no longer shows unsaved entries.",
+                DialogTone.Warning);
+            return;
+        }
+
+        // Every window that shows or edits entries goes; toasts only hold an id and will prompt when clicked.
+        foreach (Window window in Windows.OfType<Window>().ToList())
+        {
+            if (window is MainWindow main)
+            {
+                main.CloseForLock();
+            }
+            else if (window is not ToastWindow)
+            {
+                window.Close();
+            }
+        }
+
+        _main = null;
+        _capture = null;
+        _suggestions = null;
+        _suggestionsFor = null;
+        Log = null;
+        _tray?.SetLocked(true);
+        Diag.Log("Locked from the tray");
+    }
+
     private void ShowCapture()
     {
         if (!EnsureUnlocked())
@@ -435,6 +482,7 @@ public sealed partial class App : Application, IDisposable
     {
         LogFile log = Log!;
         bool saved;
+        _writesInFlight++;
         try
         {
             saved = await Task.Run(() => log.Append(entry)).ConfigureAwait(true);
@@ -444,6 +492,10 @@ public sealed partial class App : Application, IDisposable
             // Not expected, but this path must never fail quietly: the entry is in memory and in the queue.
             Diag.Log("Capture write failed unexpectedly", e);
             saved = false;
+        }
+        finally
+        {
+            _writesInFlight--;
         }
 
         _suggestions = null; // the new entry may introduce a tag or person
