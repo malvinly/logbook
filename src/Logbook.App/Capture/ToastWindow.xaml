@@ -1,0 +1,20 @@
+<Window x:Class="Logbook.App.Capture.ToastWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Logbook" Width="320" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" WindowStartupLocation="Manual"
+        Cursor="Hand" MouseLeftButtonUp="OnClick" MouseEnter="OnMouseEnter" MouseLeave="OnMouseLeave">
+  <WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+  </WindowChrome.WindowChrome>
+  <Border x:Name="Body" Background="{StaticResource ToastBrush}" CornerRadius="{StaticResource MediumRadius}" Margin="8" Padding="14,10">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.3" />
+    </Border.Effect>
+    <StackPanel>
+      <TextBlock x:Name="Headline" Foreground="{StaticResource ToastTextBrush}" FontWeight="SemiBold" />
+      <TextBlock x:Name="Detail" Foreground="{StaticResource ToastTextBrush}" Opacity="0.85" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+    </StackPanel>
+  </Border>
+</Window>

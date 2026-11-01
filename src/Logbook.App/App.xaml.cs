@@ -1,11 +1,14 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Logbook.App.Capture;
 using Logbook.App.Diagnostics;
 using Logbook.App.Hotkeys;
 using Logbook.App.Interop;
 using Logbook.App.Lock;
 using Logbook.App.Tray;
+using Logbook.Core;
+using Logbook.Core.Export;
 using Logbook.Core.Storage;
 
 namespace Logbook.App;
@@ -21,6 +24,7 @@ public sealed partial class App : Application, IDisposable
     private HotkeyManager? _hotkeys;
     private TrayIcon? _tray;
     private Timer? _retryTimer;
+    private CaptureWindow? _capture;
     private Settings.Settings _settings = new();
     private string _root = "";
     private string _dataFilePath = "";
@@ -164,11 +168,42 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        // Built in step 6.
-        Diag.Log("Capture requested");
+        if (_capture is { } open)
+        {
+            open.Activate();
+            return;
+        }
+
+        _capture = new CaptureWindow(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice));
+        _capture.Captured += entry => _ = SaveCapturedAsync(entry, _capture.WorkArea);
+        _capture.Closed += (_, _) => _capture = null;
+        _capture.Show();
+        _capture.Activate();
     }
 
-    private void ShowMainWindow()
+    // The write runs off the UI thread: it can retry for a while if the sync client holds the file.
+    private async Task SaveCapturedAsync(Entry entry, Rect workArea)
+    {
+        LogFile log = Log!;
+        bool saved = await Task.Run(() => log.Append(entry)).ConfigureAwait(true);
+        if (saved)
+        {
+            ToastWindow toast = new(workArea, "Logged — click to edit", entry.Summary, danger: false, TimeSpan.FromSeconds(5));
+            toast.Clicked += () => ShowMainWindow(entry.Id);
+            toast.Show();
+        }
+        else
+        {
+            Diag.Log("Capture could not be written; it is pending");
+            ToastWindow toast = new(workArea, "Not saved yet", $"{RangeText.Count(log.PendingCount)} waiting for the file. Retrying every 30 seconds.", danger: true, TimeSpan.FromSeconds(15));
+            toast.Clicked += () => ShowMainWindow(entry.Id);
+            toast.Show();
+        }
+    }
+
+    private void ShowMainWindow() => ShowMainWindow(null);
+
+    private void ShowMainWindow(string? selectId)
     {
         if (!EnsureUnlocked())
         {
@@ -176,7 +211,7 @@ public sealed partial class App : Application, IDisposable
         }
 
         // Built in step 7.
-        Diag.Log("Main window requested");
+        Diag.Log($"Main window requested, select {selectId ?? "nothing"}");
     }
 
     private void ShowSettings()
