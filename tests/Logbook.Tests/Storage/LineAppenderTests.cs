@@ -78,6 +78,25 @@ public sealed class LineAppenderTests : IDisposable
     }
 
     [Fact]
+    public void DefaultScheduleIsExactlyTheOneInTheDesign()
+    {
+        // DESIGN.md section 8: 100, 200, 400, 800 ms, then 1 s, for ten attempts in all.
+        TimeSpan[] expected =
+        [
+            TimeSpan.FromMilliseconds(100),
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(400),
+            TimeSpan.FromMilliseconds(800),
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1),
+        ];
+        Assert.Equal(expected, LineAppender.DefaultRetryDelays);
+    }
+
+    [Fact]
     public void DefaultScheduleIsTenAttemptsStartingAtOneHundredMillisecondsAndUnderTenSeconds()
     {
         Assert.Equal(9, LineAppender.DefaultRetryDelays.Count);
