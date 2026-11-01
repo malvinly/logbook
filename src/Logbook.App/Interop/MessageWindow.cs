@@ -25,6 +25,9 @@ internal sealed class MessageWindow : IDisposable
 
     public IntPtr Handle => _source.Handle;
 
+    /// <summary>Device pixels to device-independent units, for placing windows from monitor coordinates.</summary>
+    public System.Windows.Media.Matrix TransformFromDevice => _source.CompositionTarget.TransformFromDevice;
+
     public void AddHook(HwndSourceHook hook) => _source.AddHook(hook);
 
     public void Dispose() => _source.Dispose();

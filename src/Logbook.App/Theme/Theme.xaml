@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:chips="clr-namespace:Logbook.App.Chips">
 
   <!-- The one place colors, fonts, sizes and radii live (DESIGN.md section 16). A dark theme is a second copy of this file. -->
 
@@ -281,9 +282,29 @@
     <Setter Property="TextElement.Foreground" Value="{StaticResource DateChipTextBrush}" />
   </Style>
 
-  <Style x:Key="ChipText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+  <!-- The text inherits TextElement.Foreground from the chip border, so no Foreground setter here. -->
+  <Style x:Key="ChipText" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource CaptionSize}" />
-    <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=(TextElement.Foreground)}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+
+  <DataTemplate DataType="{x:Type chips:Chip}">
+    <Border x:Name="ChipBorder" Style="{StaticResource TagChip}">
+      <TextBlock Style="{StaticResource ChipText}" Text="{Binding Text}" />
+    </Border>
+    <DataTemplate.Triggers>
+      <DataTrigger Binding="{Binding Kind}" Value="Person">
+        <Setter TargetName="ChipBorder" Property="Style" Value="{StaticResource PersonChip}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Kind}" Value="Date">
+        <Setter TargetName="ChipBorder" Property="Style" Value="{StaticResource DateChip}" />
+      </DataTrigger>
+    </DataTemplate.Triggers>
+  </DataTemplate>
+
+  <ItemsPanelTemplate x:Key="ChipPanel">
+    <WrapPanel Orientation="Horizontal" />
+  </ItemsPanelTemplate>
 
 </ResourceDictionary>
