@@ -61,6 +61,7 @@ public sealed partial class App : Application, IDisposable
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
     private bool _passphraseNoticeOpen; // the "Passphrase changed" notice is on screen; locking waits for it
     private bool _sessionLocked; // Windows locked the session or is signing out and has not reported an unlock since
+    private bool _retrySessionNotifications; // registering at startup failed; retried once at the first unlock
 
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
@@ -104,6 +105,7 @@ public sealed partial class App : Application, IDisposable
         else
         {
             Diag.Log($"Could not register for session notifications (error {Marshal.GetLastWin32Error()}); a workstation lock will not lock the log");
+            _retrySessionNotifications = true;
         }
 
         _hotkeys = new HotkeyManager(_messageWindow);
@@ -132,6 +134,7 @@ public sealed partial class App : Application, IDisposable
             _tray.SetLocked(false);
             StartReminders();
             _idleTimer.Start();
+            RetrySessionNotifications();
         }
         else
         {
@@ -511,6 +514,7 @@ public sealed partial class App : Application, IDisposable
                 _tray?.SetLocked(false);
                 StartReminders();
                 _idleTimer.Start();
+                RetrySessionNotifications();
                 return true;
             }
 
@@ -520,6 +524,26 @@ public sealed partial class App : Application, IDisposable
         {
             _unlockPrompt = null;
         }
+    }
+
+    // A silent failure here leaves the log open on an unattended machine (DESIGN.md section 9), so a registration that
+    // failed at startup is tried once more at the first unlock, and if Windows refuses again the user is told.
+    private void RetrySessionNotifications()
+    {
+        if (!_retrySessionNotifications)
+        {
+            return;
+        }
+
+        _retrySessionNotifications = false;
+        if (_messageWindow!.RegisterForSessionNotifications())
+        {
+            Diag.Log("Registered for session lock and sign-out notifications on the retry at unlock");
+            return;
+        }
+
+        Diag.Log($"Could not register for session notifications on the retry either (error {Marshal.GetLastWin32Error()}); a workstation lock will not lock the log");
+        _tray?.ShowBalloon("Workstation lock not followed", "Windows refused to report workstation locks to Logbook, so locking the workstation will not lock the log. Use Lock now in the tray menu before you walk away.", warning: true);
     }
 
     /// <summary>
