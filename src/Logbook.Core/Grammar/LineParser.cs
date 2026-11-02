@@ -77,6 +77,9 @@ public static class LineParser
         // Text since the last token the filter used, so "at:yesterday." stays one word although it scans as two tokens.
         MarkedText plain = new();
         bool previousUsed = false;
+        // True right after a used token or the punctuation stripped from it, so a separator after "#a?" in "#a?,#b" still
+        // counts as between two tokens, while the punctuation itself stays in the word it was typed in ("@a,.#b").
+        bool afterUsedToken = false;
 
         foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
         {
@@ -105,13 +108,11 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "last" && DateValues.TryParseLast(token.Value, today, out DateOnly lastDate):
                     since = lastDate;
                     break;
-                case TokenKind.Separator when previousUsed:
+                case TokenKind.Separator when afterUsedToken:
                     break; // Between two tokens the filter used, so it needs no literal "," for it.
                 case TokenKind.Stripped when previousUsed:
-                    // The punctuation went with the token, so used stays true: a separator after it ("#a?,#b") is still
-                    // between two tokens the filter used. Nothing typed follows it in the same word, so ending the word
-                    // here changes nothing.
                     plain.Append(token.Value, Origin.Left);
+                    used = false;
                     break;
                 case TokenKind.Opening:
                     // A tag or person always follows and ends the word, so the opener never finds its partner: it goes
@@ -132,6 +133,7 @@ public static class LineParser
                 plain.Clear();
             }
 
+            afterUsedToken = used || (token.Kind == TokenKind.Stripped && previousUsed);
             previousUsed = used;
         }
 

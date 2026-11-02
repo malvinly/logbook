@@ -300,6 +300,7 @@ public sealed class CollisionRuleTests
     [InlineData("why? (really)", new[] { "why?", "(really)" })]
     [InlineData("asked , then", new[] { "asked", ",", "then" })] // typed by the user, not left by a token
     [InlineData("at:yesterday.", new[] { "at:yesterday." })] // at: is a word in a filter, punctuation and all
+    [InlineData("@a,.#b", new[] { ",.#b" })] // the stripped "," stays in the word typed after it, as in a capture
     public void FilterKeepsWordsThatAreNotLeftoverPunctuation(string text, string[] words)
     {
         Assert.Equal(words, LineParser.ParseQuery(text, Today).Words);
