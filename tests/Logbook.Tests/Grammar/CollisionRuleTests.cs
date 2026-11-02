@@ -243,8 +243,32 @@ public sealed class CollisionRuleTests
         Assert.Equal("told's manager", line.Summary);
     }
 
+    [Fact]
+    public void FilterStripsAQuestionMarkFromAPersonAndKeepsTheWordsAround()
+    {
+        QueryLine line = LineParser.ParseQuery("asked @j-doe? then", Today);
+        Assert.Equal(["asked", "then"], line.Words);
+        Assert.Equal(["j-doe"], line.People);
+    }
+
+    [Fact]
+    public void FilterStripsAPossessiveFromAPersonAndLeavesNoWord()
+    {
+        QueryLine line = LineParser.ParseQuery("@j-doe's", Today);
+        Assert.Equal(["j-doe"], line.People);
+        Assert.Empty(line.Words);
+    }
+
+    [Fact]
+    public void PossessiveIsStrippedFromAKeywordValueToo()
+    {
+        CaptureLine line = LineParser.ParseCapture("thing at:yesterday's meeting", Now, Zone);
+        Assert.Equal(new DateTimeOffset(2026, 10, 7, 12, 0, 0, TimeSpan.FromHours(-5)), line.OccurredAt);
+        Assert.Equal("thing's meeting", line.Summary);
+    }
+
     [Theory]
-    [InlineData("@o'brien", "o'brien")] // an apostrophe inside a name is kept
+    [InlineData("@j-o'doe", "j-o'doe")] // an apostrophe inside a name is kept
     [InlineData("#rock'n'roll", "rock'n'roll")]
     [InlineData("@j-doe'", "j-doe'")] // a lone trailing apostrophe is not a possessive
     [InlineData("@j-doe's-team", "j-doe's-team")] // 's that does not end the token
@@ -275,6 +299,7 @@ public sealed class CollisionRuleTests
     [InlineData("at:.")] // nothing is left once the trailing punctuation goes
     [InlineData("at:?!")]
     [InlineData("At:15:00")] // keywords are lowercase
+    [InlineData("at:15:")] // stripping leaves "15", which is not a time
     public void KeywordNotAtWordBoundaryOrWithoutAValueIsPlainText(string text)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
@@ -325,6 +350,14 @@ public sealed class CollisionRuleTests
     public void BackslashThatEscapesNothingIsKeptInAQuery()
     {
         Assert.Equal([@"\\server\#share"], LineParser.ParseQuery(@"\\server\#share", Today).Words);
+    }
+
+    [Fact]
+    public void BackslashAfterAnOpeningParenEscapesSigilInAQuery()
+    {
+        QueryLine line = LineParser.ParseQuery(@"(\#asked)", Today);
+        Assert.Empty(line.Tags);
+        Assert.Equal(["(#asked)"], line.Words);
     }
 
     [Fact]

@@ -175,8 +175,10 @@ public sealed class EntryQueryTests
     }
 
     [Fact]
-    public void DeletedFollowUpIsNotListed()
+    public void DeletedFollowUpIsNotListedWhenGivenTheLiveEntries()
     {
+        // FollowUpsOf trusts its caller to pass the live entries and does no deleted check of its own, so this pins
+        // that a deleted follow-up drops out of what the log reports as live, before and after a reopen.
         using TempFile file = new();
         LogFile log = LogFile.Create(file.Path, "correct horse", Original.RecordedAt, []);
         Entry kept = FollowUpOf(Original, "01K0000000000000000000000X", new DateTimeOffset(2026, 10, 15, 14, 30, 0, TimeSpan.FromHours(-5)));
