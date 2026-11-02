@@ -20,12 +20,12 @@ public sealed class DataFolderTests
     }
 
     [Theory]
-    [InlineData(@"C:\Users\j-doe\OneDrive\logbook.jsonl", @"C:\Users\j-doe\OneDrive", true)]
-    [InlineData(@"C:\Users\j-doe\OneDrive\sub\x.jsonl", @"C:\Users\j-doe\OneDrive\", true)]
-    [InlineData(@"C:\Users\j-doe\onedrive", @"C:\Users\j-doe\OneDrive", true)] // the root itself
-    [InlineData(@"C:\Users\j-doe\OneDrive2\x.jsonl", @"C:\Users\j-doe\OneDrive", false)] // a sibling with a longer name
-    [InlineData(@"C:\Users\j-doe\Documents\x.jsonl", @"C:\Users\j-doe\OneDrive", false)]
-    [InlineData(@"C:\Users\j-doe\OneDrive\..\Documents\x.jsonl", @"C:\Users\j-doe\OneDrive", false)] // normalised first
+    [InlineData(@"C:\Users\j-doe\Sync\logbook.jsonl", @"C:\Users\j-doe\Sync", true)]
+    [InlineData(@"C:\Users\j-doe\Sync\sub\x.jsonl", @"C:\Users\j-doe\Sync\", true)]
+    [InlineData(@"C:\Users\j-doe\sync", @"C:\Users\j-doe\Sync", true)] // the root itself
+    [InlineData(@"C:\Users\j-doe\Sync2\x.jsonl", @"C:\Users\j-doe\Sync", false)] // a sibling with a longer name
+    [InlineData(@"C:\Users\j-doe\Documents\x.jsonl", @"C:\Users\j-doe\Sync", false)]
+    [InlineData(@"C:\Users\j-doe\Sync\..\Documents\x.jsonl", @"C:\Users\j-doe\Sync", false)] // normalised first
     [InlineData(@"D:\x\logbook.jsonl", @"D:\", true)] // a drive root holds everything on the drive
     [InlineData(@"C:\x", @"D:\", false)]
     [InlineData(@"\\server\share\sub", @"\\server\share", true)]
