@@ -23,9 +23,9 @@ internal sealed class TrayIcon : IDisposable
     private readonly NotifyIcon _icon;
     private readonly ContextMenu _menu;
     private readonly IntPtr _focusHandle;
-    private readonly Icon _unlockedIcon;
-    private readonly Icon _lockedIcon;
-    private readonly Icon _pendingIcon;
+    private Icon _unlockedIcon;
+    private Icon _lockedIcon;
+    private Icon _pendingIcon;
     private bool _locked = true;
     private int _pending;
     private readonly BalloonOrder<Balloon> _balloons = new();
@@ -76,6 +76,24 @@ internal sealed class TrayIcon : IDisposable
     public event Action? SettingsRequested;
 
     public event Action? ExitRequested;
+
+    /// <summary>
+    /// Redraws the three icons in the theme's new colors (DESIGN.md section 12) and shows the one for the current state.
+    /// The old icons are disposed only after the NotifyIcon has let go of them. The balloon queue is not touched.
+    /// </summary>
+    public void Recolor(Color accent, Color muted, Color danger)
+    {
+        Icon oldUnlocked = _unlockedIcon;
+        Icon oldLocked = _lockedIcon;
+        Icon oldPending = _pendingIcon;
+        _unlockedIcon = DrawIcon(accent, Glyph.Letter, null);
+        _lockedIcon = DrawIcon(muted, Glyph.Padlock, null);
+        _pendingIcon = DrawIcon(accent, Glyph.Letter, danger);
+        Redraw();
+        oldUnlocked.Dispose();
+        oldLocked.Dispose();
+        oldPending.Dispose();
+    }
 
     /// <summary>The unlocked "L" badge alone, which every window carries as its icon (DESIGN.md section 16).</summary>
     public static Icon DrawWindowIcon(Color accent) => DrawIcon(accent, Glyph.Letter, null);

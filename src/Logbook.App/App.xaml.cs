@@ -209,6 +209,13 @@ public sealed partial class App : Application, IDisposable
         Resources["WindowIcon"] = image;
     }
 
+    // The tray icon and the window icon are drawn from theme colors, not brushes, so a theme change redraws them.
+    private void RecolorIcons()
+    {
+        _tray?.Recolor(ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
+        UpdateWindowIcon();
+    }
+
     private System.Drawing.Color ThemeColor(string brushKey)
     {
         System.Windows.Media.Color c = ((System.Windows.Media.SolidColorBrush)FindResource(brushKey)).Color;
@@ -885,6 +892,7 @@ public sealed partial class App : Application, IDisposable
         // Open windows repaint through their DynamicResource brushes; the capture box's acrylic tint is a window
         // attribute, so an open one is told separately. A box opened later reads the theme when it is created.
         AppTheme.Apply(this, _settings.Theme);
+        RecolorIcons();
         if (_capture is { } capture)
         {
             Backdrop.RefreshTint(capture);
