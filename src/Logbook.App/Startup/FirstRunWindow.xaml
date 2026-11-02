@@ -8,12 +8,12 @@
     <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogFooter}">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
         <Button x:Name="ContinueButton" Content="Continue" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnContinueClick" />
-        <Button Content="Quit" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
+        <Button x:Name="CancelButton" Content="Quit" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
       </StackPanel>
     </Border>
     <StackPanel Margin="{StaticResource PagePadding}">
-      <TextBlock Style="{StaticResource DisplayText}" Text="Welcome to Logbook" />
-      <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
+      <TextBlock x:Name="Heading" Style="{StaticResource DisplayText}" Text="Welcome to Logbook" />
+      <TextBlock x:Name="Intro" Margin="0,8,0,0" TextWrapping="Wrap"
                  Text="Logbook keeps one encrypted, append-only file. Choose where it lives. A folder your sync service backs up is a good choice; Logbook has no backup of its own." />
 
       <Label Content="Data file" Margin="0,20,0,0" />

@@ -58,7 +58,7 @@ public sealed partial class App : Application, IDisposable
     private bool _firstRun;
     private bool _placeholderSeen;
     private bool _exiting;
-    private bool _restartRequested; // "Choose another…" asked for a restart; OnExit starts the exe again
+    private string? _restartTo; // the log "Choose another…" switched to; non-null means a restart was accepted and OnExit starts the exe again
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
     private bool _passphraseNoticeOpen; // the "Passphrase changed" notice is on screen; locking waits for it
     private bool _sessionLocked; // Windows locked the session and has not reported an unlock since
@@ -188,7 +188,7 @@ public sealed partial class App : Application, IDisposable
         // Switching data files is a restart: the open log, windows, hotkeys and timers are all built at launch, and
         // rebuilding them in place is not worth the code. Started after Dispose has released the single-instance mutex,
         // so the new process does not find this one and exit.
-        if (_restartRequested)
+        if (_restartTo is not null)
         {
             try
             {
@@ -197,6 +197,10 @@ public sealed partial class App : Application, IDisposable
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
             {
                 Diag.Log("Could not restart", ex);
+
+                // The app's own dialogs need a live Application with its theme resources, which are gone this late in
+                // shutdown; a plain MessageBox does not, and without it the user would see Logbook simply vanish.
+                System.Windows.MessageBox.Show("Logbook could not restart. Start it again yourself.", "Logbook", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -403,7 +407,7 @@ public sealed partial class App : Application, IDisposable
     {
         while (true)
         {
-            FirstRunWindow welcome = new();
+            FirstRunWindow welcome = new(switching: false);
             if (welcome.ShowDialog() != true)
             {
                 return false;
@@ -1025,14 +1029,15 @@ public sealed partial class App : Application, IDisposable
         {
             if (window.ShowDialog() != true)
             {
-                if (_restartRequested)
+                if (_restartTo is { } target)
                 {
-                    // RequestExit may refuse (a write in flight) or the user may keep running; the pointer is already
-                    // written either way, so the chosen file opens at the next start.
+                    // RequestExit may refuse (a write in flight) or the user may keep running past unsaved entries; the
+                    // pointer is already written either way, so the chosen file opens at the next start.
                     RequestExit();
                     if (!_exiting)
                     {
-                        _restartRequested = false;
+                        _restartTo = null;
+                        AppDialog.Inform(VisibleMain, "Restart postponed", $"Logbook keeps running on the current log. The chosen file opens the next time Logbook starts:\n{target}", DialogTone.Information);
                     }
                 }
 
@@ -1059,30 +1064,30 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    // Settings → "Choose another…" (docs/settings.md): reruns the picker, rewrites the pointer and offers a restart. The
-    // running app keeps using the current log until then. Returns the chosen path, or null when nothing changed.
-    private string? ChooseAnotherFile(Window owner)
+    // Settings → "Choose another…" (docs/settings.md): the picker, then the chosen file is unlocked or created, so it is
+    // known to be a log the user can open, then a restart is offered. Nothing is written until the restart is accepted,
+    // and the running app keeps using the current log until it exits. True means the restart was accepted and the
+    // pointer names the chosen file; the Settings window then closes unsaved and ShowSettings asks to exit.
+    private bool ChooseAnotherFile(Window owner)
     {
-        FirstRunWindow picker = new() { Owner = owner };
+        FirstRunWindow picker = new(switching: true) { Owner = owner };
         if (picker.ShowDialog() != true)
         {
-            return null;
+            return false;
         }
 
         string path = picker.DataFilePath;
         if (string.Equals(path, _dataFilePath, StringComparison.OrdinalIgnoreCase))
         {
-            return null;
+            return false;
         }
 
-        // An existing file is not unlocked here; the restart asks for its passphrase. A new one is created now so that
-        // the restart finds it, and closed at once.
         if (picker.CreateNew)
         {
             NewPassphraseWindow passphrase = new(path) { Owner = owner };
             if (passphrase.ShowDialog() != true)
             {
-                return null;
+                return false;
             }
 
             try
@@ -1093,38 +1098,46 @@ public sealed partial class App : Application, IDisposable
             {
                 Diag.Log("Could not create the data file", e);
                 AppDialog.Inform(owner, "Could not create the file", "The file could not be created: " + e.Message, DialogTone.Error);
-                return null;
+                return false;
             }
         }
-
-        // The running app keeps its own settings until the restart, which reads the ones beside the chosen file; the
-        // current settings file is left as it is.
-        AdoptSettingsBeside(Path.GetDirectoryName(path)!, _settings, owner);
-
-        if (!DataFileLocation.Write(path))
+        else
         {
-            AppDialog.Inform(owner, "Could not switch", $"Logbook could not record where the log is:\n{DataFileLocation.Path}\n\nLogbook keeps using the current log.", DialogTone.Warning);
-            return null;
-        }
+            // Unlocking proves the file is a log this passphrase opens before the pointer changes. The running app
+            // keeps its own open log, so this one is closed at once; the restart asks for the passphrase again.
+            UnlockWindow unlock = new(path) { Owner = owner };
+            if (unlock.ShowDialog() != true || unlock.Opened is null)
+            {
+                return false;
+            }
 
-        Diag.Log($"Data file pointer changed to {path}");
+            unlock.Opened.Close();
+        }
 
         bool restart = AppDialog.Confirm(
             owner,
             "Restart Logbook?",
-            $"Logbook will open this file the next time it starts:\n{path}\n\nRestart now? Unsaved changes in Settings are discarded.",
+            $"Logbook will restart and open:\n{path}\n\nUnsaved changes in Settings are discarded. Restart now?",
             "Restart now",
-            "Later",
+            "Cancel",
             DialogTone.Question,
             confirmIsDefault: true);
-        if (restart)
+        if (!restart)
         {
-            // Closes the Settings dialog unsaved; ShowSettings sees the flag when ShowDialog returns and asks to exit.
-            _restartRequested = true;
-            owner.DialogResult = false;
+            return false;
         }
 
-        return path;
+        // The running app keeps its own settings; the restart reads the ones this leaves beside the chosen file.
+        AdoptSettingsBeside(Path.GetDirectoryName(path)!, _settings, owner);
+        if (!DataFileLocation.Write(path))
+        {
+            AppDialog.Inform(owner, "Could not switch", $"Logbook could not record where the log is:\n{DataFileLocation.Path}\n\nLogbook keeps using the current log.", DialogTone.Warning);
+            return false;
+        }
+
+        Diag.Log($"Data file pointer changed to {path}");
+        _restartTo = path;
+        return true;
     }
 
     /// <summary>

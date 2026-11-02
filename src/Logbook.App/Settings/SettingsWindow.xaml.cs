@@ -15,12 +15,11 @@ public sealed partial class SettingsWindow : Window
     private const int MaxIdleLockMinutes = 1440; // a day; beyond that, 0 says what is meant
 
     private readonly Settings _settings;
-    private readonly Func<Window, string?> _chooseAnotherFile;
-    private readonly string _filesCaption;
+    private readonly Func<Window, bool> _chooseAnotherFile;
 
     // chooseAnotherFile runs the switch to another data file with this window as owner (docs/settings.md); it returns
-    // the file the next start opens, or null when nothing changed.
-    public SettingsWindow(Settings settings, string settingsPath, string dataFilePath, Func<Window, string?> chooseAnotherFile)
+    // true when the user accepted the restart, and this window then closes unsaved so the app can exit.
+    public SettingsWindow(Settings settings, string settingsPath, string dataFilePath, Func<Window, bool> chooseAnotherFile)
     {
         InitializeComponent();
         _settings = settings;
@@ -38,8 +37,7 @@ public sealed partial class SettingsWindow : Window
         };
         StartWithWindows.IsChecked = StartupShortcut.IsRegistered();
         DataFilePath.Text = dataFilePath;
-        _filesCaption = $"Settings: {settingsPath}\nDiagnostics: {Diag.LogFolder}\nTo move the log, quit Logbook, move the file and its settings file in Explorer, then start Logbook and choose the new location.";
-        FileInfo.Text = _filesCaption;
+        FileInfo.Text = $"Settings: {settingsPath}\nDiagnostics: {Diag.LogFolder}\nTo move the log, quit Logbook, move the file and its settings file in Explorer, then start Logbook and choose the new location.";
         // The assembly version comes from <Version> in the project file, or from the tag in a release build (docs/development.md).
         Version? version = typeof(SettingsWindow).Assembly.GetName().Version;
         VersionText.Text = version is null ? "Logbook" : $"Logbook {version.ToString(3)}";
@@ -47,12 +45,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnChooseAnotherClick(object sender, RoutedEventArgs e)
     {
-        string? chosen = _chooseAnotherFile(this);
-        if (chosen is not null)
+        if (_chooseAnotherFile(this))
         {
-            // The app keeps using the current log until it restarts, so the box shows the file the next start opens.
-            DataFilePath.Text = chosen;
-            FileInfo.Text = "Opens the next time Logbook starts.\n" + _filesCaption;
+            DialogResult = false;
         }
     }
 

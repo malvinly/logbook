@@ -7,14 +7,27 @@ using Microsoft.Win32;
 namespace Logbook.App.Startup;
 
 /// <summary>
-/// First-run step 1 (docs/settings.md): choose or create the data file, in any folder. The result is the file's full
-/// path and whether it still has to be created.
+/// Choose or create the data file, in any folder (docs/settings.md). Shown by first-run step 1 at launch, and by
+/// Settings → "Choose another…" with <c>switching</c> true, which changes the wording and makes it an ordinary owned
+/// dialog. The result is the file's full path and whether it still has to be created.
 /// </summary>
 public sealed partial class FirstRunWindow : Window
 {
-    public FirstRunWindow()
+    private readonly bool _switching;
+
+    public FirstRunWindow(bool switching)
     {
         InitializeComponent();
+        _switching = switching;
+        if (switching)
+        {
+            Title = "Choose another log file";
+            Heading.Text = "Choose another log file";
+            Intro.Text = "Logbook will restart and open the file you choose. A folder your sync service backs up is a good choice; Logbook has no backup of its own.";
+            CancelButton.Content = "Cancel";
+            WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            Topmost = false;
+        }
     }
 
     public string DataFilePath { get; private set; } = "";
@@ -32,7 +45,9 @@ public sealed partial class FirstRunWindow : Window
         }
         else if (File.Exists(path))
         {
-            FileNote.Text = "This file exists. You will be asked for its passphrase, and the settings beside it will be used.";
+            FileNote.Text = _switching
+                ? "This file exists. You will be asked for its passphrase now, and again after the restart."
+                : "This file exists. You will be asked for its passphrase, and the settings beside it will be used.";
         }
         else
         {
