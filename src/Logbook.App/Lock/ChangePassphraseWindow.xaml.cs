@@ -113,6 +113,7 @@ public sealed partial class ChangePassphraseWindow : Window
         }
         catch (InvalidOperationException)
         {
+            Diag.Log("Passphrase change refused: an entry is still waiting to be written; nothing was changed");
             ShowProblem("An entry is still waiting to be written. Try again once the tray icon no longer shows unsaved entries.");
         }
         catch (InvalidDataException ex)
