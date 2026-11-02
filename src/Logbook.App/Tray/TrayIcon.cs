@@ -35,6 +35,7 @@ internal sealed class TrayIcon : IDisposable
     private int _pending;
     private readonly BalloonOrder<Balloon> _balloons = new();
     private readonly DispatcherTimer _balloonFallback;
+    private bool _waitingForCap; // which wait _balloonFallback is on: false for the first, true for the cap
     private readonly MenuItem _lockItem;
 
     public TrayIcon(IntPtr focusHandle, Color accent, Color muted, Color danger)
@@ -141,14 +142,15 @@ internal sealed class TrayIcon : IDisposable
         _balloonFallback.Stop();
         _icon.ShowBalloonTip(BalloonTimeoutMilliseconds, balloon.Title, balloon.Text, balloon.Warning ? ToolTipIcon.Warning : ToolTipIcon.Info);
         _balloonFallback.Interval = BalloonFallback;
+        _waitingForCap = false;
         _balloonFallback.Start();
     }
 
-    // The timer's interval says which wait just ended: the first, at 15 seconds, or the cap, 45 seconds later. Display
-    // starts every balloon on the first, so a close that releases the next one between the two never carries the cap over.
+    // _waitingForCap says which wait just ended: the first, at 15 seconds, or the cap, 45 seconds later. Display starts
+    // every balloon on the first, so a close that releases the next one between the two never carries the cap over.
     private void OnBalloonFallback()
     {
-        if (_balloonFallback.Interval == BalloonCapRemainder)
+        if (_waitingForCap)
         {
             AfterClose(_balloons.Expired());
             return;
@@ -160,6 +162,7 @@ internal sealed class TrayIcon : IDisposable
             // Windows reported it shown, so it may still be on screen: wait for its close, up to the cap.
             _balloonFallback.Stop();
             _balloonFallback.Interval = BalloonCapRemainder;
+            _waitingForCap = true;
             _balloonFallback.Start();
             return;
         }
