@@ -349,7 +349,7 @@ Everything the review of Phases 2 to 6 left open, decided together on 2026-11-01
 9. Window and taskbar icon from the tray badge (section 16); the tray icon redrawn on a theme change (section 12).
 10. README rewritten to describe the app as it is.
 
-### Phase 8 — the decisions from the Phase 7 review
+### Phase 8 (done) — the decisions from the Phase 7 review
 
 Everything the adversarial review of Phase 7 left open, decided together on 2026-11-02. Each item's behaviour is written into its own section, tagged "(Phase 8)"; this list is the build order. No change to the file format. Not in the list: names stored under the old grammar (`j-doe?`, `j-doe's`) are fixed by hand in the detail pane, not by a migration, since there are few of them and a normalisation on load would touch section 8.
 

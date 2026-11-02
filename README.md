@@ -8,7 +8,7 @@ Logbook is a personal Windows tray app for recording decisions and events as the
 - **Storage.** One `logbook.jsonl` file: a plaintext header, then one AES-256-GCM encrypted record per line under a data key that a passphrase unwraps. The file is only ever appended to; edits and deletes are new revisions. It is built to live in a sync folder, and nothing depends on the Windows user profile surviving.
 - **Main window.** Filter with the same grammar (`#asked @j-doe last:30d "exact phrase"`), save a filter as a button, read entries grouped by day, edit any field as a new revision, see every prior revision with changed fields highlighted, follow up on an entry with the thread recorded (the original lists its follow-ups as "Followed up by" lines), and set a reminder that shows as a tray balloon.
 - **Export.** Copy the filtered set as a plain-text timeline (with HTML alongside for mail clients), with optional gaps between entries, month counts, a compact form and tags and people per line. A timeline from a saved-query button is headed by the button's name. Save it as CSV, where a cell that would read as a spreadsheet formula gets a leading apostrophe, or export the whole log as decrypted JSONL, both steered away from synced folders.
-- **Lock.** The app starts locked and prompts for the passphrase at the first hotkey. Lock now in the tray menu, idle auto-lock (60 minutes by default; an open dialog holds it off for up to twice that), and locking when Windows locks the session or signs out, which, like the idle lock, waits until no entry is still being saved and no passphrase change is under way. Tools → Change passphrase rewrites only the header.
+- **Lock.** The app starts locked and prompts for the passphrase at the first hotkey. Lock now in the tray menu, idle auto-lock (60 minutes by default; an open dialog holds it off for up to twice that), and locking when Windows locks the session or signs out, which, like the idle lock, waits until no entry is still being saved and no passphrase change is under way; a lock postponed that way is dropped again if you unlock the session first. Tools → Change passphrase rewrites only the header.
 - **Look.** Windows 11 Fluent, following the Windows light or dark mode or forced from Settings.
 
 ## Running it
@@ -27,4 +27,4 @@ dotnet publish src/Logbook.App -c Release -r win-x64 --self-contained -p:Publish
 - [CLAUDE.md](CLAUDE.md) holds the conventions for working in this repo.
 - `src/Logbook.Core` is the UI-free library (model, parser, crypto, file store, query, export); `src/Logbook.App` is the WPF tray app; `tests/Logbook.Tests` holds the Core tests.
 
-Status: Phases 1 to 7 of DESIGN.md are built; Phase 7 was the list of decisions from the review of Phases 2 to 6.
+Status: Phases 1 to 8 of DESIGN.md are built; Phases 7 and 8 were the decisions from the reviews of the phases before them.
