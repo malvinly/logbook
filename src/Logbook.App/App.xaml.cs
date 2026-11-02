@@ -53,7 +53,7 @@ public sealed partial class App : Application, IDisposable
     private Suggestions? _suggestions;
     private LogFile? _suggestionsFor;
     private Settings.Settings _settings = new();
-    private string _root = "";
+    private string _dataFolder = ""; // the data file's folder; the settings file lives beside it
     private string _dataFilePath = "";
     private bool _firstRun;
     private bool _placeholderSeen;
@@ -299,26 +299,38 @@ public sealed partial class App : Application, IDisposable
         return log.PendingCount;
     }
 
-    /// <summary>Finds the settings and data file, running first-run setup when there are none. False means quit.</summary>
+    /// <summary>
+    /// Finds the data file through the per-profile pointer and loads the settings beside it, running first-run setup
+    /// when there is no pointer or the file it names is gone (docs/settings.md). False means quit.
+    /// </summary>
     private bool PrepareDataFile()
     {
-        string? envVar = SettingsStore.FindConfiguredEnvVar();
-        string? root = envVar is null ? null : SettingsStore.ResolveRoot(envVar);
-        Settings.Settings? settings = root is null ? null : SettingsStore.Load(root);
-        if (root is null || settings is null)
+        string? pointer = DataFileLocation.Read();
+        if (pointer is null)
         {
-            return RunFirstRun(null);
+            return RunFirstRun();
         }
 
-        _root = root;
-        _settings = settings;
-        _dataFilePath = SettingsStore.DataFilePath(root, settings);
-        if (_dataFilePath.Length == 0)
+        if (!File.Exists(pointer))
         {
-            Diag.Log($"The configured data file path is not inside the synced root: {settings.DataFileRelativePath}");
-            AppDialog.Inform(null, "Data file outside the synced folder", "The settings point at a data file outside the synced folder, which Logbook does not allow. Choose the file again.", DialogTone.Warning);
-            return RunFirstRun(settings);
+            // The file is gone: ask rather than create a new file silently (docs/development.md).
+            Diag.Log($"The data file named by the pointer is missing: {pointer}");
+            bool choose = AppDialog.Confirm(
+                null,
+                "Log file not found",
+                $"The log file is not where it was last time:\n{pointer}\n\nIf a sync client is still downloading, quit and wait for it; creating a new log here would split your entries across two files. Otherwise choose the file where it is now, or create a new one.",
+                "Choose a file",
+                "Quit",
+                DialogTone.Warning,
+                confirmIsDefault: true);
+            return choose && RunFirstRun();
         }
+
+        _dataFilePath = pointer;
+        _dataFolder = Path.GetDirectoryName(pointer)!;
+
+        // A missing or broken settings file beside an existing log means defaults; Load logs a broken one.
+        _settings = SettingsStore.Load(_dataFolder) ?? new Settings.Settings();
 
         // Several logbook*.jsonl files beside each other: ask which is real, never guess (docs/file-format.md).
         IReadOnlyList<string> siblings = SyncFile.Siblings(_dataFilePath);
@@ -330,23 +342,12 @@ public sealed partial class App : Application, IDisposable
                 return false;
             }
 
+            // A sibling is in the same folder, so the settings beside it are the ones already loaded.
             if (!string.Equals(picker.ChosenPath, _dataFilePath, StringComparison.OrdinalIgnoreCase))
             {
                 _dataFilePath = picker.ChosenPath;
-                _settings.DataFileRelativePath = Path.GetRelativePath(SettingsStore.DataRoot(_root, _settings), _dataFilePath);
-                SaveSettings();
+                DataFileLocation.Write(_dataFilePath);
             }
-        }
-        else if (!File.Exists(_dataFilePath))
-        {
-            // The configured file is gone: run the picker rather than create a new file silently (docs/development.md).
-            Diag.Log($"Configured data file is missing: {_dataFilePath}");
-            AppDialog.Inform(
-                null,
-                "Log file not found",
-                $"The log file is not where the settings say:\n{_dataFilePath}\n\nIf the sync client is still downloading, quit and wait for it; creating a new log here would split your entries across two files. Otherwise choose or create the file now.",
-                DialogTone.Warning);
-            return RunFirstRun(settings);
         }
 
         if (SyncFile.IsPlaceholder(_dataFilePath))
@@ -359,8 +360,9 @@ public sealed partial class App : Application, IDisposable
     }
 
     // docs/settings.md, first run steps 1 to 3. Cancelling a later step returns to the first.
-    // Existing settings (hotkeys, toggles) are kept; only the file location changes.
-    private bool RunFirstRun(Settings.Settings? existing)
+    // The settings beside the chosen file win; when there are none, the settings in memory are kept and saved there,
+    // which are defaults on a true first run and the user's own hotkeys and theme when the app is being re-pointed.
+    private bool RunFirstRun()
     {
         while (true)
         {
@@ -401,14 +403,12 @@ public sealed partial class App : Application, IDisposable
                 opened = unlock.Opened;
             }
 
-            Settings.Settings settings = existing ?? new Settings.Settings();
-            settings.SyncRootEnvVar = welcome.SyncRootEnvVar;
-            settings.DataFileRelativePath = welcome.DataFileRelativePath;
-            _root = welcome.Root;
-            _settings = settings;
+            _dataFolder = Path.GetDirectoryName(welcome.DataFilePath)!;
+            _settings = SettingsStore.Load(_dataFolder) ?? _settings;
             _dataFilePath = welcome.DataFilePath;
             Log = opened;
             _firstRun = true;
+            DataFileLocation.Write(_dataFilePath);
             SaveSettings();
             Diag.Log("First run complete");
             return true;
@@ -916,7 +916,7 @@ public sealed partial class App : Application, IDisposable
     // Every synced folder on the machine, not only the configured one: a plaintext export must not land in any of them.
     private List<string> SyncRoots()
     {
-        List<string> roots = [_root];
+        List<string> roots = [_dataFolder];
         foreach (string envVar in SettingsStore.KnownSyncEnvVars)
         {
             if (SettingsStore.ResolveRoot(envVar) is { } folder && !roots.Contains(folder, StringComparer.OrdinalIgnoreCase))
@@ -973,7 +973,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        SettingsWindow window = new(_settings, SettingsStore.SettingsPath(_root), _dataFilePath) { Owner = VisibleMain };
+        SettingsWindow window = new(_settings, SettingsStore.SettingsPath(_dataFolder), _dataFilePath) { Owner = VisibleMain };
         _settingsWindow = window;
         try
         {
@@ -1006,7 +1006,7 @@ public sealed partial class App : Application, IDisposable
     {
         try
         {
-            SettingsStore.Save(_root, _settings);
+            SettingsStore.Save(_dataFolder, _settings);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {

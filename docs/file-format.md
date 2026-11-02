@@ -34,7 +34,7 @@ Plaintext JSON, one object per record, before encryption. Property names are cam
 
 ## File format
 
-One file, default name `logbook.jsonl`, in the configured synced folder.
+One file, default name `logbook.jsonl`, in the folder the user chose (which may be synced).
 
 ### Line 1 — header (plaintext JSON)
 

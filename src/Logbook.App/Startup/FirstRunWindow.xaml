@@ -14,13 +14,9 @@
     <StackPanel Margin="{StaticResource PagePadding}">
       <TextBlock Style="{StaticResource DisplayText}" Text="Welcome to Logbook" />
       <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
-                 Text="Logbook keeps one encrypted, append-only file in your synced folder. Choose where it lives." />
+                 Text="Logbook keeps one encrypted, append-only file. Choose where it lives. A folder your sync service backs up is a good choice; Logbook has no backup of its own." />
 
-      <Label Content="Synced folder (from an environment variable)" Margin="0,20,0,0" />
-      <ComboBox x:Name="RootVar" HorizontalAlignment="Stretch" SelectionChanged="OnRootChanged" />
-      <TextBlock x:Name="RootPath" Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
-
-      <Label Content="Data file" Margin="0,16,0,0" />
+      <Label Content="Data file" Margin="0,20,0,0" />
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />

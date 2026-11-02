@@ -5,7 +5,7 @@ How the code is laid out, the decisions that shape it, and how a build and a rel
 ## Constraints
 
 - .NET 10, WPF, Windows only. No third-party installs on the target machine, so the app is a self-contained build you drop in a folder.
-- The data file lives in a folder managed by a file sync service, because that is the only backed-up location. Sync services sync files; they do not understand databases. The file format is designed to be sync-safe: append-only, one record per line, never rewritten in place (the single exception is line 1 on a passphrase change, written over itself at the same length; [file-format.md](file-format.md)).
+- The data file should live in a folder managed by a file sync service, because that is the only backed-up location, but the app does not detect or enforce this: the user chooses the folder. Sync services sync files; they do not understand databases. The file format is designed to be sync-safe: append-only, one record per line, never rewritten in place (the single exception is line 1 on a passphrase change, written over itself at the same length; [file-format.md](file-format.md)).
 - The Windows user account may change. Nothing may depend on the user profile surviving: no DPAPI, no per-user registry secrets, no absolute paths into `C:\Users\<login>`.
 - The author must be able to understand every line. Prefer the boring implementation. Keep the core free of UI dependencies so it can be ported (likely to TypeScript) later.
 
@@ -59,8 +59,8 @@ WPF rules for this project: plain code-behind plus a hand-written `INotifyProper
 
 ## Files
 
-- Data file: `logbook.jsonl`. Settings file: `logbook.settings.json`, beside it. Both inside the synced root.
-- Settings include `syncRootEnvVar` (default list tried in order: `OneDriveCommercial`, `OneDrive`, `USERPROFILE`) and `dataFileRelativePath`. If the resolved file is missing at launch, the app runs the first-run picker rather than creating a new file silently.
+- Data file: `logbook.jsonl`, wherever the user put it. Settings file: `logbook.settings.json`, beside it.
+- The data file is found through the per-profile pointer `%LOCALAPPDATA%\Logbook\data-file` ([settings.md](settings.md)). If the file it names is missing at launch, the app asks rather than creating a new file silently.
 - Diagnostics (not entries, never entry contents) go to a rolling text log in `%LOCALAPPDATA%\Logbook\logs\`, one file per day, two weeks kept. Losing it on a profile change is fine.
 
 ## Build, test and release

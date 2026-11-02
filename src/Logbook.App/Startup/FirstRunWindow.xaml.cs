@@ -1,60 +1,26 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using Logbook.App.Settings;
 using Logbook.Core.Storage;
 using Microsoft.Win32;
 
 namespace Logbook.App.Startup;
 
 /// <summary>
-/// First-run step 1 (docs/settings.md): pick the synced root and choose or create the data file.
-/// The result is the root, the settings to save there, and whether the file still has to be created.
+/// First-run step 1 (docs/settings.md): choose or create the data file, in any folder. The result is the file's full
+/// path and whether it still has to be created.
 /// </summary>
 public sealed partial class FirstRunWindow : Window
 {
-    private sealed record RootChoice(string EnvVar, string Path)
-    {
-        public override string ToString() => $"{EnvVar}  —  {Path}";
-    }
-
     public FirstRunWindow()
     {
         InitializeComponent();
-        List<RootChoice> choices = [];
-        foreach (string envVar in SettingsStore.DefaultSyncRootEnvVars)
-        {
-            if (SettingsStore.ResolveRoot(envVar) is { } path)
-            {
-                choices.Add(new RootChoice(envVar, path));
-            }
-        }
-
-        RootVar.ItemsSource = choices;
-        RootVar.SelectedIndex = 0;
     }
-
-    public string Root { get; private set; } = "";
-
-    public string SyncRootEnvVar { get; private set; } = "";
-
-    public string DataFileRelativePath { get; private set; } = "";
 
     public string DataFilePath { get; private set; } = "";
 
     /// <summary>True when the chosen path does not exist yet and must be created with a new passphrase.</summary>
     public bool CreateNew { get; private set; }
-
-    private RootChoice? SelectedRoot => RootVar.SelectedItem as RootChoice;
-
-    private void OnRootChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (SelectedRoot is { } root)
-        {
-            RootPath.Text = root.Path;
-            FilePath.Text = Path.Combine(root.Path, "logbook.jsonl");
-        }
-    }
 
     private void OnFileChanged(object sender, TextChangedEventArgs e)
     {
@@ -66,7 +32,7 @@ public sealed partial class FirstRunWindow : Window
         }
         else if (File.Exists(path))
         {
-            FileNote.Text = "This file exists. You will be asked for its passphrase.";
+            FileNote.Text = "This file exists. You will be asked for its passphrase, and the settings beside it will be used.";
         }
         else
         {
@@ -76,12 +42,15 @@ public sealed partial class FirstRunWindow : Window
 
     private void OnBrowseClick(object sender, RoutedEventArgs e)
     {
+        string? typedFolder = Path.GetDirectoryName(FilePath.Text.Trim());
         OpenFileDialog dialog = new()
         {
             Title = "Choose or name the log file",
             Filter = "Logbook files (logbook*.jsonl)|logbook*.jsonl|All files (*.*)|*.*",
-            InitialDirectory = SelectedRoot?.Path,
-            FileName = Path.GetFileName(FilePath.Text),
+            InitialDirectory = !string.IsNullOrEmpty(typedFolder) && Directory.Exists(typedFolder)
+                ? typedFolder
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            FileName = Path.GetFileName(FilePath.Text.Trim()),
             CheckFileExists = false,
             CheckPathExists = true,
         };
@@ -93,14 +62,9 @@ public sealed partial class FirstRunWindow : Window
 
     private void OnContinueClick(object sender, RoutedEventArgs e)
     {
-        if (SelectedRoot is not { } root)
-        {
-            Problem.Text = "No synced folder was found. Set OneDrive or OneDriveCommercial in the environment first.";
-            return;
-        }
-
         string path = FilePath.Text.Trim();
-        if (path.Length == 0 || !Directory.Exists(Path.GetDirectoryName(path)))
+        // A relative path would resolve against wherever the exe was started from, so only a full path is accepted.
+        if (!Path.IsPathFullyQualified(path) || !Directory.Exists(Path.GetDirectoryName(path)))
         {
             Problem.Text = "Choose a file inside an existing folder.";
             return;
@@ -112,17 +76,7 @@ public sealed partial class FirstRunWindow : Window
             return;
         }
 
-        string fullPath = Path.GetFullPath(path);
-        if (!DataFolder.IsUnder(fullPath, root.Path))
-        {
-            Problem.Text = "The file must be inside the synced folder; the settings file beside it names it by a relative path.";
-            return;
-        }
-
-        Root = root.Path;
-        SyncRootEnvVar = root.EnvVar;
-        DataFilePath = fullPath;
-        DataFileRelativePath = Path.GetRelativePath(root.Path, fullPath);
+        DataFilePath = Path.GetFullPath(path);
         CreateNew = !File.Exists(DataFilePath);
         DialogResult = true;
     }
