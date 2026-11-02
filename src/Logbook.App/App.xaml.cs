@@ -508,6 +508,8 @@ public sealed partial class App : Application, IDisposable
                 if (_sessionLocked)
                 {
                     Lock("The log opened while Windows had the session locked; locked at once");
+                    // Visible, so that a stale session flag would not look like a right passphrase doing nothing.
+                    _tray?.ShowBalloon("Locked again", "Windows reported the session locked while the log was opening, so Logbook locked it at once. Press the hotkey to unlock.", warning: true);
                     return false;
                 }
 
