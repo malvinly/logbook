@@ -77,6 +77,9 @@ internal sealed class TrayIcon : IDisposable
 
     public event Action? ExitRequested;
 
+    /// <summary>The unlocked "L" badge alone, which every window carries as its icon (DESIGN.md section 16).</summary>
+    public static Icon DrawWindowIcon(Color accent) => DrawIcon(accent, Glyph.Letter, null);
+
     public void SetLocked(bool locked)
     {
         _locked = locked;

@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Logbook.App.Autocomplete;
 using Logbook.App.Capture;
@@ -67,6 +68,7 @@ public sealed partial class App : Application, IDisposable
     {
         base.OnStartup(e);
         AppTheme.FollowWindows(this);
+        UpdateWindowIcon(); // before any window, the first-run ones included
         Diag.Prune();
         Diag.Log("Starting");
         DispatcherUnhandledException += OnUnhandledException;
@@ -88,6 +90,7 @@ public sealed partial class App : Application, IDisposable
 
         // Before the unlock prompt, so every window opens in the chosen theme; following Windows this changes nothing.
         AppTheme.Apply(this, _settings.Theme);
+        UpdateWindowIcon();
 
         _messageWindow = new MessageWindow();
         _messageWindow.AddHook(OnMessage);
@@ -189,6 +192,21 @@ public sealed partial class App : Application, IDisposable
         _tray = null;
         _messageWindow = null;
         _instance = null;
+    }
+
+    /// <summary>
+    /// Every window's XAML sets <c>Icon="{DynamicResource WindowIcon}"</c> (DESIGN.md section 16), so replacing this
+    /// resource gives open windows the new icon at once, as a brush change repaints them. Drawn in the tray's unlocked
+    /// color, which comes from the theme, so it is redrawn whenever the theme is applied.
+    /// </summary>
+    private void UpdateWindowIcon()
+    {
+        using System.Drawing.Icon icon = TrayIcon.DrawWindowIcon(ThemeColor("AccentBrush"));
+
+        // The bitmap copies the icon's pixels, so the icon can go; frozen because it is shared by every window.
+        BitmapSource image = Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+        image.Freeze();
+        Resources["WindowIcon"] = image;
     }
 
     private System.Drawing.Color ThemeColor(string brushKey)

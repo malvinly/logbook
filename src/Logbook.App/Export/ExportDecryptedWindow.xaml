@@ -1,6 +1,7 @@
 <Window x:Class="Logbook.App.Export.ExportDecryptedWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="{DynamicResource WindowIcon}"
         Title="Export decrypted" Width="580" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <DockPanel>

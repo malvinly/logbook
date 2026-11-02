@@ -1,6 +1,7 @@
 <Window x:Class="Logbook.App.Export.ExportPanel"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="{DynamicResource WindowIcon}"
         Title="Copy as timeline" Width="780" Height="560" MinWidth="580" MinHeight="380"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <DockPanel>

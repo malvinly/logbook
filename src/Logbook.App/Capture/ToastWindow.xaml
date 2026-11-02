@@ -1,6 +1,7 @@
 <Window x:Class="Logbook.App.Capture.ToastWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="{DynamicResource WindowIcon}"
         Title="Logbook notification" Width="388" SizeToContent="Height" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" WindowStartupLocation="Manual"

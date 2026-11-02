@@ -1,6 +1,7 @@
 <Window x:Class="Logbook.App.Help.CheatSheetWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="{DynamicResource WindowIcon}"
         Title="Logbook cheat sheet" Width="780" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen">
   <DockPanel>

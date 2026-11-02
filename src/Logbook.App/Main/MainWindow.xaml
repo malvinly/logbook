@@ -4,6 +4,7 @@
         xmlns:main="clr-namespace:Logbook.App.Main"
         xmlns:settings="clr-namespace:Logbook.App.Settings"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        Icon="{DynamicResource WindowIcon}"
         Title="Logbook" Width="1120" Height="760" MinWidth="860" MinHeight="520" WindowStartupLocation="CenterScreen">
   <!-- Laid out as a Windows 11 list and detail page: the filter and the count on the Mica surface, then the results and
        the selected entry as two cards side by side. -->
