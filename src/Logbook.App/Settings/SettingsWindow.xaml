@@ -6,10 +6,13 @@
         WindowStartupLocation="CenterScreen" ShowInTaskbar="False">
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogFooter}">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-        <Button Content="Save" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnSaveClick" />
-        <Button Content="Cancel" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
-      </StackPanel>
+      <DockPanel>
+        <TextBlock x:Name="VersionText" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Content="Save" Style="{StaticResource AccentButton}" IsDefault="True" Click="OnSaveClick" />
+          <Button Content="Cancel" Style="{StaticResource FooterButton}" IsCancel="True" Margin="8,0,0,0" />
+        </StackPanel>
+      </DockPanel>
     </Border>
     <StackPanel Margin="{StaticResource PagePadding}">
       <TextBlock Style="{StaticResource TitleText}" Text="Settings" />

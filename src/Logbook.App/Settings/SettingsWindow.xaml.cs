@@ -9,7 +9,7 @@ using Logbook.App.Theme;
 
 namespace Logbook.App.Settings;
 
-/// <summary>Edits the settings file in place (DESIGN.md section 12). The app re-registers hotkeys and applies the theme after a save.</summary>
+/// <summary>Edits the settings file in place (docs/settings.md). The app re-registers hotkeys and applies the theme after a save.</summary>
 public sealed partial class SettingsWindow : Window
 {
     private const int MaxIdleLockMinutes = 1440; // a day; beyond that, 0 says what is meant
@@ -33,6 +33,9 @@ public sealed partial class SettingsWindow : Window
         };
         StartWithWindows.IsChecked = StartupShortcut.IsRegistered();
         FileInfo.Text = $"Data file: {dataFilePath}\nSettings: {settingsPath}\nDiagnostics: {Diag.LogFolder}";
+        // The assembly version comes from <Version> in the project file, or from the tag in a release build (docs/development.md).
+        Version? version = typeof(SettingsWindow).Assembly.GetName().Version;
+        VersionText.Text = version is null ? "Logbook" : $"Logbook {version.ToString(3)}";
     }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)

@@ -4,10 +4,12 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>WinExe</OutputType>
     <AssemblyName>Logbook</AssemblyName>
+    <!-- The fallback for local builds; the release workflow overrides it with the tag (docs/development.md). Shown in the Settings footer. -->
+    <Version>0.9.0</Version>
     <UseWPF>true</UseWPF>
-    <!-- Only for NotifyIcon (DESIGN.md section 16). The WinForms implicit usings clash with WPF, so they are removed. -->
+    <!-- Only for NotifyIcon (docs/development.md). The WinForms implicit usings clash with WPF, so they are removed. -->
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- WPF ships native DLLs; bundling them keeps the publish output to one Logbook.exe (DESIGN.md section 16). -->
+    <!-- WPF ships native DLLs; bundling them keeps the publish output to one Logbook.exe (docs/development.md). -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <!-- WPF text layout needs culture data and throws under invariant globalization, so the shared setting is undone here. -->
     <InvariantGlobalization>false</InvariantGlobalization>
