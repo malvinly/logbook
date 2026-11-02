@@ -355,6 +355,10 @@ public sealed partial class App : Application, IDisposable
                 "Quit",
                 DialogTone.Warning,
                 confirmIsDefault: true);
+
+            // The settings may still be in the old folder; loading them now means a log moved without its settings
+            // file keeps the user's hotkeys and theme, since the picker saves the settings in memory beside the new one.
+            _settings = SettingsStore.Load(Path.GetDirectoryName(pointer)!) ?? _settings;
             return choose && RunFirstRun();
         }
 
@@ -392,8 +396,8 @@ public sealed partial class App : Application, IDisposable
     }
 
     // docs/settings.md, first run steps 1 to 3. Cancelling a later step returns to the first.
-    // The settings beside the chosen file win; when there are none, the settings in memory are kept and saved there,
-    // which are defaults on a true first run and the user's own hotkeys and theme when the app is being re-pointed.
+    // The settings beside the chosen file are adopted by AdoptSettingsBeside. The settings in memory are defaults here
+    // unless PrepareDataFile has just loaded the ones from the missing log's old folder.
     private bool RunFirstRun()
     {
         while (true)
@@ -436,12 +440,11 @@ public sealed partial class App : Application, IDisposable
             }
 
             _dataFolder = Path.GetDirectoryName(welcome.DataFilePath)!;
-            _settings = SettingsStore.Load(_dataFolder) ?? _settings;
+            _settings = AdoptSettingsBeside(_dataFolder, _settings, null);
             _dataFilePath = welcome.DataFilePath;
             Log = opened;
             _firstRun = true;
             RememberDataFile(_dataFilePath);
-            SaveSettings();
             Diag.Log("First run complete");
             return true;
         }
@@ -1078,21 +1081,9 @@ public sealed partial class App : Application, IDisposable
             }
         }
 
-        // The settings beside the chosen file win at the next start; when there are none, the current ones travel
-        // with the user. The current settings file is left as it is.
-        string folder = Path.GetDirectoryName(path)!;
-        if (!File.Exists(SettingsStore.SettingsPath(folder)))
-        {
-            try
-            {
-                SettingsStore.Save(folder, _settings);
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                Diag.Log("Could not copy the settings beside the chosen file", e);
-                AppDialog.Inform(owner, "Settings not copied", "The settings could not be saved beside the chosen file, so it will start with default settings: " + e.Message, DialogTone.Warning);
-            }
-        }
+        // The running app keeps its own settings until the restart, which reads the ones beside the chosen file; the
+        // current settings file is left as it is.
+        AdoptSettingsBeside(Path.GetDirectoryName(path)!, _settings, owner);
 
         if (!DataFileLocation.Write(path))
         {
@@ -1118,6 +1109,38 @@ public sealed partial class App : Application, IDisposable
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// The one rule for which settings go with a newly chosen log (docs/settings.md): the file beside the log wins; an
+    /// unreadable one is left alone and the current settings stay in memory; when there is none, the current settings
+    /// are saved there so they travel with the user. Returns the settings to use.
+    /// </summary>
+    private static Settings.Settings AdoptSettingsBeside(string folder, Settings.Settings current, Window? owner)
+    {
+        if (SettingsStore.Load(folder) is { } beside)
+        {
+            return beside;
+        }
+
+        if (File.Exists(SettingsStore.SettingsPath(folder)))
+        {
+            // Overwriting it would destroy settings the user may still want; Load has logged why it failed.
+            Diag.Log("The settings file beside the log could not be read and is left alone; the current settings stay in memory");
+            return current;
+        }
+
+        try
+        {
+            SettingsStore.Save(folder, current);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Diag.Log("Could not save the settings beside the log", e);
+            AppDialog.Inform(owner, "Settings not saved beside the log", "Your settings could not be saved beside the log, so the next start uses default settings: " + e.Message, DialogTone.Warning);
+        }
+
+        return current;
     }
 
     private void SaveSettings()
