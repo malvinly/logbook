@@ -43,7 +43,7 @@ public sealed partial class App : Application, IDisposable
     private readonly HashSet<Reminders.Shown> _remindersShown = []; // since the last unlock; dropped on lock with the log
     private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromMinutes(1) }; // runs only while unlocked
 
-    // Runs only while a workstation lock or sign-out found an entry not on disk yet; takes that lock once it is.
+    // Runs only while a workstation lock or sign-out found a reason to wait (LockWaitReason); takes that lock once none is left.
     private readonly DispatcherTimer _postponedLockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private CaptureWindow? _capture;
     private MainWindow? _main;
@@ -58,6 +58,7 @@ public sealed partial class App : Application, IDisposable
     private bool _placeholderSeen;
     private bool _exiting;
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
+    private bool _passphraseNoticeOpen; // the "Passphrase changed" notice is on screen; locking waits for it
 
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
@@ -513,7 +514,8 @@ public sealed partial class App : Application, IDisposable
     /// <summary>
     /// Tray → Lock now: back to the state the app starts in (DESIGN.md section 9). The open log, and with it the data
     /// key and every decrypted entry, is dropped; the next hotkey prompts for the passphrase and opens the file afresh.
-    /// Unsaved captures live only inside the open log, so locking is refused until they are on disk.
+    /// Unsaved captures live only inside the open log, so locking is refused until they are on disk; it is refused too
+    /// while the result of a passphrase change is on screen, the only place the user learns which passphrase now opens the log.
     /// </summary>
     private void LockNow()
     {
@@ -533,6 +535,12 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
+        if (PassphraseResultOnScreen())
+        {
+            AppDialog.Inform(VisibleMain, "Not locked yet", "The result of the passphrase change is still on screen. Read it and close it, then lock again.", DialogTone.Warning);
+            return;
+        }
+
         Lock("Locked from the tray");
     }
 
@@ -540,7 +548,8 @@ public sealed partial class App : Application, IDisposable
     /// Idle auto-lock (DESIGN.md section 9), checked once a minute while unlocked. "Idle" is no input to the Windows
     /// session at all, so typing in other apps keeps the log open and the hotkey stays one keystroke away. When due it
     /// takes the same path as Lock now. A tick never shows a dialog: while anything is unsaved it skips and tries again
-    /// next minute (the tray icon already shows the pending count), and while one of the app's modal dialogs is open it
+    /// next minute (the tray icon already shows the pending count), as it does while the result of a passphrase change
+    /// is on screen, and while one of the app's modal dialogs is open it
     /// waits too, so a half-made decision there is not closed under the user, until twice the limit has passed; then
     /// the lock closes the dialog along with every other window.
     /// </summary>
@@ -563,10 +572,11 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        // Unsaved captures win over everything, the open dialog included: a lock never drops them.
-        if (WriteInProgress(log))
+        // Unsaved captures and the result of a passphrase change win over everything, the twice-the-limit rule included:
+        // a lock never drops the one or takes away the other.
+        if (LockWaitReason(log) is { } reason)
         {
-            Diag.Log("Idle lock postponed: an entry is not on disk yet");
+            Diag.Log($"Idle lock postponed: {reason}");
             return;
         }
 
@@ -578,9 +588,9 @@ public sealed partial class App : Application, IDisposable
     /// <summary>
     /// Windows locked the session or is signing the user out (DESIGN.md section 9): lock the log as Lock now does, since
     /// walking away is usually what locking the workstation means. While an entry is not on disk yet, a write is in
-    /// flight or a passphrase change is rewriting the header, the lock is postponed and taken as soon as that is done.
-    /// A sign-out with unsaved entries is refused separately (OnSessionEnding); a postponed lock cannot hide them,
-    /// because it is only taken once nothing is unsaved.
+    /// flight, a passphrase change is rewriting the header or its result is on screen, the lock is postponed and taken
+    /// as soon as that is done. A sign-out with unsaved entries is refused separately (OnSessionEnding); a postponed
+    /// lock cannot hide them, because it is only taken once nothing is unsaved.
     /// </summary>
     private void LockForSession(string what)
     {
@@ -589,9 +599,9 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        if (WriteInProgress(log))
+        if (LockWaitReason(log) is { } reason)
         {
-            Diag.Log($"{what}; lock postponed: an entry is not on disk yet");
+            Diag.Log($"{what}; lock postponed: {reason}");
             _postponedLockTimer.Start();
             return;
         }
@@ -600,7 +610,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     // Polled rather than hooked into every place a write can finish (a capture, a detail-pane save, the 30-second
-    // retry, a passphrase change), so no settling path can be missed.
+    // retry, a passphrase change) or a passphrase result can be closed, so no settling path can be missed.
     private void TakePostponedLock()
     {
         if (Log is not { } log)
@@ -609,7 +619,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        if (WriteInProgress(log))
+        if (LockWaitReason(log) is not null)
         {
             return;
         }
@@ -676,6 +686,29 @@ public sealed partial class App : Application, IDisposable
     /// a passphrase change must not race an append, so both wait for this to clear.
     /// </summary>
     private bool WriteInProgress(LogFile log) => log.PendingCount > 0 || WriteInFlight();
+
+    /// <summary>
+    /// Why a lock must wait right now, for the diagnostics log; null when it may go ahead. A write in progress, or the
+    /// result of a passphrase change still on screen (DESIGN.md section 9): that notice is the only place the user
+    /// learns which passphrase the log now has. A change window with nothing attempted yet may still be closed.
+    /// </summary>
+    private string? LockWaitReason(LogFile log)
+    {
+        if (WriteInProgress(log))
+        {
+            return "an entry is not on disk yet";
+        }
+
+        if (PassphraseResultOnScreen())
+        {
+            return "the result of a passphrase change is on screen";
+        }
+
+        return null;
+    }
+
+    private bool PassphraseResultOnScreen()
+        => _passphraseNoticeOpen || Windows.OfType<ChangePassphraseWindow>().Any(w => w.HasOutcome);
 
     /// <summary>True while a capture, a detail-pane save or a passphrase change is being written right now.</summary>
     private bool WriteInFlight()
@@ -860,7 +893,15 @@ public sealed partial class App : Application, IDisposable
         ChangePassphraseWindow window = new(log, _dataFilePath, () => WriteInProgress(log)) { Owner = VisibleMain };
         if (window.ShowDialog() == true)
         {
-            AppDialog.Inform(VisibleMain, "Passphrase changed", "Use the new passphrase from now on; this file no longer opens with the old one. Copies made before the change (sync version history, backups) still do, because the entries themselves are not re-encrypted. Logbook stays unlocked, and every entry is unchanged.", DialogTone.Information);
+            _passphraseNoticeOpen = true;
+            try
+            {
+                AppDialog.Inform(VisibleMain, "Passphrase changed", "Use the new passphrase from now on; this file no longer opens with the old one. Copies made before the change (sync version history, backups) still do, because the entries themselves are not re-encrypted. Logbook stays unlocked, and every entry is unchanged.", DialogTone.Information);
+            }
+            finally
+            {
+                _passphraseNoticeOpen = false;
+            }
         }
     }
 

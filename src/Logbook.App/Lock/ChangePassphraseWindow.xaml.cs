@@ -36,6 +36,12 @@ public sealed partial class ChangePassphraseWindow : Window
     /// <summary>True while the header is being rewritten; locking waits for it.</summary>
     public bool IsChanging { get; private set; }
 
+    /// <summary>
+    /// True once an attempt has run and its outcome is on screen (success closes the window, so in practice a failure
+    /// such as a wrong current passphrase). Locking waits for it, so the user learns which passphrase the log now has.
+    /// </summary>
+    public bool HasOutcome { get; private set; }
+
     private void OnChangeClick(object sender, RoutedEventArgs e) => _ = TryChangeAsync();
 
     private async Task TryChangeAsync()
@@ -126,6 +132,7 @@ public sealed partial class ChangePassphraseWindow : Window
         finally
         {
             SetBusy(false);
+            HasOutcome = true;
         }
 
         if (changed)
