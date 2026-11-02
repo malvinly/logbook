@@ -60,7 +60,7 @@ public sealed partial class App : Application, IDisposable
     private bool _exiting;
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
     private bool _passphraseNoticeOpen; // the "Passphrase changed" notice is on screen; locking waits for it
-    private bool _sessionLocked; // Windows locked the session or is signing out and has not reported an unlock since
+    private bool _sessionLocked; // Windows locked the session and has not reported an unlock since
     private bool _retrySessionNotifications; // registering at startup failed; retried once at the first unlock
 
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
@@ -1094,9 +1094,11 @@ public sealed partial class App : Application, IDisposable
             string what = wParam.ToInt32() == NativeMethods.WtsSessionLock ? "Windows locked the session" : "Windows is signing the user out";
 
             // Not inside the message hook: the lock closes windows.
+            // Only a lock sets the flag: a sign-out ends the process anyway, and one Windows later cancels would leave it set.
+            bool locked = wParam.ToInt32() == NativeMethods.WtsSessionLock;
             Dispatcher.BeginInvoke(() =>
             {
-                _sessionLocked = true;
+                _sessionLocked |= locked;
                 LockForSession(what);
             });
         }
