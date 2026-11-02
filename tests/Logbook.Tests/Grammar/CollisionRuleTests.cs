@@ -104,6 +104,27 @@ public sealed class CollisionRuleTests
     }
 
     [Theory]
+    [InlineData("@a,.#b", ",.#b")] // only the "," itself lets a token start; the "." after it is text
+    [InlineData("@a,,#b", ",,#b")]
+    public void OnlyTheSeparatorItselfLetsAnotherTokenStart(string text, string summary)
+    {
+        // The "," the token left touches the user's text, so it stays in the summary with it.
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
+        Assert.Equal(["a"], line.People);
+        Assert.Empty(line.Tags);
+        Assert.Equal(summary, line.Summary);
+    }
+
+    [Fact]
+    public void QuoteAfterASeparatorIsNotSwallowedInAQuery()
+    {
+        QueryLine line = LineParser.ParseQuery("#a,\"x y\"", Today);
+        Assert.Equal(["a"], line.Tags);
+        Assert.Equal(["x y"], line.Phrases);
+        Assert.Empty(line.Words);
+    }
+
+    [Theory]
     [InlineData("ticket #12345,")] // the comma does not make a digit-led name a token
     [InlineData("ticket #12345,#a")] // nor does a comma that ended no token open one
     [InlineData("C#,@x")]

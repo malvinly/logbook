@@ -38,12 +38,10 @@ internal static class Scanner
             {
                 int end = EndOfName(text, i);
                 int nameEnd = StripTrailing(text, i + 1, end);
-                // The "," or ";" that ended the name, and any punctuation right after it, is stripped like a trailing ".".
-                int strippedEnd = end;
-                while (strippedEnd < text.Length && IsTrailingPunctuation(text[strippedEnd]))
-                {
-                    strippedEnd++;
-                }
+                // The "," or ";" that ended the name is stripped like a trailing ".", and only right after it may another
+                // token start. Punctuation after it is the user's text, so "@a,.#b" is one person and the text ",.#b".
+                bool endedAtSeparator = end < text.Length && text[end] is ',' or ';';
+                int strippedEnd = endedAtSeparator ? end + 1 : end;
 
                 // The "(" or quote that let the token open is kept apart too, so "done (#asked)" can drop the "()" it leaves.
                 if (!atWordStart && plain.Length > 0 && text[i - 1] is '(' or '"')
@@ -60,16 +58,17 @@ internal static class Scanner
                     tokens.Add(new Token(TokenKind.Stripped, text[nameEnd..strippedEnd], text[nameEnd..strippedEnd]));
                 }
 
-                if (strippedEnd > end)
+                if (endedAtSeparator)
                 {
-                    afterSeparator = strippedEnd;
+                    afterSeparator = end + 1;
                 }
 
                 i = strippedEnd;
                 continue;
             }
 
-            if (c == '"' && quotedPhrases && atWordStart)
+            // A phrase may also open right after a separator, as a tag could, so "#a,\"x y\"" is a tag and a phrase.
+            if (c == '"' && quotedPhrases && (atWordStart || i == afterSeparator))
             {
                 // An unterminated quote runs to the end of the line, so a phrase works while it is still being typed.
                 int close = text.IndexOf('"', i + 1);
