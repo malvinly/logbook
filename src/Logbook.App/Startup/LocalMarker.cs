@@ -4,9 +4,10 @@ using Logbook.App.Diagnostics;
 namespace Logbook.App.Startup;
 
 /// <summary>
-/// Small per-profile values in %LOCALAPPDATA%: the "already asked" marker for the startup offer and the last export
-/// folder. They live with the profile on purpose. When the login changes, the Startup shortcut vanishes and so does
-/// the marker, so the offer is made again; and an absolute local path never lands in the synced settings file.
+/// Small per-profile values in %LOCALAPPDATA%: the "already asked" marker for the startup offer, the last export
+/// folder, and the pointer to the data file (<see cref="DataFileLocation"/>). They live with the profile on purpose.
+/// When the login changes, the Startup shortcut vanishes and so does the marker, so the offer is made again; and an
+/// absolute local path never lands in the synced settings file.
 /// </summary>
 internal static class LocalMarker
 {
