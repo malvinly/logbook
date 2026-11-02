@@ -26,6 +26,9 @@ public sealed class DataFolderTests
     [InlineData(@"C:\Users\j-doe\OneDrive2\x.jsonl", @"C:\Users\j-doe\OneDrive", false)] // a sibling with a longer name
     [InlineData(@"C:\Users\j-doe\Documents\x.jsonl", @"C:\Users\j-doe\OneDrive", false)]
     [InlineData(@"C:\Users\j-doe\OneDrive\..\Documents\x.jsonl", @"C:\Users\j-doe\OneDrive", false)] // normalised first
+    [InlineData(@"D:\x\logbook.jsonl", @"D:\", true)] // a drive root holds everything on the drive
+    [InlineData(@"C:\x", @"D:\", false)]
+    [InlineData(@"\\server\share\sub", @"\\server\share", true)]
     public void IsUnderComparesNormalisedFullPaths(string path, string root, bool expected)
     {
         Assert.Equal(expected, DataFolder.IsUnder(path, root));

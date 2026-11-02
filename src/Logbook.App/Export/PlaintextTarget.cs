@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Logbook.App.Dialogs;
 using Logbook.App.Startup;
+using Logbook.Core.Export;
 using Logbook.Core.Storage;
 
 namespace Logbook.App.Export;
@@ -29,16 +30,17 @@ internal static class PlaintextTarget
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         ];
+        List<string> existing = [];
         foreach (string? folder in candidates)
         {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder) && !IsInLogFolder(folder, logFolder))
+            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
             {
-                return folder;
+                existing.Add(folder);
             }
         }
 
-        // Every candidate is inside the log's folder; the warning before the write will say so.
-        return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        // Null when every candidate is inside the log's folder; the warning before the write will say so.
+        return PlaintextFolder.Choose(existing, logFolder) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     }
 
     public static bool IsInLogFolder(string path, string logFolder) => DataFolder.IsUnder(path, logFolder);
