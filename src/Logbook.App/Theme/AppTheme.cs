@@ -55,31 +55,29 @@ internal static class AppTheme
         if (_mode == FollowSystem)
         {
             ReplaceIfDifferent(app, 0, FluentSystem);
-            FollowWindows(app);
-            return;
+        }
+        else
+        {
+            ReplaceIfDifferent(app, 0, _mode == Dark ? FluentDark : FluentLight);
         }
 
-        bool dark = _mode == Dark;
-        ReplaceIfDifferent(app, 0, dark ? FluentDark : FluentLight);
-        ReplaceIfDifferent(app, 1, dark ? TokensDark : TokensLight);
-        IsDark = dark;
+        ReloadTokens(app);
     }
 
     /// <summary>
-    /// Following Windows, reads the Windows setting and swaps the token dictionary if it changed. Called at startup
-    /// and again whenever Windows broadcasts a color-set change, so open windows repaint (views use DynamicResource
-    /// for brushes). With a forced theme it does nothing: Windows changing mode must not change the app.
+    /// Loads the token dictionary for the mode in force: following Windows, the one the Windows setting asks for;
+    /// forced, the forced one. Called at startup, when Settings is saved and whenever Windows broadcasts a color-set
+    /// change, so open windows repaint (views use DynamicResource for brushes). Always a fresh copy, even when the file
+    /// is the one already merged: a brush whose colour is a Windows system colour (the accent) keeps the colour it had
+    /// when the dictionary loaded, so a new accent reaches the views and the icons only through a reload (Phase 8;
+    /// DESIGN.md section 16). Windows changing mode still does not change a forced theme: the forced file is what
+    /// reloads.
     /// </summary>
-    public static void FollowWindows(Application app)
+    public static void ReloadTokens(Application app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        if (_mode != FollowSystem)
-        {
-            return;
-        }
-
-        bool dark = WindowsUsesDarkApps();
-        ReplaceIfDifferent(app, 1, dark ? TokensDark : TokensLight);
+        bool dark = _mode == FollowSystem ? WindowsUsesDarkApps() : _mode == Dark;
+        app.Resources.MergedDictionaries[1] = new ResourceDictionary { Source = dark ? TokensDark : TokensLight };
         IsDark = dark;
     }
 

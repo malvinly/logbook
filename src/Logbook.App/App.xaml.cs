@@ -71,7 +71,7 @@ public sealed partial class App : Application, IDisposable
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        AppTheme.FollowWindows(this);
+        AppTheme.ReloadTokens(this);
         UpdateWindowIcon(); // before any window, the first-run ones included
         Diag.Prune();
         Diag.Log("Starting");
@@ -1115,13 +1115,13 @@ public sealed partial class App : Application, IDisposable
         {
             // Windows broadcasts this when light or dark mode (or the accent) changes; follow it without a restart.
             // WPF handles the same message to swap its Fluent resources, so the tokens follow once that work is done.
-            // An open capture box's acrylic tint is a window attribute, not a brush, so it is told as Settings save does,
-            // and the icons are redrawn as there. A forced theme ignores Windows changing mode, but the icons are
-            // redrawn either way: the accent brush follows the Windows accent under any theme, and the icons are
-            // bitmaps drawn from it, so only a redraw carries a new accent to them.
+            // The tokens are reloaded under any theme, forced too, because the accent brush only takes a new accent
+            // through a fresh load (AppTheme.ReloadTokens), and the icons are bitmaps drawn from it, so they are redrawn
+            // after. An open capture box's acrylic tint is a window attribute, not a brush, so it is told as Settings
+            // save does.
             Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
             {
-                AppTheme.FollowWindows(this);
+                AppTheme.ReloadTokens(this);
                 RecolorIcons();
 
                 if (_capture is { } capture)
