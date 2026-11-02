@@ -248,6 +248,26 @@ public sealed class CollisionRuleTests
         Assert.Equal(["x y"], line.Phrases);
     }
 
+    [Theory]
+    [InlineData("see last:7d,#a", "see last:7d,")] // a query-only keyword is text in a capture
+    [InlineData("see at:xyz,#a", "see at:xyz,")] // a value that does not parse is text
+    [InlineData("see last:7d.,#a", "see last:7d.,")] // the stripped "." does not make the separator go
+    [InlineData("fixed at:yesterday,#a", "fixed")] // a used keyword takes the separator with it
+    public void SeparatorAfterAKeywordThatStaysAsTextIsKept(string text, string summary)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
+        Assert.Equal(summary, line.Summary);
+        Assert.Equal(["a"], line.Tags);
+    }
+
+    [Fact]
+    public void SeparatorAfterAKeywordThatStaysAsTextIsKeptInAQuery()
+    {
+        QueryLine line = LineParser.ParseQuery("at:yesterday,#printer", Today);
+        Assert.Equal(["at:yesterday,"], line.Words);
+        Assert.Equal(["printer"], line.Tags);
+    }
+
     [Fact]
     public void DateRangeRewriteKeepsASeparatorBetweenTwoTokens()
     {

@@ -185,6 +185,7 @@ public sealed class CsvExportTests
     [Theory]
     [InlineData("-urgent")]
     [InlineData("+1")]
+    [InlineData("=x")] // typed in the additional-tags box, which does not parse tokens
     public void TagsStartingWithAFormulaCharacterGetAnApostrophe(string firstTag)
     {
         Entry entry = SampleEntries.FirstAsk with { Tags = [firstTag, "asked"] };

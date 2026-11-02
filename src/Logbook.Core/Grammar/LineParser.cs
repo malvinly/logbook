@@ -37,16 +37,17 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "at" && DateValues.TryParseAt(token.Value, now, zone, out DateTimeOffset at):
                     occurredAt = at; // The last at: on the line wins.
                     break;
-                case TokenKind.Separator:
+                case TokenKind.Separator when previousRemoved:
                     break; // Between two tokens that are both gone, so it would stand alone.
                 case TokenKind.Stripped when previousRemoved && token.Value.Length == 0:
                     break; // Only a possessive 's, which went with the token: "told @j-doe's manager" stores "told manager".
                 case TokenKind.Stripped when previousRemoved:
                     // With the token gone, the space before it would be left in front of its punctuation
                     // ("asked @j-doe, then"), so it goes too: "asked, then".
+                    // The punctuation went with the token, so removed stays true: a separator after it ("#a?,#b")
+                    // is still between two tokens that are both gone.
                     summary.TrimEnd();
                     summary.Append(token.Value, Origin.Left);
-                    removed = false;
                     break;
                 case TokenKind.Opening:
                     summary.Append(token.Raw, Origin.Opener);
@@ -104,14 +105,17 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "last" && DateValues.TryParseLast(token.Value, today, out DateOnly lastDate):
                     since = lastDate;
                     break;
-                case TokenKind.Separator:
-                    break; // Between two tokens, so the filter needs no literal "," for it.
+                case TokenKind.Separator when previousUsed:
+                    break; // Between two tokens the filter used, so it needs no literal "," for it.
                 case TokenKind.Stripped when previousUsed:
+                    // The punctuation went with the token, so used stays true: a separator after it ("#a?,#b") is still
+                    // between two tokens the filter used. Nothing typed follows it in the same word, so ending the word
+                    // here changes nothing.
                     plain.Append(token.Value, Origin.Left);
-                    used = false;
                     break;
                 case TokenKind.Opening:
-                    // A tag or person always follows and ends the word, so the opener never finds its partner and goes.
+                    // A tag or person always follows and ends the word, so the opener never finds its partner: it goes
+                    // when nothing typed is in its word, and stays when it is part of a typed word ("x(#a b)" keeps "x(").
                     plain.Append(token.Raw, Origin.Opener);
                     used = false;
                     break;
