@@ -151,6 +151,15 @@ public sealed class CsvExportTests
     }
 
     [Theory]
+    [InlineData("=")]
+    [InlineData("-")]
+    public void SummaryThatIsOnlyAFormulaCharacterGetsAnApostrophe(string summary)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Summary = summary };
+        Assert.Contains(",'" + summary + ",", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("=1+1")]
     [InlineData("+1")]
     [InlineData("-1")]
@@ -175,6 +184,7 @@ public sealed class CsvExportTests
     [Theory]
     [InlineData("Asked again")]
     [InlineData("'already quoted")]
+    [InlineData("'")]
     [InlineData(" =leading space")]
     [InlineData("#tag-like")]
     [InlineData("1+1")]
