@@ -41,6 +41,11 @@ Balloons:
 - A clicked balloon brings no Closed event, so the next one waits the 60 s cap instead of 15 s; releasing on click when shown would be safe.
 - "Reminder balloon shown" is logged when the balloon is queued, not when it is shown.
 
+Exit paths:
+
+- Exit, and the restart from Settings → "Choose another…", checks pending entries and writes in flight but not an open capture box, so typed, unsubmitted text is closed without a prompt. The capture code's own rule is that nothing typed is ever thrown away.
+- The 30-second retry runs on a timer thread that the in-flight write counter does not see, so an exit or session end can stop the process during a queued write. The loss is one retry attempt, since each append is a single write-through call, but the exit check is meant to wait for every write.
+
 Tests:
 
 - Two leftover-punctuation cases now take the separator path and their names are stale.
