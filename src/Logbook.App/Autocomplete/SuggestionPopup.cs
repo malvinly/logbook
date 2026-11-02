@@ -82,6 +82,8 @@ public sealed class SuggestionPopup
     // The token is the run around the caret up to whitespace, "," or ";", when it starts with # or @ at a word start
     // (or just after an opening paren or quote, or after a "," or ";" that ended another token). Its end leaves out
     // trailing punctuation, which the grammar strips (DESIGN.md section 6), so "@j-d?" suggests for "j-d" and keeps the "?".
+    // It suggests only while the caret is inside the name: after "asked @j-doe." the popup hides, because an Enter
+    // typed there is meant to submit the line and must not accept a suggestion.
     private bool FindToken(out int start, out int end, out char sigil)
     {
         string text = _box.Text;
@@ -122,13 +124,14 @@ public sealed class SuggestionPopup
 
         sigil = start < text.Length ? text[start] : '\0';
         bool mayStart = start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"' || FollowsTokenSeparator(text, start);
-        return (sigil == '#' || sigil == '@') && mayStart;
+        return (sigil == '#' || sigil == '@') && mayStart && caret <= end;
     }
 
     private static bool IsTokenEnd(char c) => char.IsWhiteSpace(c) || c is ',' or ';';
 
     // "@j-doe,@a" suggests for "a": the comma ended a token. This only checks that the piece before the comma starts
-    // with # or @; the parser has the final say on longer chains.
+    // with # or @ and a letter, as the grammar requires ("ticket #12345,#a" suggests nothing); the parser has the final
+    // say on longer chains.
     private static bool FollowsTokenSeparator(string text, int start)
     {
         if (start == 0 || text[start - 1] is not (',' or ';'))
@@ -147,7 +150,7 @@ public sealed class SuggestionPopup
             previous++;
         }
 
-        return text[previous] is '#' or '@';
+        return text[previous] is '#' or '@' && char.IsLetter(text[previous + 1]);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
