@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using Logbook.App.Diagnostics;
 using Logbook.App.Dialogs;
 using Logbook.App.Startup;
 using Logbook.Core.Export;
@@ -18,29 +19,45 @@ internal static class PlaintextTarget
     // may be synced: it is an absolute local path that would point a reader of that file at the one plaintext copy.
     private const string FolderMarker = "export-folder";
 
-    /// <summary>The one-sentence reason a plaintext export defaults outside the log's folder.</summary>
-    public const string Why = "The export is unencrypted and contains notes about people and situations. Logbook cannot tell which folders are synced, so it only keeps the default out of the log's folder; choose a folder that is not synced.";
+    /// <summary>The one-sentence reason a plaintext export defaults to a private folder under the Windows profile.</summary>
+    public const string Why = "The export is unencrypted and contains notes about people and situations. Logbook cannot tell which folders are synced, so it defaults to a private folder under your Windows profile, outside the log's folder; if you choose another folder, choose one that is not synced.";
 
-    /// <summary>The remembered folder, else Documents, else local app data: the first that is not inside the log's folder.</summary>
+    /// <summary>
+    /// The remembered folder, else <c>%LOCALAPPDATA%\Logbook\exports</c>: the first that is not inside the log's folder.
+    /// The profile's local app data is not a folder sync services back up by default, which is the safest default the
+    /// app can offer without detecting sync folders.
+    /// </summary>
     public static string DefaultFolder(string logFolder)
     {
-        string?[] candidates =
-        [
-            LocalMarker.Read(FolderMarker),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        ];
         List<string> existing = [];
-        foreach (string? folder in candidates)
+        if (LocalMarker.Read(FolderMarker) is { Length: > 0 } remembered && Directory.Exists(remembered))
         {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-            {
-                existing.Add(folder);
-            }
+            existing.Add(remembered);
+        }
+
+        if (PrivateExportsFolder() is { } exports)
+        {
+            existing.Add(exports);
         }
 
         // Null when every candidate is inside the log's folder; the warning before the write will say so.
         return PlaintextFolder.Choose(existing, logFolder) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    }
+
+    /// <summary>Created on demand; null when it cannot be, in which case the dialog falls back to Documents.</summary>
+    private static string? PrivateExportsFolder()
+    {
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Logbook", "exports");
+        try
+        {
+            Directory.CreateDirectory(folder);
+            return folder;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Diag.Log("Could not create the exports folder", e);
+            return null;
+        }
     }
 
     public static bool IsInLogFolder(string path, string logFolder) => DataFolder.IsUnder(path, logFolder);

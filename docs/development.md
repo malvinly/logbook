@@ -62,6 +62,7 @@ WPF rules for this project: plain code-behind plus a hand-written `INotifyProper
 - Data file: `logbook.jsonl`, wherever the user put it. Settings file: `logbook.settings.json`, beside it.
 - The data file is found through the per-profile pointer `%LOCALAPPDATA%\Logbook\data-file` ([settings.md](settings.md)). If the file it names is missing at launch, the app asks rather than creating a new file silently.
 - Diagnostics (not entries, never entry contents) go to a rolling text log in `%LOCALAPPDATA%\Logbook\logs\`, one file per day, two weeks kept. Losing it on a profile change is fine.
+- Plaintext exports default to `%LOCALAPPDATA%\Logbook\exports\`, created on demand, because the profile's local app data is not a folder sync services back up ([export.md](export.md)).
 
 ## Build, test and release
 
@@ -69,4 +70,4 @@ WPF rules for this project: plain code-behind plus a hand-written `INotifyProper
 - Release build: `dotnet publish src/Logbook.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=false`. One `Logbook.exe` dropped in a folder is the whole install. Trimming stays off until the source-generated JSON context is proven.
 - A release is a tag. Pushing `vX.Y.Z` runs `release.yml`: build, test, publish with `-p:Version=X.Y.Z`, and a GitHub Release holding `Logbook.exe` and its SHA-256. A `0.x` tag is marked a pre-release. The version in `Logbook.App.csproj` is the fallback for local builds and is what the Settings footer shows.
 - The exe is not code-signed, so SmartScreen warns on the first run of a downloaded copy; the README says so and points at the hash.
-- Smoke tests that save Settings from a test build must back up `Startup\Logbook.lnk` first and restore it afterwards, and remove any `%LOCALAPPDATA%\Logbook\export-folder` marker a smoke export created, or the real installation ends up pointing at the test exe. A smoke test that runs the first-run picker or "Choose another…" from a test build rewrites the real pointer `%LOCALAPPDATA%\Logbook\data-file`, so it must back that file up first (or note its absence) and restore or delete it afterwards.
+- Smoke tests that save Settings from a test build must back up `Startup\Logbook.lnk` first and restore it afterwards, and remove any `%LOCALAPPDATA%\Logbook\export-folder` marker and `exports` folder a smoke export created, or the real installation ends up pointing at the test exe. A smoke test that runs the first-run picker or "Choose another…" from a test build rewrites the real pointer `%LOCALAPPDATA%\Logbook\data-file`, so it must back that file up first (or note its absence) and restore or delete it afterwards.
