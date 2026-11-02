@@ -94,7 +94,7 @@ internal static class Scanner
                 int valueStart = i + key.Length + 1;
                 if (valueStart < text.Length && !char.IsWhiteSpace(text[valueStart]))
                 {
-                    int end = EndOfWord(text, valueStart);
+                    int end = EndOfValue(text, valueStart);
                     // Trailing punctuation goes as from a tag ("at:yesterday."); "at:." is left with no value and stays text.
                     int valueEnd = StripTrailing(text, valueStart, end, out string left);
                     if (valueEnd > valueStart)
@@ -104,6 +104,14 @@ internal static class Scanner
                         if (valueEnd < end)
                         {
                             tokens.Add(new Token(TokenKind.Stripped, text[valueEnd..end], left));
+                        }
+
+                        // A value that stopped at a separator has a tag or person right after it.
+                        if (end < text.Length && text[end] is ',' or ';')
+                        {
+                            tokens.Add(new Token(TokenKind.Separator, text[end..(end + 1)], text[end..(end + 1)]));
+                            afterSeparator = end + 1;
+                            end++;
                         }
 
                         i = end;
@@ -187,10 +195,12 @@ internal static class Scanner
         return end;
     }
 
-    private static int EndOfWord(string text, int start)
+    // A keyword value runs to whitespace, but stops at a "," or ";" that a tag or person follows, so "last:7d,#printer"
+    // is a keyword and a tag. Other commas belong to the value ("at:yesterday,3pm").
+    private static int EndOfValue(string text, int start)
     {
         int end = start;
-        while (end < text.Length && !char.IsWhiteSpace(text[end]))
+        while (end < text.Length && !char.IsWhiteSpace(text[end]) && !(text[end] is ',' or ';' && TokenStartsAt(text, end + 1, quotedPhrases: false)))
         {
             end++;
         }

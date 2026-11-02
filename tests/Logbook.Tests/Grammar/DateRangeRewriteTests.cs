@@ -60,4 +60,22 @@ public sealed class DateRangeRewriteTests
         Assert.Equal(["first ask"], query.Phrases);
         Assert.Empty(query.Words);
     }
+
+    [Theory]
+    [InlineData("last:7d,#printer", "#printer since:2026-02-02")]
+    [InlineData("last:7d.,#printer foo", "#printer foo since:2026-02-02")]
+    [InlineData("foo since:today;@j-doe", "foo @j-doe since:2026-02-02")]
+    public void RemovesTheSeparatorBetweenARemovedTokenAndATag(string text, string expected)
+    {
+        Assert.Equal(expected, LineParser.WithDateRange(text, From, null));
+    }
+
+    [Fact]
+    public void TagAfterARemovedTokenSurvivesTheRoundTrip()
+    {
+        QueryLine query = LineParser.ParseQuery(LineParser.WithDateRange("last:7d,#printer", From, null), new DateOnly(2026, 10, 8));
+        Assert.Equal(From, query.Since);
+        Assert.Equal(["printer"], query.Tags);
+        Assert.Empty(query.Words);
+    }
 }

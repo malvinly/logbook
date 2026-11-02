@@ -135,4 +135,37 @@ public sealed class QueryDateTokenTests
     {
         Assert.Equal("thing since:2026-10-06; more", LineParser.ParseCapture("thing since:2026-10-06; more", Now, Zone).Summary);
     }
+
+    [Theory]
+    [InlineData("last:7d,#printer")]
+    [InlineData("last:7d;#printer")]
+    [InlineData("last:7d.,#printer")] // the "." is stripped from the value as before
+    public void KeywordValueEndsAtASeparatorBeforeATag(string text)
+    {
+        QueryLine line = LineParser.ParseQuery(text, Today);
+        Assert.Equal(new DateOnly(2026, 10, 1), line.Since);
+        Assert.Equal(["printer"], line.Tags);
+        Assert.Empty(line.Words);
+    }
+
+    [Fact]
+    public void KeywordValueEndsAtASeparatorBeforeAPerson()
+    {
+        QueryLine line = LineParser.ParseQuery("since:today,@j-doe", Today);
+        Assert.Equal(Today, line.Since);
+        Assert.Equal(["j-doe"], line.People);
+        Assert.Empty(line.Words);
+    }
+
+    [Theory]
+    [InlineData("last:7d,printer")] // a word, not a tag, follows the comma
+    [InlineData("last:7d,#12345")] // a digit-led name is not a tag
+    [InlineData("last:7d,\"x\"")] // only a tag or person ends the value, not a phrase
+    public void KeywordValueRunsOnPastASeparatorNotBeforeATagOrPerson(string text)
+    {
+        QueryLine line = LineParser.ParseQuery(text, Today);
+        Assert.Null(line.Since);
+        Assert.Empty(line.Tags);
+        Assert.Equal([text], line.Words);
+    }
 }

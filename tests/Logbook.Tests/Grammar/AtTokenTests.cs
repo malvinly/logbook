@@ -204,4 +204,32 @@ public sealed class AtTokenTests
         QueryLine line = LineParser.ParseQuery("at:yesterday. thing", new DateOnly(2026, 10, 8));
         Assert.Equal(["at:yesterday.", "thing"], line.Words);
     }
+
+    [Theory]
+    [InlineData("fixed at:yesterday,#printer", "fixed")] // the comma between the two tokens is dropped
+    [InlineData("fixed at:yesterday.,#printer", "fixed.")] // the "." stripped from the value attaches to the word before
+    public void AtValueEndsAtASeparatorBeforeATag(string text, string summary)
+    {
+        CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
+        Assert.Equal(new DateTimeOffset(2026, 10, 7, 12, 0, 0, Offset), line.OccurredAt);
+        Assert.Equal(["printer"], line.Tags);
+        Assert.Equal(summary, line.Summary);
+    }
+
+    [Fact]
+    public void AtValueKeepsItsOwnCommaBeforeASeparatorAndAPerson()
+    {
+        CaptureLine line = LineParser.ParseCapture("met at:yesterday,3pm;@j-doe", Now, Zone);
+        Assert.Equal(new DateTimeOffset(2026, 10, 7, 15, 0, 0, Offset), line.OccurredAt);
+        Assert.Equal(["j-doe"], line.People);
+        Assert.Equal("met", line.Summary);
+    }
+
+    [Fact]
+    public void AtValueRunsOnPastACommaNotBeforeATagOrPerson()
+    {
+        CaptureLine line = LineParser.ParseCapture("fixed at:yesterday,printer", Now, Zone);
+        Assert.Null(line.OccurredAt);
+        Assert.Equal("fixed at:yesterday,printer", line.Summary);
+    }
 }

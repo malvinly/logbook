@@ -146,8 +146,9 @@ public static class LineParser
         bool removedPrevious = false;
         foreach (Token token in Scanner.Scan(text, quotedPhrases: true))
         {
-            // Punctuation stripped from a removed token's value ("last:7d,") goes with the token.
-            if ((token.Kind == TokenKind.Keyword && token.Key is "since" or "until" or "last") || (removedPrevious && token.Kind == TokenKind.Stripped))
+            // Punctuation stripped from a removed token's value ("last:7d,") goes with the token, and so does the
+            // separator after it ("last:7d,#printer"), which would otherwise be left in front of the tag.
+            if ((token.Kind == TokenKind.Keyword && token.Key is "since" or "until" or "last") || (removedPrevious && token.Kind is TokenKind.Stripped or TokenKind.Separator))
             {
                 removedPrevious = true;
                 continue;
