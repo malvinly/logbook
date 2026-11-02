@@ -179,10 +179,41 @@ public sealed class CollisionRuleTests
     [InlineData("(#a #b) done", "done")]
     [InlineData("#a;#b", "")]
     [InlineData("@j-doe, @a-smith: noted", "noted")]
-    [InlineData("done (#asked and more)", "done and more)")] // read literally: the "(" alone is left behind with spaces around it
     public void PunctuationATokenLeavesWithOnlyWhitespaceAroundItIsDropped(string text, string summary)
     {
         Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Theory]
+    [InlineData("done (#asked and more)", "done (and more)")]
+    [InlineData("said \"@j-doe agreed\"", "said \"agreed\"")]
+    [InlineData("done (#a #b and more)", "done (and more)")]
+    [InlineData("(#asked and more) later", "(and more) later")]
+    [InlineData("done (#asked, more)", "done (more)")] // the "," touches only the "(", so it goes like any leftover; the "(" stays
+    [InlineData("see foo(#a and more)", "see foo(and more)")]
+    public void OpenerStaysWhenItsClosingPartnerStays(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Theory]
+    [InlineData("done (#asked)", "done")]
+    [InlineData("said \"#urgent\" twice", "said twice")]
+    [InlineData("done (#asked) and (more)", "done and (more)")] // the partner is the next ")", here the one the tag left
+    [InlineData("done (#asked", "done")] // no partner at all, so the "(" goes as other leftovers do
+    [InlineData("said \"@j-doe agreed", "said agreed")]
+    public void OpenerGoesWhenItsClosingPartnerGoesOrIsMissing(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Fact]
+    public void FilterNeverRequiresALeftoverOpener()
+    {
+        // The tag ends the word before it, so the "(" is a word alone; the ")" was typed against "more" and stays with it.
+        QueryLine line = LineParser.ParseQuery("(#asked and more)", Today);
+        Assert.Equal(["asked"], line.Tags);
+        Assert.Equal(["and", "more)"], line.Words);
     }
 
     [Theory]

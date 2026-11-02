@@ -45,15 +45,15 @@ public static class LineParser
                     // With the token gone, the space before it would be left in front of its punctuation
                     // ("asked @j-doe, then"), so it goes too: "asked, then".
                     summary.TrimEnd();
-                    summary.Append(token.Value, fromToken: true);
+                    summary.Append(token.Value, Origin.Left);
                     removed = false;
                     break;
                 case TokenKind.Opening:
-                    summary.Append(token.Raw, fromToken: true);
+                    summary.Append(token.Raw, Origin.Opener);
                     removed = false;
                     break;
                 default:
-                    summary.Append(token.Raw, fromToken: false);
+                    summary.Append(token.Raw, Origin.Typed);
                     removed = false;
                     break;
             }
@@ -107,12 +107,16 @@ public static class LineParser
                 case TokenKind.Separator:
                     break; // Between two tokens, so the filter needs no literal "," for it.
                 case TokenKind.Stripped when previousUsed:
+                    plain.Append(token.Value, Origin.Left);
+                    used = false;
+                    break;
                 case TokenKind.Opening:
-                    plain.Append(token.Value, fromToken: true);
+                    // A tag or person always follows and ends the word, so the opener never finds its partner and goes.
+                    plain.Append(token.Raw, Origin.Opener);
                     used = false;
                     break;
                 default:
-                    plain.Append(token.Raw, fromToken: false);
+                    plain.Append(token.Raw, Origin.Typed);
                     used = false;
                     break;
             }
@@ -187,20 +191,32 @@ public static class LineParser
         }
     }
 
+    /// <summary>Where a character of <see cref="MarkedText"/> came from.</summary>
+    private enum Origin
+    {
+        /// <summary>Typed by the user as text.</summary>
+        Typed,
+        /// <summary>Punctuation stripped from the end of a token (<see cref="TokenKind.Stripped"/>).</summary>
+        Left,
+        /// <summary>The <c>(</c> or <c>"</c> that let a token open (<see cref="TokenKind.Opening"/>).</summary>
+        Opener,
+    }
+
     /// <summary>
-    /// Text left over once tokens are taken out, with a flag per character saying whether it is punctuation a token
-    /// left behind (<see cref="TokenKind.Stripped"/> or <see cref="TokenKind.Opening"/>). DESIGN.md section 6 drops
-    /// such punctuation when nothing but whitespace is around it: "done (#asked)" stores "done", not "done ()".
+    /// Text left over once tokens are taken out, with the origin of each character. DESIGN.md section 6 drops punctuation
+    /// a token left behind when nothing but whitespace is around it: "done (#asked)" stores "done", not "done ()". An
+    /// opener is the exception: it stays when its closing partner stays, and then attaches to the word after it, so
+    /// "done (#asked and more)" stores "done (and more)".
     /// </summary>
     private sealed class MarkedText
     {
         private readonly StringBuilder _text = new();
-        private readonly List<bool> _fromToken = [];
+        private readonly List<Origin> _origin = [];
 
-        public void Append(string text, bool fromToken)
+        public void Append(string text, Origin origin)
         {
             _text.Append(text);
-            _fromToken.AddRange(Enumerable.Repeat(fromToken, text.Length));
+            _origin.AddRange(Enumerable.Repeat(origin, text.Length));
         }
 
         public void TrimEnd()
@@ -208,44 +224,99 @@ public static class LineParser
             while (_text.Length > 0 && char.IsWhiteSpace(_text[^1]))
             {
                 _text.Length--;
-                _fromToken.RemoveAt(_fromToken.Count - 1);
+                _origin.RemoveAt(_origin.Count - 1);
             }
         }
 
         public void Clear()
         {
             _text.Clear();
-            _fromToken.Clear();
+            _origin.Clear();
         }
 
-        /// <summary>The whitespace-separated words, leaving out each word made only of punctuation a token left behind.</summary>
+        /// <summary>
+        /// The whitespace-separated words, leaving out each word with nothing the user typed in it, except for an opener
+        /// whose partner stays.
+        /// </summary>
         public List<string> Words()
         {
-            List<string> words = [];
+            string text = _text.ToString();
+
+            // First the words, and for each character the word it is in (-1 for whitespace).
+            List<(int Start, int End, bool Typed)> spans = [];
+            int[] wordAt = new int[text.Length];
             int i = 0;
-            while (i < _text.Length)
+            while (i < text.Length)
             {
-                if (char.IsWhiteSpace(_text[i]))
+                if (char.IsWhiteSpace(text[i]))
                 {
+                    wordAt[i] = -1;
                     i++;
                     continue;
                 }
 
                 int start = i;
-                bool onlyFromToken = true;
-                while (i < _text.Length && !char.IsWhiteSpace(_text[i]))
+                bool typed = false;
+                while (i < text.Length && !char.IsWhiteSpace(text[i]))
                 {
-                    onlyFromToken &= _fromToken[i];
+                    typed |= _origin[i] == Origin.Typed;
+                    wordAt[i] = spans.Count;
                     i++;
                 }
 
-                if (!onlyFromToken)
+                spans.Add((start, i, typed));
+            }
+
+            List<string> words = [];
+            // An opener that stays at the end of its word waits here to be put in front of the next word.
+            string pending = "";
+            foreach ((int start, int end, bool typed) in spans)
+            {
+                string word = typed ? text[start..end] : SurvivingOpeners(text, start, end, spans, wordAt);
+                if (word.Length == 0)
                 {
-                    words.Add(_text.ToString(start, i - start));
+                    continue;
                 }
+
+                word = pending + word;
+                pending = "";
+                if (!typed || _origin[end - 1] == Origin.Opener)
+                {
+                    pending = word;
+                    continue;
+                }
+
+                words.Add(word);
+            }
+
+            if (pending.Length > 0)
+            {
+                words.Add(pending);
             }
 
             return words;
+        }
+
+        // From a word with nothing typed in it, the openers whose closing partner (the next ")" for "(", the next quote
+        // for a quote) is in a word that stays. With no partner at all, the opener goes.
+        private string SurvivingOpeners(string text, int start, int end, List<(int Start, int End, bool Typed)> spans, int[] wordAt)
+        {
+            StringBuilder kept = new();
+            for (int i = start; i < end; i++)
+            {
+                if (_origin[i] != Origin.Opener)
+                {
+                    continue;
+                }
+
+                int partner = text.IndexOf(text[i] == '(' ? ')' : '"', i + 1);
+                if (partner >= 0 && spans[wordAt[partner]].Typed)
+                {
+                    kept.Append(text[i]);
+                }
+            }
+
+            return kept.ToString();
         }
     }
 }
