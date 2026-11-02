@@ -105,6 +105,8 @@ public sealed partial class ChangePassphraseWindow : Window
         }
         catch (CryptographicException)
         {
+            // Every outcome goes to the diagnostics log (DESIGN.md section 9), never what was typed.
+            Diag.Log("Passphrase change refused: the current passphrase is wrong; nothing was changed");
             ShowProblem("The current passphrase is wrong. Nothing was changed.");
             Current.Clear();
             Current.Focus();
