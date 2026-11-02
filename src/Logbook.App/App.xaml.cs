@@ -215,7 +215,7 @@ public sealed partial class App : Application, IDisposable
         Resources["WindowIcon"] = image;
     }
 
-    // The tray icon and the window icon are drawn from theme colors, not brushes, so a theme change redraws them.
+    // The tray icon and the window icon are drawn from theme colors, not brushes, so a theme or accent change redraws them.
     private void RecolorIcons()
     {
         _tray?.Recolor(ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
@@ -1111,14 +1111,13 @@ public sealed partial class App : Application, IDisposable
             // Windows broadcasts this when light or dark mode (or the accent) changes; follow it without a restart.
             // WPF handles the same message to swap its Fluent resources, so the tokens follow once that work is done.
             // An open capture box's acrylic tint is a window attribute, not a brush, so it is told as Settings save does,
-            // and the icons are redrawn as there. A forced theme ignores Windows changing mode, its icons included.
+            // and the icons are redrawn as there. A forced theme ignores Windows changing mode, but the icons are
+            // redrawn either way: the accent brush follows the Windows accent under any theme, and the icons are
+            // bitmaps drawn from it, so only a redraw carries a new accent to them.
             Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
             {
                 AppTheme.FollowWindows(this);
-                if (AppTheme.FollowsWindows)
-                {
-                    RecolorIcons();
-                }
+                RecolorIcons();
 
                 if (_capture is { } capture)
                 {
