@@ -30,6 +30,9 @@ internal static class AppTheme
 
     private static string _mode = FollowSystem;
 
+    /// <summary>True when the theme follows Windows; false while the setting forces light or dark.</summary>
+    public static bool FollowsWindows => _mode == FollowSystem;
+
     /// <summary>True when the dark tokens are in use.</summary>
     public static bool IsDark { get; private set; }
 
