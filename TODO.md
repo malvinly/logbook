@@ -1,17 +1,9 @@
 # Roadmap
 
-Logbook is feature complete for its purpose: capture with a hotkey, an encrypted append-only log in a synced folder, filtered timelines on demand. What is listed here is what is still planned, what is parked, and what is deliberately out of scope. The spec lives in [docs/](docs/).
+Logbook is feature complete for its purpose: capture with a hotkey, an encrypted append-only log in a folder of your choice, filtered timelines on demand. What is listed here is what is still planned, what is parked, and what is deliberately out of scope. The spec lives in [docs/](docs/).
 
 ## Before 1.0
 
-- Let the user choose the data file location freely. Today the first-run picker offers only the folders named by `OneDriveCommercial`, `OneDrive` and `USERPROFILE`, and the settings name the file relative to that root. Instead:
-  - First run shows a plain file picker: any folder, a new or an existing `logbook*.jsonl`. No sync-service detection and no warning about unsynced folders; where the file lives is the user's responsibility. The app keeps assuming the folder might be synced, so everything that makes the file sync-safe stays as it is: append-only writes, write-through, the file never held open, placeholder hydration, the conflict-copy sibling picker and the "still downloading" dialog.
-  - The absolute path of the chosen file is kept per Windows profile in `%LOCALAPPDATA%\Logbook\data-file`, through the existing `LocalMarker` helper. It is the only thing that finds the file at launch. When it is missing, the first-run picker runs; when it points at a file that is gone, the "Log file not found" dialog runs it. Browsing to an existing file picks up the `logbook.settings.json` beside it, so losing the profile costs one dialog, never data or settings.
-  - The settings file stays beside the data file and stops naming it: `syncRootEnvVar` and `dataFileRelativePath` are removed, with the "data file outside the synced folder" check and dialog. Choosing a different file in the sibling picker updates the pointer, not the settings.
-  - Plaintext exports (CSV and decrypted JSONL) default to a folder outside the log's own folder and ask before writing inside it, in place of "outside every synced root"; `KnownSyncEnvVars` and the root list go away. The wording keeps saying why: the log's folder may be synced, and synced storage is searchable by people who are not you.
-  - Settings gets a read-only "Data file" row with a "Choose another…" button that reruns the picker and rewrites the pointer. There is no built-in move: moving the file is done in Explorer with the app quit, then "Choose another…" or the not-found dialog points the app at it. Copying a file a sync client may be mid-upload on is not the app's job.
-  - No migration code. The settings files that exist today belong to dummy logs.
-  - Docs in the same commits: [docs/settings.md](docs/settings.md) (contents, first run, how the file is found), [docs/development.md](docs/development.md) (the synced-folder constraint becomes a recommendation; the Files section drops the variables), [docs/file-format.md](docs/file-format.md), [docs/export.md](docs/export.md) and the README.
 - Publish a `v0.9.x` pre-release from the tag workflow and use it daily for a while, with the real log, so that the idle lock, the workstation lock, reminders and the balloon queue all happen in ordinary use. Fix what turns up.
 - Tag `v1.0.0` when nothing new has turned up.
 
