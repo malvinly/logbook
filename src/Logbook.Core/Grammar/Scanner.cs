@@ -41,7 +41,9 @@ internal static class Scanner
                 // The "," or ";" that ended the name is stripped like a trailing ".", and only right after it may another
                 // token start. Punctuation after it is the user's text, so "@a,.#b" is one person and the text ",.#b".
                 bool endedAtSeparator = end < text.Length && text[end] is ',' or ';';
-                int strippedEnd = endedAtSeparator ? end + 1 : end;
+                // A separator with another token right after it belongs to neither, so it is kept apart to be dropped.
+                bool betweenTokens = endedAtSeparator && TokenStartsAt(text, end + 1, quotedPhrases);
+                int strippedEnd = endedAtSeparator && !betweenTokens ? end + 1 : end;
 
                 // The "(" or quote that let the token open is kept apart too, so "done (#asked)" can drop the "()" it leaves.
                 if (!atWordStart && plain.Length > 0 && text[i - 1] is '(' or '"')
@@ -58,12 +60,17 @@ internal static class Scanner
                     tokens.Add(new Token(TokenKind.Stripped, text[nameEnd..strippedEnd], text[nameEnd..strippedEnd]));
                 }
 
+                if (betweenTokens)
+                {
+                    tokens.Add(new Token(TokenKind.Separator, text[end..(end + 1)], text[end..(end + 1)]));
+                }
+
                 if (endedAtSeparator)
                 {
                     afterSeparator = end + 1;
                 }
 
-                i = strippedEnd;
+                i = endedAtSeparator ? end + 1 : end;
                 continue;
             }
 
@@ -110,6 +117,17 @@ internal static class Scanner
 
         Flush(tokens, plain);
         return tokens;
+    }
+
+    // What may open right after a separator: a tag or person, or in a query a quoted phrase.
+    private static bool TokenStartsAt(string text, int i, bool quotedPhrases)
+    {
+        if (i >= text.Length)
+        {
+            return false;
+        }
+
+        return (text[i] is '#' or '@' && i + 1 < text.Length && char.IsLetter(text[i + 1])) || (quotedPhrases && text[i] == '"');
     }
 
     private static bool TryMatchKeyword(string text, int start, out string key)

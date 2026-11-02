@@ -17,6 +17,11 @@ internal enum TokenKind
     Stripped,
     /// <summary>The <c>(</c> or <c>"</c> right before a tag or person, which let it start. Text, kept apart like <see cref="Stripped"/>.</summary>
     Opening,
+    /// <summary>
+    /// A <c>,</c> or <c>;</c> that ended one token and is followed directly by another (<c>@j-doe,@a-smith</c>). It is
+    /// dropped from a summary and from filter words, but a rewrite of the line keeps it.
+    /// </summary>
+    Separator,
 }
 
 /// <summary>

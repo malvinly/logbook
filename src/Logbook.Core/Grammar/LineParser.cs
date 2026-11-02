@@ -37,6 +37,8 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "at" && DateValues.TryParseAt(token.Value, now, zone, out DateTimeOffset at):
                     occurredAt = at; // The last at: on the line wins.
                     break;
+                case TokenKind.Separator:
+                    break; // Between two tokens that are both gone, so it would stand alone.
                 case TokenKind.Stripped when previousRemoved:
                     // With the token gone, the space before it would be left in front of its punctuation
                     // ("asked @j-doe, then"), so it goes too: "asked, then".
@@ -100,6 +102,8 @@ public static class LineParser
                 case TokenKind.Keyword when token.Key == "last" && DateValues.TryParseLast(token.Value, today, out DateOnly lastDate):
                     since = lastDate;
                     break;
+                case TokenKind.Separator:
+                    break; // Between two tokens, so the filter needs no literal "," for it.
                 case TokenKind.Stripped when previousUsed:
                 case TokenKind.Opening:
                     plain.Append(token.Raw, fromToken: true);

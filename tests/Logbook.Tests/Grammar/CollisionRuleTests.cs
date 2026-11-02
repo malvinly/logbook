@@ -182,10 +182,47 @@ public sealed class CollisionRuleTests
     [InlineData("#a;#b", "")]
     [InlineData("@j-doe, @a-smith: noted", "noted")]
     [InlineData("done (#asked and more)", "done and more)")] // read literally: the "(" alone is left behind with spaces around it
-    [InlineData("asked @j-doe,@a-smith about #printer? at:yesterday.", "asked, about?.")] // the comma and "." attach to a word
     public void PunctuationATokenLeavesWithOnlyWhitespaceAroundItIsDropped(string text, string summary)
     {
         Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Theory]
+    [InlineData("asked @j-doe,@a-smith about it", "asked about it")]
+    [InlineData("asked @j-doe;@a-smith about it", "asked about it")]
+    [InlineData("told @j-doe,#printer", "told")]
+    [InlineData("done #a?,#b", "done?")] // the "?" stripped from the tag still attaches to the word before
+    [InlineData("asked @j-doe,@a-smith about #printer? at:yesterday.", "asked about?.")]
+    public void SeparatorBetweenTwoTokensIsDropped(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Theory]
+    [InlineData("Reported to @a-smith, @b-jones.", "Reported to,.")] // a space follows the comma, so no token follows directly
+    [InlineData("asked @a-smith, @b-jones", "asked,")]
+    [InlineData("asked @j-doe,ticket", "asked,ticket")] // a word, not a token, follows
+    [InlineData(@"asked @j-doe,\#b", "asked,#b")] // an escaped sigil is text
+    [InlineData("asked @j-doe,#12345", "asked,#12345")] // a digit-led name is not a token
+    public void SeparatorNotFollowedDirectlyByATokenIsKept(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Fact]
+    public void SeparatorBetweenTwoTokensIsDroppedInAQuery()
+    {
+        QueryLine line = LineParser.ParseQuery("asked @j-doe,@a-smith about #printer?;\"x y\"", Today);
+        Assert.Equal(["asked", "about"], line.Words);
+        Assert.Equal(["j-doe", "a-smith"], line.People);
+        Assert.Equal(["printer"], line.Tags);
+        Assert.Equal(["x y"], line.Phrases);
+    }
+
+    [Fact]
+    public void DateRangeRewriteKeepsASeparatorBetweenTwoTokens()
+    {
+        Assert.Equal("#a,#b;@j-doe since:2026-02-02", LineParser.WithDateRange("#a,#b;@j-doe last:7d", new DateOnly(2026, 2, 2), null));
     }
 
     [Theory]
