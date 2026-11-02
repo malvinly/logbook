@@ -37,7 +37,7 @@ internal static class Scanner
             if ((c == '#' || c == '@') && sigilMayStart && i + 1 < text.Length && char.IsLetter(text[i + 1]))
             {
                 int end = EndOfName(text, i);
-                int nameEnd = StripTrailing(text, i + 1, end);
+                int nameEnd = StripTrailing(text, i + 1, end, out string left);
                 // The "," or ";" that ended the name is stripped like a trailing ".", and only right after it may another
                 // token start. Punctuation after it is the user's text, so "@a,.#b" is one person and the text ",.#b".
                 bool endedAtSeparator = end < text.Length && text[end] is ',' or ';';
@@ -57,7 +57,8 @@ internal static class Scanner
                 tokens.Add(new Token(c == '#' ? TokenKind.Tag : TokenKind.Person, text[i..nameEnd], TokenNormalizer.Normalize(text[(i + 1)..nameEnd])));
                 if (nameEnd < strippedEnd)
                 {
-                    tokens.Add(new Token(TokenKind.Stripped, text[nameEnd..strippedEnd], text[nameEnd..strippedEnd]));
+                    string separator = strippedEnd > end ? text[end..strippedEnd] : "";
+                    tokens.Add(new Token(TokenKind.Stripped, text[nameEnd..strippedEnd], left + separator));
                 }
 
                 if (betweenTokens)
@@ -95,14 +96,14 @@ internal static class Scanner
                 {
                     int end = EndOfWord(text, valueStart);
                     // Trailing punctuation goes as from a tag ("at:yesterday."); "at:." is left with no value and stays text.
-                    int valueEnd = StripTrailing(text, valueStart, end);
+                    int valueEnd = StripTrailing(text, valueStart, end, out string left);
                     if (valueEnd > valueStart)
                     {
                         Flush(tokens, plain);
                         tokens.Add(new Token(TokenKind.Keyword, text[i..valueEnd], text[valueStart..valueEnd], key));
                         if (valueEnd < end)
                         {
-                            tokens.Add(new Token(TokenKind.Stripped, text[valueEnd..end], text[valueEnd..end]));
+                            tokens.Add(new Token(TokenKind.Stripped, text[valueEnd..end], left));
                         }
 
                         i = end;
@@ -146,13 +147,16 @@ internal static class Scanner
     }
 
     // Trailing punctuation belongs to the sentence, not the token: "asked @j-doe." and "@j-doe's desk" both name j-doe.
-    // Returns the end of what is left, never before start; the stripped characters stay in the text.
-    private static int StripTrailing(string text, int start, int end)
+    // Returns the end of what is left, never before start. The stripped punctuation stays in the text and comes back
+    // in leftInText; a possessive 's is stripped too but goes with the token, so it is not in leftInText.
+    private static int StripTrailing(string text, int start, int end, out string leftInText)
     {
+        StringBuilder left = new();
         while (end > start)
         {
             if (IsTrailingPunctuation(text[end - 1]))
             {
+                left.Insert(0, text[end - 1]);
                 end--;
             }
             else if (end - 2 >= start && text[end - 2] == '\'' && text[end - 1] == 's')
@@ -165,6 +169,7 @@ internal static class Scanner
             }
         }
 
+        leftInText = left.ToString();
         return end;
     }
 

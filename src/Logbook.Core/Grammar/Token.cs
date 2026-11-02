@@ -13,6 +13,7 @@ internal enum TokenKind
     /// <summary>
     /// Punctuation stripped from the end of the token before it (<c>@j-doe,</c>, <c>at:yesterday.</c>), including the
     /// <c>,</c> or <c>;</c> that ended a tag or person. It is text, but kept apart so a reader knows where it came from.
+    /// <see cref="Token.Value"/> leaves out a possessive <c>'s</c>, which goes with the token; <see cref="Token.Raw"/> has it.
     /// </summary>
     Stripped,
     /// <summary>The <c>(</c> or <c>"</c> right before a tag or person, which let it start. Text, kept apart like <see cref="Stripped"/>.</summary>

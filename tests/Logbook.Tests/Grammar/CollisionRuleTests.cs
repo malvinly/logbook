@@ -147,8 +147,6 @@ public sealed class CollisionRuleTests
     [InlineData("asked @j-doe?", "?")]
     [InlineData("asked @j-doe!", "!")]
     [InlineData("asked @j-doe?!", "?!")]
-    [InlineData("asked @j-doe's", "'s")]
-    [InlineData("asked @j-doe's.", "'s.")]
     public void TrailingPunctuationIsStrippedFromTokenAndLeftInText(string text, string leftover)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
@@ -268,16 +266,55 @@ public sealed class CollisionRuleTests
     {
         CaptureLine line = LineParser.ParseCapture("asked about #printer? and #printer's tray!", Now, Zone);
         Assert.Equal(["printer"], line.Tags);
-        Assert.Equal("asked about? and's tray!", line.Summary);
+        Assert.Equal("asked about? and tray!", line.Summary);
+    }
+
+    [Theory]
+    [InlineData("told @j-doe's manager", "told manager")]
+    [InlineData("asked @j-doe's", "asked")]
+    [InlineData("asked @j-doe's.", "asked.")] // the "." is the sentence's and stays attached to the word before
+    [InlineData("asked @j-doe's, then", "asked, then")]
+    [InlineData("asked @j-doe's,@a-smith", "asked")]
+    [InlineData("fixed #it's tray", "fixed tray")]
+    public void PossessiveGoesWithTheToken(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
     }
 
     [Fact]
-    public void PossessiveIsLeftInTheSummaryAsTyped()
+    public void PossessiveStrippedFromATagLeavesTheTagName()
     {
-        // Read literally, the rule leaves the 's behind and drops the space before it, as it does for a comma.
-        CaptureLine line = LineParser.ParseCapture("told @j-doe's manager", Now, Zone);
+        Assert.Equal(["it"], LineParser.ParseCapture("#it's", Now, Zone).Tags);
+    }
+
+    [Theory]
+    [InlineData("told j-doe's manager", "told j-doe's manager")] // no token, so the possessive is the user's
+    [InlineData("told @j-doe 's manager", "told 's manager")] // typed apart from the token
+    public void PossessiveThatNoTokenStrippedStays(string text, string summary)
+    {
+        Assert.Equal(summary, LineParser.ParseCapture(text, Now, Zone).Summary);
+    }
+
+    [Fact]
+    public void OnlyAStraightApostropheMakesAPossessive()
+    {
+        CaptureLine line = LineParser.ParseCapture("asked @j-doe’s", Now, Zone);
+        Assert.Equal(["j-doe’s"], line.People);
+        Assert.Equal("asked", line.Summary);
+    }
+
+    [Fact]
+    public void FilterDropsAPossessiveWithItsToken()
+    {
+        QueryLine line = LineParser.ParseQuery("told @j-doe's manager", Today);
+        Assert.Equal(["told", "manager"], line.Words);
         Assert.Equal(["j-doe"], line.People);
-        Assert.Equal("told's manager", line.Summary);
+    }
+
+    [Fact]
+    public void DateRangeRewriteKeepsAPossessiveAsTyped()
+    {
+        Assert.Equal("told @j-doe's manager since:2026-02-02", LineParser.WithDateRange("told @j-doe's manager last:7d", new DateOnly(2026, 2, 2), null));
     }
 
     [Fact]
@@ -297,11 +334,18 @@ public sealed class CollisionRuleTests
     }
 
     [Fact]
-    public void PossessiveIsStrippedFromAKeywordValueToo()
+    public void PossessiveGoesWithAKeywordToo()
     {
         CaptureLine line = LineParser.ParseCapture("thing at:yesterday's meeting", Now, Zone);
         Assert.Equal(new DateTimeOffset(2026, 10, 7, 12, 0, 0, TimeSpan.FromHours(-5)), line.OccurredAt);
-        Assert.Equal("thing's meeting", line.Summary);
+        Assert.Equal("thing meeting", line.Summary);
+    }
+
+    [Fact]
+    public void PossessiveOfAKeywordThatDoesNotParseStaysAsTyped()
+    {
+        // "since:" is a query keyword, so in a capture it is text, possessive and all.
+        Assert.Equal("since:today's meeting", LineParser.ParseCapture("since:today's meeting", Now, Zone).Summary);
     }
 
     [Theory]

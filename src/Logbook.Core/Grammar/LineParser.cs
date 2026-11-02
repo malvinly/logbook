@@ -39,11 +39,13 @@ public static class LineParser
                     break;
                 case TokenKind.Separator:
                     break; // Between two tokens that are both gone, so it would stand alone.
+                case TokenKind.Stripped when previousRemoved && token.Value.Length == 0:
+                    break; // Only a possessive 's, which went with the token: "told @j-doe's manager" stores "told manager".
                 case TokenKind.Stripped when previousRemoved:
                     // With the token gone, the space before it would be left in front of its punctuation
                     // ("asked @j-doe, then"), so it goes too: "asked, then".
                     summary.TrimEnd();
-                    summary.Append(token.Raw, fromToken: true);
+                    summary.Append(token.Value, fromToken: true);
                     removed = false;
                     break;
                 case TokenKind.Opening:
@@ -106,7 +108,7 @@ public static class LineParser
                     break; // Between two tokens, so the filter needs no literal "," for it.
                 case TokenKind.Stripped when previousUsed:
                 case TokenKind.Opening:
-                    plain.Append(token.Raw, fromToken: true);
+                    plain.Append(token.Value, fromToken: true);
                     used = false;
                     break;
                 default:
