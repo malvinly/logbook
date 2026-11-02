@@ -68,6 +68,20 @@ public sealed class BalloonOrder<T>
     /// </summary>
     public T? Expired() => Showing is null ? null : Release();
 
+    /// <summary>
+    /// Drops every waiting balloon that matches, keeping the rest in order. The one showing, and the click action, are
+    /// left alone: the app drops waiting reminders on lock (DESIGN.md section 10), since they show again after unlock.
+    /// </summary>
+    public void RemoveWaiting(Func<T, bool> match)
+    {
+        T[] kept = _waiting.Where(balloon => !match(balloon)).ToArray();
+        _waiting.Clear();
+        foreach (T balloon in kept)
+        {
+            _waiting.Enqueue(balloon);
+        }
+    }
+
     private T? Release()
     {
         if (_waiting.TryDequeue(out T? next))

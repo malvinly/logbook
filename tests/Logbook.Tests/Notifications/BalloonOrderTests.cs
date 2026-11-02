@@ -307,4 +307,90 @@ public sealed class BalloonOrderTests
         Assert.Null(queue.Showing);
         Assert.Same(Reminder, queue.Enqueue(Reminder));
     }
+
+    [Fact]
+    public void RemoveWaitingDropsAWaitingMatchAndKeepsTheRestInOrder()
+    {
+        BalloonOrder<Balloon> queue = new();
+        Balloon first = new("First", "a");
+        Balloon secondReminder = new("Reminder", "entry-2");
+        queue.Enqueue(first);
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+        queue.Enqueue(Downloaded);
+        queue.Enqueue(secondReminder);
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Same(first, queue.Showing);
+        Assert.Same(HotkeyFailed, ShownThenClosed(queue));
+        Assert.Same(Downloaded, ShownThenClosed(queue));
+        Assert.Null(ShownThenClosed(queue));
+    }
+
+    [Fact]
+    public void RemoveWaitingLeavesTheShowingMatchAndItsClickAction()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(Reminder);
+        queue.Enqueue(HotkeyFailed);
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Same(Reminder, queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+        Assert.Same(HotkeyFailed, ShownThenClosed(queue));
+    }
+
+    [Fact]
+    public void RemoveWaitingKeepsTheClickActionOfAClosedMatch()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(Reminder);
+        ShownThenClosed(queue);
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Null(queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void RemoveWaitingWithNoMatchChangesNothing()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Downloaded);
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Same(HotkeyFailed, queue.Showing);
+        Assert.Same(Downloaded, ShownThenClosed(queue));
+    }
+
+    [Fact]
+    public void RemoveWaitingWithNothingQueuedIsFine()
+    {
+        BalloonOrder<Balloon> queue = new();
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Null(queue.Showing);
+        Assert.Null(queue.LastShown);
+        Assert.Same(Reminder, queue.Enqueue(Reminder));
+    }
+
+    [Fact]
+    public void AfterTheLastWaitingMatchIsDroppedTheShowingOnesCloseLeavesNothingShowing()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+
+        queue.RemoveWaiting(balloon => balloon.Title == "Reminder");
+
+        Assert.Null(ShownThenClosed(queue));
+        Assert.Null(queue.Showing);
+        Assert.Same(HotkeyFailed, queue.LastShown);
+    }
 }
