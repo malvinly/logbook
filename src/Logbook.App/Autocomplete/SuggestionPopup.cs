@@ -12,6 +12,8 @@ namespace Logbook.App.Autocomplete;
 /// </summary>
 public sealed class SuggestionPopup
 {
+    private static readonly string[] Keywords = ["at", "since", "until", "last"];
+
     private readonly TextBox _box;
     private readonly Func<Suggestions> _suggestions;
     private readonly Popup _popup;
@@ -106,6 +108,16 @@ public sealed class SuggestionPopup
             start++;
         }
 
+        end = StripTrailing(text, start, end);
+        sigil = start < text.Length ? text[start] : '\0';
+        bool mayStart = start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"' || FollowsTokenSeparator(text, start);
+        return (sigil == '#' || sigil == '@') && mayStart && caret <= end;
+    }
+
+    // The end once the trailing punctuation the grammar strips is left out, keeping at least the character at start
+    // (the sigil, or a keyword's colon).
+    private static int StripTrailing(string text, int start, int end)
+    {
         while (end > start + 1)
         {
             if (text[end - 1] is ',' or '.' or ';' or ':' or ')' or '"' or '?' or '!')
@@ -122,9 +134,7 @@ public sealed class SuggestionPopup
             }
         }
 
-        sigil = start < text.Length ? text[start] : '\0';
-        bool mayStart = start == 0 || char.IsWhiteSpace(text[start - 1]) || text[start - 1] is '(' or '"' || FollowsTokenSeparator(text, start);
-        return (sigil == '#' || sigil == '@') && mayStart && caret <= end;
+        return end;
     }
 
     private static bool IsTokenEnd(char c) => char.IsWhiteSpace(c) || c is ',' or ';';
@@ -137,6 +147,23 @@ public sealed class SuggestionPopup
         if (start == 0 || text[start - 1] is not (',' or ';'))
         {
             return false;
+        }
+
+        // "last:7d,#pr" suggests too: a keyword value ends at a separator before a tag or person. The value may hold
+        // commas of its own ("at:yesterday,3pm,#pr"), so the keyword is looked for at the start of the whole word.
+        int wordStart = start - 1;
+        while (wordStart > 0 && !char.IsWhiteSpace(text[wordStart - 1]))
+        {
+            wordStart--;
+        }
+
+        foreach (string keyword in Keywords)
+        {
+            int colon = wordStart + keyword.Length;
+            if (text.AsSpan(wordStart).StartsWith(keyword + ":", StringComparison.Ordinal) && StripTrailing(text, colon, start - 1) > colon + 1)
+            {
+                return true;
+            }
         }
 
         int previous = start - 1;
