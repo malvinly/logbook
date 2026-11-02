@@ -6,11 +6,11 @@ namespace Logbook.Core.Storage;
 /// </summary>
 public static class DataFilePointer
 {
-    /// <summary>The path the pointer names, or null when it is empty, relative, or not a log file name.</summary>
+    /// <summary>The path the pointer names, or null when it is empty, more than one line, relative, or not a log file name.</summary>
     public static string? Parse(string? content)
     {
         string path = content?.Trim() ?? "";
-        if (path.Length == 0 || !Path.IsPathFullyQualified(path))
+        if (path.Length == 0 || path.Contains('\r') || path.Contains('\n') || !Path.IsPathFullyQualified(path))
         {
             return null;
         }

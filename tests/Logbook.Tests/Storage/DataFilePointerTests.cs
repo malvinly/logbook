@@ -39,6 +39,8 @@ public sealed class DataFilePointerTests
     [InlineData(@"C:\Users\j-doe\Logbook\logbook.jsonl")]
     [InlineData(@"D:\Sync\logbook-DESKTOP.jsonl")] // a conflict copy the user chose
     [InlineData(@"\\server\share\logbook.jsonl")]
+    [InlineData("C:/Users/j-doe/Logbook/logbook.jsonl")] // forward slashes are returned as written
+    [InlineData(@"C:\Users\j-doe\Logbook\LOGBOOK.JSONL")] // the name check ignores case
     public void AFullPathToALogFileIsThePointer(string content)
     {
         Assert.Equal(content, DataFilePointer.Parse(content));
@@ -48,5 +50,21 @@ public sealed class DataFilePointerTests
     public void SurroundingWhitespaceAndNewlinesAreTrimmed()
     {
         Assert.Equal(@"C:\Users\j-doe\Logbook\logbook.jsonl", DataFilePointer.Parse("  " + @"C:\Users\j-doe\Logbook\logbook.jsonl" + "\r\n"));
+    }
+
+    [Theory]
+    [InlineData("C:\\Users\\j-doe\\Logbook\\logbook.jsonl\r\nD:\\Sync\\logbook.jsonl")]
+    [InlineData("C:\\Users\\j-doe\\Logbook\\logbook.jsonl\nD:\\Sync\\logbook.jsonl")]
+    public void TwoLinesAreNoPointer(string content)
+    {
+        Assert.Null(DataFilePointer.Parse(content));
+    }
+
+    // Explorer's "Copy as path" wraps the path in double quotes. The app writes the pointer itself, so quotes never
+    // occur; a hand-edited pointer with them is not a full path, and first run asks.
+    [Fact]
+    public void AQuotedPathIsNoPointer()
+    {
+        Assert.Null(DataFilePointer.Parse("\"" + @"C:\Users\j-doe\Logbook\logbook.jsonl" + "\""));
     }
 }

@@ -18,7 +18,7 @@
 ## Finding the data file
 
 - The absolute path of the chosen file is kept per Windows profile in `%LOCALAPPDATA%\Logbook\data-file`. It is the only thing that finds the file at launch; the settings file does not name it.
-- No pointer (a new profile, or a pointer that is not a full path to a `logbook*.jsonl` file): the first-run picker runs.
+- No pointer (a new profile, or a pointer that is not one line holding a full path to a `logbook*.jsonl` file): the first-run picker runs.
 - A pointer to a file that is not there: the "Log file not found" dialog names the path and offers "Choose a file", which runs the first-run picker, or "Quit", for when a sync client is still downloading the file.
 - Browsing to an existing file uses the `logbook.settings.json` beside it. When there is none, the settings in use are kept and saved beside the file. So losing the profile costs one dialog, never data or settings.
 - Choosing a different file in the conflict-copy sibling picker at launch updates the pointer; the sibling is in the same folder, so the settings stay.
