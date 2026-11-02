@@ -1,0 +1,48 @@
+# A pushed tag vX.Y.Z becomes a GitHub Release holding the single-file Logbook.exe and its SHA-256 (docs/development.md).
+# A 0.x version is marked a pre-release.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Version from tag
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test -c Release
+
+      - name: Publish
+        run: dotnet publish src/Logbook.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=false -p:Version=${{ env.VERSION }} -o publish
+
+      - name: Hash
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash publish/Logbook.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content publish/Logbook.exe.sha256 -Value "$hash  Logbook.exe" -NoNewline
+          "SHA256=$hash" >> $env:GITHUB_ENV
+
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = "SHA-256 of Logbook.exe: ``$env:SHA256``"
+          $args = @($env:GITHUB_REF_NAME, 'publish/Logbook.exe', 'publish/Logbook.exe.sha256', '--title', "Logbook $env:VERSION", '--notes', $notes)
+          if ($env:VERSION.StartsWith('0.')) { $args += '--prerelease' }
+          gh release create @args
