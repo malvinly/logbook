@@ -84,18 +84,14 @@ public sealed class HeaderLineTests : IDisposable
     }
 
     [Fact]
-    public async Task OverwriteRetriesWhileAnotherProcessHoldsTheFile()
+    public void OverwriteRetriesWhileAnotherProcessHoldsTheFile()
     {
         File.WriteAllText(_file.Path, "AAAAAA\nrecord\n");
         FileStream held = new(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None);
-        Task release = Task.Run(async () =>
-        {
-            await Task.Delay(100);
-            await held.DisposeAsync();
-        });
+        Thread release = Later.Run(TimeSpan.FromMilliseconds(100), held.Dispose);
 
         HeaderLine.Overwrite(_file.Path, Bytes("AAAAAA"), Bytes("BBBBBB"), _ => true, ShortDelays);
-        await release;
+        release.Join();
 
         Assert.Equal("BBBBBB\nrecord\n", File.ReadAllText(_file.Path));
     }

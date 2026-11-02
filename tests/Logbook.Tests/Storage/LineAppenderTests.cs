@@ -48,18 +48,14 @@ public sealed class LineAppenderTests : IDisposable
     }
 
     [Fact]
-    public async Task RetriesWhileAnotherProcessHoldsTheFile()
+    public void RetriesWhileAnotherProcessHoldsTheFile()
     {
         File.WriteAllText(_file.Path, "header\n");
         FileStream held = new(_file.Path, FileMode.Open, FileAccess.Read, FileShare.None);
-        Task release = Task.Run(async () =>
-        {
-            await Task.Delay(100);
-            await held.DisposeAsync();
-        });
+        Thread release = Later.Run(TimeSpan.FromMilliseconds(100), held.Dispose);
 
         new LineAppender(_file.Path, ShortDelays).Append("line");
-        await release;
+        release.Join();
 
         Assert.Equal("header\nline\n", File.ReadAllText(_file.Path));
     }
@@ -113,18 +109,14 @@ public sealed class LineAppenderTests : IDisposable
     }
 
     [Fact]
-    public async Task RetriesWhileTheFileIsReadOnly()
+    public void RetriesWhileTheFileIsReadOnly()
     {
         File.WriteAllText(_file.Path, "header\n");
         File.SetAttributes(_file.Path, FileAttributes.ReadOnly);
-        Task release = Task.Run(async () =>
-        {
-            await Task.Delay(100);
-            File.SetAttributes(_file.Path, FileAttributes.Normal);
-        });
+        Thread release = Later.Run(TimeSpan.FromMilliseconds(100), () => File.SetAttributes(_file.Path, FileAttributes.Normal));
 
         new LineAppender(_file.Path, ShortDelays).Append("line");
-        await release;
+        release.Join();
 
         Assert.Equal("header\nline\n", File.ReadAllText(_file.Path));
     }
