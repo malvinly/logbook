@@ -95,8 +95,8 @@ public sealed partial class ExportPanel : Window
         }
     }
 
-    // The same rules as Export decrypted, since this is a plaintext copy too: a default folder outside every synced
-    // folder, a warning before writing into one, never over the log, and the folder remembered on this profile only.
+    // The same rules as Export decrypted, since this is a plaintext copy too: a default folder outside the log's
+    // folder, a warning before writing into it, never over the log, and the folder remembered on this profile only.
     private void OnSaveCsvClick(object sender, RoutedEventArgs e)
     {
         SaveFileDialog dialog = new()

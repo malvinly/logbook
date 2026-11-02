@@ -19,7 +19,7 @@ internal static class PlaintextTarget
     private const string FolderMarker = "export-folder";
 
     /// <summary>The one-sentence reason a plaintext export defaults outside the log's folder.</summary>
-    public const string Why = "The export is unencrypted and contains notes about people and situations; the log's folder may be synced, and synced storage is searchable by people who are not you, so the export defaults to a folder outside it.";
+    public const string Why = "The export is unencrypted and contains notes about people and situations. Logbook cannot tell which folders are synced, so it only keeps the default out of the log's folder; choose a folder that is not synced.";
 
     /// <summary>The remembered folder, else Documents, else local app data: the first that is not inside the log's folder.</summary>
     public static string DefaultFolder(string logFolder)

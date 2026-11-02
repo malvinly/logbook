@@ -14,7 +14,7 @@
     <StackPanel Margin="{StaticResource PagePadding}">
       <TextBlock Style="{StaticResource TitleText}" Text="Write a plaintext copy of the log" />
       <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
-                 Text="The export is unencrypted and contains notes about people and situations; the log's folder may be synced, and synced storage is searchable by people who are not you, so the export defaults to a folder outside it. Delete the file when you are done with it." />
+                 Text="The export is unencrypted and contains notes about people and situations. Logbook cannot tell which folders are synced, so it only keeps the default out of the log's folder; choose a folder that is not synced. Delete the file when you are done with it." />
       <Label Content="Save as" Margin="0,16,0,0" />
       <Grid>
         <Grid.ColumnDefinitions>

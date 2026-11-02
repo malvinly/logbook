@@ -13,7 +13,7 @@ namespace Logbook.App.Export;
 
 /// <summary>
 /// Tools → Export decrypted (docs/export.md): a plaintext JSONL file, latest revision per live id, or the
-/// whole history. The save location defaults outside every synced folder and is remembered.
+/// whole history. The save location defaults outside the log's folder and is remembered.
 /// </summary>
 public sealed partial class ExportDecryptedWindow : Window
 {
