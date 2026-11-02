@@ -903,18 +903,15 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowExportPanel(string title, IReadOnlyList<Entry> entries)
     {
-        ExportPanel panel = new(title, entries, _settings.Export, SaveSettings, _dataFilePath, SyncRoots()) { Owner = VisibleMain };
+        ExportPanel panel = new(title, entries, _settings.Export, SaveSettings, _dataFilePath, _dataFolder) { Owner = VisibleMain };
         panel.ShowDialog();
     }
 
     private void ShowExportDecrypted()
     {
-        ExportDecryptedWindow window = new(Log!, _dataFilePath, SyncRoots()) { Owner = VisibleMain };
+        ExportDecryptedWindow window = new(Log!, _dataFilePath, _dataFolder) { Owner = VisibleMain };
         window.ShowDialog();
     }
-
-    // The log's own folder, which may be synced: a plaintext export must not default into it.
-    private List<string> SyncRoots() => [_dataFolder];
 
     // Only reachable from the main window, which exists only while unlocked.
     private void ShowChangePassphrase()

@@ -22,10 +22,10 @@ public sealed partial class ExportPanel : Window
     private readonly ExportSettings _settings;
     private readonly Action _saveSettings;
     private readonly string _dataFilePath;
-    private readonly IReadOnlyList<string> _syncRoots;
+    private readonly string _logFolder;
     private bool _loading = true;
 
-    public ExportPanel(string title, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings, string dataFilePath, IReadOnlyList<string> syncRoots)
+    public ExportPanel(string title, IReadOnlyList<Entry> entries, ExportSettings settings, Action saveSettings, string dataFilePath, string logFolder)
     {
         InitializeComponent();
         _title = title;
@@ -33,7 +33,7 @@ public sealed partial class ExportPanel : Window
         _settings = settings;
         _saveSettings = saveSettings;
         _dataFilePath = dataFilePath;
-        _syncRoots = syncRoots;
+        _logFolder = logFolder;
         CsvWhy.Text = "Save as CSV writes the entries listed here with every field, except that a text cell starting with =, +, - or @ gets a leading apostrophe so spreadsheets do not run it as a formula. " + PlaintextTarget.Why;
         ShowGaps.IsChecked = settings.ShowGaps;
         GroupByMonth.IsChecked = settings.GroupByMonth;
@@ -103,7 +103,7 @@ public sealed partial class ExportPanel : Window
         {
             Title = "Save as CSV",
             FileName = DateTime.Now.ToString("'logbook-export-'yyyy-MM-dd'.csv'", CultureInfo.InvariantCulture),
-            InitialDirectory = PlaintextTarget.DefaultFolder(_syncRoots),
+            InitialDirectory = PlaintextTarget.DefaultFolder(_logFolder),
             Filter = "CSV (*.csv)|*.csv|All files (*.*)|*.*",
             DefaultExt = ".csv",
             OverwritePrompt = true,
@@ -121,7 +121,7 @@ public sealed partial class ExportPanel : Window
             return;
         }
 
-        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots) || !IsLoaded)
+        if (!PlaintextTarget.ConfirmIfInLogFolder(this, fullPath, _logFolder) || !IsLoaded)
         {
             return;
         }

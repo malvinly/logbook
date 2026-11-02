@@ -8,20 +8,20 @@ namespace Logbook.App.Export;
 
 /// <summary>
 /// Where a plaintext export may go (docs/export.md), shared by the decrypted export and the CSV export: a default
-/// folder outside every synced folder, a warning before writing into one, the guards that keep the encrypted log from
-/// being overwritten, and the last folder remembered per Windows profile.
+/// folder outside the log's folder (which may be synced), a warning before writing into it, the guards that keep the
+/// encrypted log from being overwritten, and the last folder remembered per Windows profile.
 /// </summary>
 internal static class PlaintextTarget
 {
-    // The folder is remembered per Windows profile, never in the synced settings file: it is an absolute local path
-    // that would point a reader of that file at the one plaintext copy.
+    // The folder is remembered per Windows profile in %LOCALAPPDATA%, never in the settings file beside the log, which
+    // may be synced: it is an absolute local path that would point a reader of that file at the one plaintext copy.
     private const string FolderMarker = "export-folder";
 
-    /// <summary>The one-sentence reason a plaintext export defaults outside the synced root.</summary>
-    public const string Why = "The export is unencrypted and contains notes about people and situations; synced storage is searchable by people who are not you, so it defaults to a folder outside the synced root.";
+    /// <summary>The one-sentence reason a plaintext export defaults outside the log's folder.</summary>
+    public const string Why = "The export is unencrypted and contains notes about people and situations; the log's folder may be synced, and synced storage is searchable by people who are not you, so the export defaults to a folder outside it.";
 
-    /// <summary>The remembered folder, else Documents, else local app data: the first that is not inside any synced folder.</summary>
-    public static string DefaultFolder(IReadOnlyList<string> syncRoots)
+    /// <summary>The remembered folder, else Documents, else local app data: the first that is not inside the log's folder.</summary>
+    public static string DefaultFolder(string logFolder)
     {
         string?[] candidates =
         [
@@ -31,17 +31,17 @@ internal static class PlaintextTarget
         ];
         foreach (string? folder in candidates)
         {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder) && !IsSynced(folder, syncRoots))
+            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder) && !IsInLogFolder(folder, logFolder))
             {
                 return folder;
             }
         }
 
-        // Everything is synced (USERPROFILE as the root does that); the warning before the write will say so.
+        // Every candidate is inside the log's folder; the warning before the write will say so.
         return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     }
 
-    public static bool IsSynced(string path, IReadOnlyList<string> syncRoots) => syncRoots.Any(root => DataFolder.IsUnder(path, root));
+    public static bool IsInLogFolder(string path, string logFolder) => DataFolder.IsUnder(path, logFolder);
 
     /// <summary>Why the path must not be written, or null when it may be.</summary>
     public static string? Problem(string fullPath, string dataFilePath)
@@ -60,15 +60,15 @@ internal static class PlaintextTarget
         return null;
     }
 
-    /// <summary>True when the path is outside every synced folder, or the user chose to write into one anyway.</summary>
-    public static bool ConfirmIfSynced(Window owner, string fullPath, IReadOnlyList<string> syncRoots)
+    /// <summary>True when the path is outside the log's folder, or the user chose to write into it anyway.</summary>
+    public static bool ConfirmIfInLogFolder(Window owner, string fullPath, string logFolder)
     {
-        if (!IsSynced(fullPath, syncRoots))
+        if (!IsInLogFolder(fullPath, logFolder))
         {
             return true;
         }
 
-        return AppDialog.Confirm(owner, "Export into a synced folder?", "This folder is synced. The export is unencrypted and others may be able to search it. Write it there anyway?", "Write it there", "Cancel", DialogTone.Warning, confirmIsDefault: false);
+        return AppDialog.Confirm(owner, "Export into the log's folder?", "This folder holds the log and may be synced. The export is unencrypted and others may be able to search synced storage. Write it there anyway?", "Write it there", "Cancel", DialogTone.Warning, confirmIsDefault: false);
     }
 
     public static void RememberFolder(string fullPath) => LocalMarker.Set(FolderMarker, Path.GetDirectoryName(fullPath));

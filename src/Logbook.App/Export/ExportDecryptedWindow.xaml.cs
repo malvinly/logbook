@@ -19,20 +19,20 @@ public sealed partial class ExportDecryptedWindow : Window
 {
     private readonly LogFile _log;
     private readonly string _dataFilePath;
-    private readonly IReadOnlyList<string> _syncRoots;
+    private readonly string _logFolder;
 
-    public ExportDecryptedWindow(LogFile log, string dataFilePath, IReadOnlyList<string> syncRoots)
+    public ExportDecryptedWindow(LogFile log, string dataFilePath, string logFolder)
     {
         InitializeComponent();
         _log = log;
         _dataFilePath = dataFilePath;
-        _syncRoots = syncRoots;
+        _logFolder = logFolder;
         PathBox.Text = Path.Combine(DefaultFolder(), FileName());
     }
 
     private static string FileName() => DateTime.Now.ToString("'logbook-export-'yyyy-MM-dd'.jsonl'", CultureInfo.InvariantCulture);
 
-    private string DefaultFolder() => PlaintextTarget.DefaultFolder(_syncRoots);
+    private string DefaultFolder() => PlaintextTarget.DefaultFolder(_logFolder);
 
     private void OnBrowseClick(object sender, RoutedEventArgs e)
     {
@@ -79,7 +79,7 @@ public sealed partial class ExportDecryptedWindow : Window
         }
 
         // A lock while the question was up closed this window and emptied the log; there is nothing to write then.
-        if (!PlaintextTarget.ConfirmIfSynced(this, fullPath, _syncRoots) || !IsLoaded)
+        if (!PlaintextTarget.ConfirmIfInLogFolder(this, fullPath, _logFolder) || !IsLoaded)
         {
             return;
         }
