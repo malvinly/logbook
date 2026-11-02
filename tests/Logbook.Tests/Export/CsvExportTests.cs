@@ -181,6 +181,41 @@ public sealed class CsvExportTests
         Assert.Contains(",'" + firstRef + "; INC0041233,", Rows([entry])[1], StringComparison.Ordinal);
     }
 
+    // Tags and people (Phase 8): the normaliser allows a leading - or +, so the joined cell can start with one.
+    [Theory]
+    [InlineData("-urgent")]
+    [InlineData("+1")]
+    public void TagsStartingWithAFormulaCharacterGetAnApostrophe(string firstTag)
+    {
+        Entry entry = SampleEntries.FirstAsk with { Tags = [firstTag, "asked"] };
+        Assert.Contains(",Asked for staging access,,'" + firstTag + " asked,j-doe,", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("-j-doe")]
+    [InlineData("+a-smith")]
+    public void PeopleStartingWithAFormulaCharacterGetAnApostrophe(string firstPerson)
+    {
+        Entry entry = SampleEntries.FirstAsk with { People = [firstPerson, "a-smith"] };
+        Assert.Contains(",asked staging-access,'" + firstPerson + " a-smith,,", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnlyTheFirstTagDecidesTheTagsCell()
+    {
+        Entry entry = SampleEntries.FirstAsk with { Tags = ["asked", "-urgent"] };
+        Assert.Contains(",asked -urgent,j-doe,", Rows([entry])[1], StringComparison.Ordinal);
+        Assert.DoesNotContain("'", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnlyTheFirstPersonDecidesThePeopleCell()
+    {
+        Entry entry = SampleEntries.FirstAsk with { People = ["j-doe", "+a-smith"] };
+        Assert.Contains(",asked staging-access,j-doe +a-smith,,", Rows([entry])[1], StringComparison.Ordinal);
+        Assert.DoesNotContain("'", Rows([entry])[1], StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("Asked again")]
     [InlineData("'already quoted")]
@@ -231,20 +266,20 @@ public sealed class CsvExportTests
     }
 
     [Fact]
-    public void FormulaPrefixLeavesTheOtherColumnsVerbatim()
+    public void FormulaPrefixLeavesRelatedToRemindAtIdAndTimestampsVerbatim()
     {
         Entry entry = SampleEntries.FirstAsk with
         {
             Summary = "=a",
             Reason = "+b",
             Refs = ["-c"],
-            Tags = ["asked"],
-            People = ["a-smith"],
+            Tags = ["-d"],
+            People = ["+e"],
             RelatedTo = ["01K0000000000000000000000A"],
             RemindAt = new DateTimeOffset(2026, 8, 10, 9, 0, 0, TimeSpan.FromHours(-5)),
         };
         Assert.Equal(
-            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,'=a,'+b,asked,a-smith,'-c,01K0000000000000000000000A,2026-08-10T09:00:00.0000000-05:00,01K0000000000000000000000B",
+            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,'=a,'+b,'-d,'+e,'-c,01K0000000000000000000000A,2026-08-10T09:00:00.0000000-05:00,01K0000000000000000000000B",
             Rows([entry])[1]);
     }
 
