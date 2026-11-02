@@ -13,7 +13,7 @@
 2. If creating: set a passphrase twice, read the no-recovery warning, confirm.
 3. If opening an existing file: enter the passphrase.
 4. Offer startup registration.
-5. Show the hotkey and the grammar cheat sheet once.
+5. Show the hotkey and the grammar cheat sheet once. This happens only on a true first run, when there was no pointer at all; the picker run from a pointer problem skips it.
 
 ## Finding the data file
 
@@ -23,7 +23,7 @@
 - The pointer is written to a temporary file beside it and then swapped in, so a crash cannot leave half a path. A write that fails is never silent: at launch "Location not remembered" names the pointer file, the chosen log opens anyway, and the next start asks for the file again; from "Choose another…" "Could not switch" names it and the app keeps the current log.
 - A pointer to a file that is not there: the "Log file not found" dialog names the path and offers "Choose a file", which runs the first-run picker, or "Quit", for when a sync client is still downloading the file.
 - Which settings go with a newly chosen file, by the picker or "Choose another…": the `logbook.settings.json` beside it wins; an unreadable one is left alone and the current settings stay in memory; when there is none, the current settings are saved there. After "Log file not found" the current settings are the ones from the missing file's old folder, when it still has them, so a log moved without its settings file keeps the user's hotkeys and theme. So losing the profile costs one dialog, never data or settings.
-- Choosing a different file in the conflict-copy sibling picker at launch updates the pointer; the sibling is in the same folder, so the settings stay.
+- Choosing a different file in the conflict-copy sibling picker at launch updates the pointer; the sibling is in the same folder, so the settings stay. The same check runs when the first-run picker returns an existing file, before its passphrase is asked for.
 - The Settings window's Files section shows the data file in a read-only box with "Choose another…", which runs the first-run picker again. An existing file is not unlocked there; the restart asks for its passphrase. A new file is created there, with a passphrase set twice as on first run.
 - The settings rule above applies; the running app keeps its own settings until the restart, and the current settings file is left as it is.
 - The pointer is then rewritten and the app offers to restart now or later. Restarting discards unsaved changes in the Settings window. Until it restarts, the app keeps using the current log, and the Settings window shows the chosen file with "Opens the next time Logbook starts."

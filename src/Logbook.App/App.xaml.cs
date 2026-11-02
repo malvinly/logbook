@@ -335,12 +335,12 @@ public sealed partial class App : Application, IDisposable
                 "Quit",
                 DialogTone.Warning,
                 confirmIsDefault: false);
-            return chooseInstead && RunFirstRun();
+            return chooseInstead && RunFirstRun(firstRun: false);
         }
 
         if (pointer is null)
         {
-            return RunFirstRun();
+            return RunFirstRun(firstRun: true);
         }
 
         if (!File.Exists(pointer))
@@ -359,7 +359,7 @@ public sealed partial class App : Application, IDisposable
             // The settings may still be in the old folder; loading them now means a log moved without its settings
             // file keeps the user's hotkeys and theme, since the picker saves the settings in memory beside the new one.
             _settings = SettingsStore.Load(Path.GetDirectoryName(pointer)!) ?? _settings;
-            return choose && RunFirstRun();
+            return choose && RunFirstRun(firstRun: false);
         }
 
         _dataFilePath = pointer;
@@ -395,10 +395,11 @@ public sealed partial class App : Application, IDisposable
         return true;
     }
 
-    // docs/settings.md, first run steps 1 to 3. Cancelling a later step returns to the first.
-    // The settings beside the chosen file are adopted by AdoptSettingsBeside. The settings in memory are defaults here
-    // unless PrepareDataFile has just loaded the ones from the missing log's old folder.
-    private bool RunFirstRun()
+    // docs/settings.md, first run steps 1 to 3. Cancelling a later step returns to the first. firstRun is true only
+    // when there was no pointer at all; the cheat sheet then shows once. The settings beside the chosen file are
+    // adopted by AdoptSettingsBeside. The settings in memory are defaults here unless PrepareDataFile has just loaded
+    // the ones from the missing log's old folder.
+    private bool RunFirstRun(bool firstRun)
     {
         while (true)
         {
@@ -408,10 +409,11 @@ public sealed partial class App : Application, IDisposable
                 return false;
             }
 
+            string path = welcome.DataFilePath;
             LogFile opened;
             if (welcome.CreateNew)
             {
-                NewPassphraseWindow passphrase = new(welcome.DataFilePath);
+                NewPassphraseWindow passphrase = new(path);
                 if (passphrase.ShowDialog() != true)
                 {
                     continue;
@@ -419,7 +421,7 @@ public sealed partial class App : Application, IDisposable
 
                 try
                 {
-                    opened = LogFile.Create(welcome.DataFilePath, passphrase.Passphrase, DateTimeOffset.Now);
+                    opened = LogFile.Create(path, passphrase.Passphrase, DateTimeOffset.Now);
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
@@ -430,7 +432,21 @@ public sealed partial class App : Application, IDisposable
             }
             else
             {
-                UnlockWindow unlock = new(welcome.DataFilePath);
+                // The launch check for conflict copies (docs/file-format.md) must also run when the file was just
+                // picked, or a sibling picked by mistake would be opened without the question.
+                IReadOnlyList<string> siblings = SyncFile.Siblings(path);
+                if (siblings.Count > 1)
+                {
+                    PickFileWindow picker = new(siblings, path);
+                    if (picker.ShowDialog() != true || picker.ChosenPath is null)
+                    {
+                        continue;
+                    }
+
+                    path = picker.ChosenPath;
+                }
+
+                UnlockWindow unlock = new(path);
                 if (unlock.ShowDialog() != true || unlock.Opened is null)
                 {
                     continue;
@@ -439,13 +455,13 @@ public sealed partial class App : Application, IDisposable
                 opened = unlock.Opened;
             }
 
-            _dataFolder = Path.GetDirectoryName(welcome.DataFilePath)!;
+            _dataFolder = Path.GetDirectoryName(path)!;
             _settings = AdoptSettingsBeside(_dataFolder, _settings, null);
-            _dataFilePath = welcome.DataFilePath;
+            _dataFilePath = path;
             Log = opened;
-            _firstRun = true;
+            _firstRun = firstRun;
             RememberDataFile(_dataFilePath);
-            Diag.Log("First run complete");
+            Diag.Log(firstRun ? "First run complete" : "Data file chosen");
             return true;
         }
     }
