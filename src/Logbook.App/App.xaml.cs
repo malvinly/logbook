@@ -135,8 +135,8 @@ public sealed partial class App : Application, IDisposable
             EnsureUnlocked();
         }
 
-        // Exit was chosen from the tray while the unlock prompt was up. The startup offer marks itself as made before it
-        // asks, so asking now, while the app shuts down, would lose it for good.
+        // Exit was chosen from the tray while the unlock prompt was up, so the startup offer is not made while the app
+        // shuts down; it comes back next launch.
         if (_exiting)
         {
             return;
@@ -417,7 +417,7 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
-        LocalMarker.Set(StartupOfferMarker);
+        bool wasLocked = IsLocked;
         bool register = AppDialog.Confirm(
             null,
             "Start Logbook when you sign in?",
@@ -426,6 +426,15 @@ public sealed partial class App : Application, IDisposable
             "Not now",
             DialogTone.Question,
             confirmIsDefault: true);
+
+        // A workstation or idle lock closes the dialog unanswered, and Confirm then returns false as if for "Not now",
+        // so the marker is set only after the dialog and only when no lock closed it; otherwise the offer comes back.
+        if (!wasLocked && IsLocked)
+        {
+            return;
+        }
+
+        LocalMarker.Set(StartupOfferMarker);
         if (!register)
         {
             return;
