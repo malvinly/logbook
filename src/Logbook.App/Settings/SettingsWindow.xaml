@@ -90,6 +90,15 @@
       <CheckBox x:Name="StartWithWindows" Margin="0,6,0,0" Content="Start Logbook when I sign in (a shortcut in the Startup folder)" />
 
       <TextBlock Style="{StaticResource SectionText}" Text="Files" Margin="0,20,0,0" />
+      <Label Content="Data file" Margin="0,6,0,0" />
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="DataFilePath" IsReadOnly="True" />
+        <Button x:Name="ChooseAnother" Grid.Column="1" Content="Choose another…" Margin="8,0,0,0" Click="OnChooseAnotherClick" />
+      </Grid>
       <TextBlock x:Name="FileInfo" Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap" />
 
       <TextBlock x:Name="Problem" Style="{StaticResource ProblemText}" Margin="0,12,0,0" />
