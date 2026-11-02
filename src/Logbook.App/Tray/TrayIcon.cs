@@ -20,6 +20,11 @@ internal sealed class TrayIcon : IDisposable
 {
     private const int BalloonTimeoutMilliseconds = 10_000;
 
+    // The balloon queue's two waits for a close that may never be reported (DESIGN.md section 12): 15 seconds after a
+    // balloon is put up, then 45 more, so the cap falls 60 seconds after it was put up.
+    private static readonly TimeSpan BalloonFallback = TimeSpan.FromMilliseconds(BalloonTimeoutMilliseconds + 5_000);
+    private static readonly TimeSpan BalloonCapRemainder = TimeSpan.FromSeconds(60) - BalloonFallback;
+
     private readonly NotifyIcon _icon;
     private readonly ContextMenu _menu;
     private readonly IntPtr _focusHandle;
@@ -61,9 +66,10 @@ internal sealed class TrayIcon : IDisposable
         _icon.BalloonTipClosed += (_, _) => AfterClose(_balloons.Closed());
 
         // Windows may never report a close for a balloon it did not show (notifications off, do not disturb), and the
-        // queue would then wait forever. If no close has come by the balloon's timeout plus a margin, take it as closed.
-        _balloonFallback = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(BalloonTimeoutMilliseconds + 5_000) };
-        _balloonFallback.Tick += (_, _) => AfterClose(_balloons.Expired());
+        // queue would then wait forever. If no close has come by the balloon's timeout plus a margin, a balloon never
+        // reported shown is taken as closed; one reported shown gets until the cap (OnBalloonFallback).
+        _balloonFallback = new DispatcherTimer { Interval = BalloonFallback };
+        _balloonFallback.Tick += (_, _) => OnBalloonFallback();
         Redraw();
     }
 
@@ -127,7 +133,31 @@ internal sealed class TrayIcon : IDisposable
     {
         _balloonFallback.Stop();
         _icon.ShowBalloonTip(BalloonTimeoutMilliseconds, balloon.Title, balloon.Text, balloon.Warning ? ToolTipIcon.Warning : ToolTipIcon.Info);
+        _balloonFallback.Interval = BalloonFallback;
         _balloonFallback.Start();
+    }
+
+    // The timer's interval says which wait just ended: the first, at 15 seconds, or the cap, 45 seconds later. Display
+    // starts every balloon on the first, so a close that releases the next one between the two never carries the cap over.
+    private void OnBalloonFallback()
+    {
+        if (_balloonFallback.Interval == BalloonCapRemainder)
+        {
+            AfterClose(_balloons.Expired());
+            return;
+        }
+
+        Balloon? next = _balloons.ReleaseIfNeverShown();
+        if (next is null && _balloons.Showing is not null)
+        {
+            // Windows reported it shown, so it may still be on screen: wait for its close, up to the cap.
+            _balloonFallback.Stop();
+            _balloonFallback.Interval = BalloonCapRemainder;
+            _balloonFallback.Start();
+            return;
+        }
+
+        AfterClose(next);
     }
 
     // A close that did not count (BalloonOrder.Closed says when) leaves the balloon up and the fallback running.
