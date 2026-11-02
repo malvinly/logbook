@@ -1,7 +1,7 @@
 namespace Logbook.Core.Query;
 
 /// <summary>
-/// Picks the reminder the tray balloon shows next (DESIGN.md section 10). A reminder is due once its moment has passed,
+/// Picks the reminder the tray balloon shows next (docs/main-window.md). A reminder is due once its moment has passed,
 /// compared as instants. The caller remembers which reminders it has shown; a reminder that is moved to a new time
 /// counts as a new one, while an edit that leaves it alone does not.
 /// </summary>

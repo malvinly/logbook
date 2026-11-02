@@ -1,7 +1,7 @@
 namespace Logbook.Core.Notifications;
 
 /// <summary>
-/// The order tray balloons show in (DESIGN.md section 12): one shows at a time, the next waits until the current one
+/// The order tray balloons show in (docs/settings.md): one shows at a time, the next waits until the current one
 /// has closed, and each keeps its own click action, so a hotkey failure at startup is not written over by the balloon
 /// that follows it. <typeparamref name="T"/> is whatever the app shows and clicks; Core knows nothing of the tray.
 /// </summary>
@@ -16,7 +16,7 @@ public sealed class BalloonOrder<T>
 
     /// <summary>
     /// The balloon whose click action is live: the one shown most recently, kept after it closes, because a balloon can
-    /// be clicked from the Windows notification list after it has left the screen (DESIGN.md section 10). Null until
+    /// be clicked from the Windows notification list after it has left the screen (docs/main-window.md). Null until
     /// the first balloon shows.
     /// </summary>
     public T? LastShown { get; private set; }
@@ -70,7 +70,7 @@ public sealed class BalloonOrder<T>
 
     /// <summary>
     /// Drops every waiting balloon that matches, keeping the rest in order. The one showing, and the click action, are
-    /// left alone: the app drops waiting reminders on lock (DESIGN.md section 10), since they show again after unlock.
+    /// left alone: the app drops waiting reminders on lock (docs/main-window.md), since they show again after unlock.
     /// </summary>
     public void RemoveWaiting(Func<T, bool> match)
     {

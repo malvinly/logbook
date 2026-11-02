@@ -8,7 +8,7 @@ using Logbook.Core.Storage;
 namespace Logbook.App.Lock;
 
 /// <summary>
-/// Tools → Change passphrase (DESIGN.md section 8): the current passphrase, the new one twice, and the no-recovery
+/// Tools → Change passphrase (docs/file-format.md): the current passphrase, the new one twice, and the no-recovery
 /// warning again. The change re-wraps the same data key in line 1 only, so the open log stays open and unlocked.
 /// Key derivation takes a noticeable moment, so the change runs on a worker and the window shows a busy state.
 /// Nothing typed here is logged; the boxes are cleared once the passphrases have been handed over.
@@ -38,7 +38,7 @@ public sealed partial class ChangePassphraseWindow : Window
 
     /// <summary>
     /// True while the message on screen is a failure that may have followed a write to the header, so it is the only
-    /// place the user learns which passphrase the log now has. Locking waits for it (DESIGN.md section 9). A refusal
+    /// place the user learns which passphrase the log now has. Locking waits for it (docs/locking.md). A refusal
     /// that changed nothing does not set it, and any later message clears it. Success closes the window.
     /// </summary>
     public bool OutcomeUncertain { get; private set; }
@@ -106,7 +106,7 @@ public sealed partial class ChangePassphraseWindow : Window
         }
         catch (CryptographicException)
         {
-            // Every outcome goes to the diagnostics log (DESIGN.md section 9), never what was typed.
+            // Every outcome goes to the diagnostics log (docs/locking.md), never what was typed.
             Diag.Log("Passphrase change refused: the current passphrase is wrong; nothing was changed");
             ShowProblem("The current passphrase is wrong. Nothing was changed.");
             Current.Clear();

@@ -6,7 +6,7 @@ using Logbook.Core.Grammar;
 namespace Logbook.App.Main;
 
 /// <summary>
-/// The detail pane's editable copy of one entry (DESIGN.md section 10). Saving produces a new revision; the
+/// The detail pane's editable copy of one entry (docs/main-window.md). Saving produces a new revision; the
 /// stored offset is kept. Each Changed flag says whether a field differs from the previous revision.
 /// </summary>
 public sealed class EntryEditor : ObservableObject

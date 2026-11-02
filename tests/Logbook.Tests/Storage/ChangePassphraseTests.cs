@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Logbook.Tests.Storage;
 
-/// <summary>Changing the passphrase rewrites only line 1, in place; records are untouched (DESIGN.md section 8).</summary>
+/// <summary>Changing the passphrase rewrites only line 1, in place; records are untouched (docs/file-format.md).</summary>
 public sealed class ChangePassphraseTests : IDisposable
 {
     private const string OldPassphrase = "correct horse";

@@ -3,7 +3,7 @@ using System.Text;
 namespace Logbook.Core.Storage;
 
 /// <summary>
-/// Appends one line to the data file per the write rules of DESIGN.md section 8: open the existing file with
+/// Appends one line to the data file per the write rules of docs/file-format.md: open the existing file with
 /// write-through, seek to its end, write the line and its newline in one call, flush, close. The file is never held open between writes.
 /// A sync client may briefly lock the file during upload, so a failed open is retried with backoff.
 /// </summary>

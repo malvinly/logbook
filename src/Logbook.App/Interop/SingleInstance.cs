@@ -2,7 +2,7 @@ namespace Logbook.App.Interop;
 
 /// <summary>
 /// One named mutex per user session. A second launch posts a registered window message, which the first
-/// instance's message window turns into "show the main window", and then exits (DESIGN.md section 12).
+/// instance's message window turns into "show the main window", and then exits (docs/settings.md).
 /// </summary>
 internal sealed class SingleInstance : IDisposable
 {

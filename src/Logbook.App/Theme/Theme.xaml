@@ -3,7 +3,7 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:chips="clr-namespace:Logbook.App.Chips">
 
-  <!-- The one place fonts, sizes, radii, paddings and Logbook's own styles live (DESIGN.md section 16). Colors are in
+  <!-- The one place fonts, sizes, radii, paddings and Logbook's own styles live (docs/development.md). Colors are in
        Theme.Light.xaml and Theme.Dark.xaml, swapped by AppTheme, so every brush here is a DynamicResource.
        Stock controls (text boxes, buttons, check boxes, combo boxes, date pickers, menus, scroll bars) are styled by WPF's
        Fluent theme, merged before this file in App.xaml; the styles below only add to it and are based on its styles. -->

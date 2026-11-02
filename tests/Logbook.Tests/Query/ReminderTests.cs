@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Logbook.Tests.Query;
 
-/// <summary>Which reminder the tray balloon shows next (DESIGN.md section 10).</summary>
+/// <summary>Which reminder the tray balloon shows next (docs/main-window.md).</summary>
 public sealed class ReminderTests
 {
     private static readonly TimeSpan Central = TimeSpan.FromHours(-5);

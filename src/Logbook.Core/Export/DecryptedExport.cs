@@ -1,7 +1,7 @@
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// Which records Tools → Export decrypted writes (DESIGN.md section 11). The App serializes and writes them; this only
+/// Which records Tools → Export decrypted writes (docs/export.md). The App serializes and writes them; this only
 /// decides which ones, and in what order.
 /// </summary>
 public static class DecryptedExport

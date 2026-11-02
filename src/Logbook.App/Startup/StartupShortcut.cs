@@ -5,7 +5,7 @@ using System.Runtime.InteropServices.ComTypes;
 namespace Logbook.App.Startup;
 
 /// <summary>
-/// The "start with Windows" shortcut in the current user's Startup folder (DESIGN.md section 12). A login change
+/// The "start with Windows" shortcut in the current user's Startup folder (docs/settings.md). A login change
 /// wipes it, and the launch-time offer brings it back. Written through the shell's IShellLink, no registry.
 /// </summary>
 internal static class StartupShortcut

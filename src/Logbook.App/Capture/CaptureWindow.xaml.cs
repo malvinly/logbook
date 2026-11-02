@@ -9,7 +9,7 @@ using Logbook.Core.Grammar;
 namespace Logbook.App.Capture;
 
 /// <summary>
-/// The launcher-style capture box (DESIGN.md section 5). The line is parsed on every keystroke and the recognised
+/// The launcher-style capture box (docs/grammar.md). The line is parsed on every keystroke and the recognised
 /// tokens show as chips, so what will be stored is visible before Enter. The window remembers nothing: a follow-up's
 /// pre-fill comes from the explicit Follow up button and lives only as long as this window, so Escape drops it.
 /// </summary>
@@ -47,7 +47,7 @@ public sealed partial class CaptureWindow : Window
     public event Action<Entry>? Captured;
 
     // The original's tags and people go into the line as typed tokens, so the chips show them and they stay editable.
-    // No tag is added for the thread itself: relatedTo carries it (DESIGN.md section 7).
+    // No tag is added for the thread itself: relatedTo carries it (docs/file-format.md).
     private void PrefillFollowUp(Entry original)
     {
         List<string> tokens = [];

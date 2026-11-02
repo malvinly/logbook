@@ -1,7 +1,7 @@
 namespace Logbook.Core;
 
 /// <summary>
-/// One revision of one log entry, exactly as it is stored on a line of the data file (DESIGN.md section 7).
+/// One revision of one log entry, exactly as it is stored on a line of the data file (docs/file-format.md).
 /// A revision is never mutated; an edit is a new <see cref="Entry"/> with the same <see cref="Id"/> and <see cref="Rev"/> + 1.
 /// </summary>
 /// <param name="Id">ULID assigned when the entry is first captured. Never reused.</param>

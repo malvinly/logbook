@@ -4,7 +4,7 @@ using System.Text;
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// Renders a filtered set as the plain-text timeline of DESIGN.md section 11: oldest first, Unicode bullets,
+/// Renders a filtered set as the plain-text timeline of docs/export.md: oldest first, Unicode bullets,
 /// fixed US-style dates in each entry's own offset, no markdown. Tags and people are left out unless asked for.
 /// </summary>
 public static class TimelineExport

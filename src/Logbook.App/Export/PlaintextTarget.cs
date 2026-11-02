@@ -7,7 +7,7 @@ using Logbook.Core.Storage;
 namespace Logbook.App.Export;
 
 /// <summary>
-/// Where a plaintext export may go (DESIGN.md section 11), shared by the decrypted export and the CSV export: a default
+/// Where a plaintext export may go (docs/export.md), shared by the decrypted export and the CSV export: a default
 /// folder outside every synced folder, a warning before writing into one, the guards that keep the encrypted log from
 /// being overwritten, and the last folder remembered per Windows profile.
 /// </summary>

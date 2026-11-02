@@ -4,7 +4,7 @@ using System.Text;
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// A filtered set as CSV (DESIGN.md section 11): RFC 4180, comma separated, CRLF after every row, one header row,
+/// A filtered set as CSV (docs/export.md): RFC 4180, comma separated, CRLF after every row, one header row,
 /// oldest first. Timestamps are the stored round-trip form with their own offset, never converted. Lists are joined
 /// by a single space, except refs, which may contain spaces themselves and are joined by "; ". A summary, reason, refs,
 /// tags or people cell that would read as a formula gets a leading apostrophe, so those five are not always verbatim.
@@ -48,9 +48,9 @@ public static class CsvExport
 
     private static string Timestamp(DateTimeOffset value) => value.ToString("O", CultureInfo.InvariantCulture);
 
-    // Spreadsheet apps run a cell that starts with = + - or @ as a formula (Phase 7), so such a text cell gets a
+    // Spreadsheet apps run a cell that starts with = + - or @ as a formula, so such a text cell gets a
     // leading apostrophe, which they read as "this is text". Applied before quoting, so the ' sits inside the quotes.
-    // Tags and people go through it too (Phase 8): the normaliser allows a leading - or +, as in -urgent or +1.
+    // Tags and people go through it too: the normaliser allows a leading - or +, as in -urgent or +1.
     private static string DefuseFormula(string text)
         => text.Length > 0 && text[0] is '=' or '+' or '-' or '@' ? "'" + text : text;
 

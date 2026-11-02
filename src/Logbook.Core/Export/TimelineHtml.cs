@@ -3,7 +3,7 @@ using System.Text;
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// The same timeline as <see cref="TimelineExport"/>, as an HTML fragment for the clipboard (DESIGN.md section 11), so
+/// The same timeline as <see cref="TimelineExport"/>, as an HTML fragment for the clipboard (docs/export.md), so
 /// mail clients paste bold dates and real bullets. The header is a paragraph, each entry one list item with its date
 /// in bold, and the reason a block under its item. All text is escaped; no classes, styles or external resources.
 /// </summary>

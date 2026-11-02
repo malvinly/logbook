@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Logbook.Tests.Storage;
 
-/// <summary>The remindAt field (DESIGN.md section 7): stored with its own offset, folded by revision, left out of the timeline.</summary>
+/// <summary>The remindAt field (docs/file-format.md): stored with its own offset, folded by revision, left out of the timeline.</summary>
 public sealed class RemindAtTests : IDisposable
 {
     private const string Passphrase = "correct horse";

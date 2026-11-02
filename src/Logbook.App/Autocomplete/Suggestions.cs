@@ -5,7 +5,7 @@ namespace Logbook.App.Autocomplete;
 
 /// <summary>
 /// Tag and person names seen in the live entries, ranked most recently used or most frequent, capped, and
-/// prefix-filtered as you type (DESIGN.md section 10). Rebuilt from the live set whenever a window opens.
+/// prefix-filtered as you type (docs/main-window.md). Rebuilt from the live set whenever a window opens.
 /// </summary>
 public sealed class Suggestions
 {

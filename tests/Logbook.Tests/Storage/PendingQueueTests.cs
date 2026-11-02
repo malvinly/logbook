@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Logbook.Tests.Storage;
 
-/// <summary>A capture that cannot reach the disk is kept, shown as pending, and written on retry (DESIGN.md section 8).</summary>
+/// <summary>A capture that cannot reach the disk is kept, shown as pending, and written on retry (docs/file-format.md).</summary>
 public sealed class PendingQueueTests : IDisposable
 {
     private static readonly IReadOnlyList<TimeSpan> NoDelays = [];

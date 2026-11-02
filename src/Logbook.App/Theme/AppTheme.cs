@@ -6,7 +6,7 @@ namespace Logbook.App.Theme;
 
 /// <summary>
 /// Light or dark: following the Windows "app mode" setting by default, or forced by the <c>theme</c> setting
-/// (DESIGN.md section 12). Following Windows, WPF's Fluent theme follows the setting by itself (App.xaml merges its
+/// (docs/settings.md). Following Windows, WPF's Fluent theme follows the setting by itself (App.xaml merges its
 /// "system" dictionary, and WPF swaps its light and dark resources when Windows changes), and this class does the same
 /// for Logbook's own color tokens, Theme.Light.xaml or Theme.Dark.xaml, reading the same registry value, so the two
 /// always agree; then it never touches the Fluent dictionary, because two owners replacing it on the same Windows
@@ -69,8 +69,8 @@ internal static class AppTheme
     /// forced, the forced one. Called at startup, when Settings is saved and whenever Windows broadcasts a color-set
     /// change, so open windows repaint (views use DynamicResource for brushes). Always a fresh copy, even when the file
     /// is the one already merged: a brush whose colour is a Windows system colour (the accent) keeps the colour it had
-    /// when the dictionary loaded, so a new accent reaches the views and the icons only through a reload (Phase 8;
-    /// DESIGN.md section 16). Windows changing mode still does not change a forced theme: the forced file is what
+    /// when the dictionary loaded, so a new accent reaches the views and the icons only through a reload
+    /// (docs/development.md). Windows changing mode still does not change a forced theme: the forced file is what
     /// reloads.
     /// </summary>
     public static void ReloadTokens(Application app)

@@ -1,7 +1,7 @@
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// What the timeline header names the set by (DESIGN.md section 11, Phase 7): the saved-query button's name while
+/// What the timeline header names the set by (docs/export.md): the saved-query button's name while
 /// the filter box still holds exactly the filter that button put there, otherwise the filter text as typed.
 /// </summary>
 public static class ExportTitle

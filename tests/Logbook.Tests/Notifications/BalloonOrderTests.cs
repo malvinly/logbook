@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Logbook.Tests.Notifications;
 
-/// <summary>Tray balloons show one at a time, in order, each with its own click action (DESIGN.md sections 10 and 12).</summary>
+/// <summary>Tray balloons show one at a time, in order, each with its own click action (docs/main-window.md and docs/settings.md).</summary>
 public sealed class BalloonOrderTests
 {
     private sealed record Balloon(string Title, string ClickOpens);

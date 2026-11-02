@@ -11,7 +11,7 @@ using Microsoft.Win32;
 namespace Logbook.App.Export;
 
 /// <summary>
-/// The "Copy as timeline" panel (DESIGN.md section 11): the four toggles, a preview, one button that puts the plain
+/// The "Copy as timeline" panel (docs/export.md): the four toggles, a preview, one button that puts the plain
 /// text and the same timeline as HTML on the clipboard, and one that saves the same entries as a CSV file. Toggles are
 /// read from and written back to settings so they are remembered.
 /// </summary>

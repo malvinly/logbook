@@ -4,7 +4,7 @@ namespace Logbook.Core.Crypto;
 
 /// <summary>
 /// Turns the passphrase into the 256-bit key-encryption key with PBKDF2-HMAC-SHA256, using the salt and
-/// iteration count stored in the file header (DESIGN.md section 8).
+/// iteration count stored in the file header (docs/file-format.md).
 /// </summary>
 public static class KeyDerivation
 {

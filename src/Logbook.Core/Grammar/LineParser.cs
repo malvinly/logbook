@@ -4,7 +4,7 @@ using System.Text;
 namespace Logbook.Core.Grammar;
 
 /// <summary>
-/// The one grammar of DESIGN.md section 6, read two ways. In a capture, query-only tokens are summary text;
+/// The one grammar of docs/grammar.md, read two ways. In a capture, query-only tokens are summary text;
 /// in a query, <c>at:</c> is a bare word. A keyword whose value does not parse is treated as text in both.
 /// </summary>
 public static class LineParser
@@ -142,7 +142,7 @@ public static class LineParser
     }
 
     /// <summary>
-    /// The date-range picker's rewrite (DESIGN.md section 10): the same filter text with every <c>since:</c>,
+    /// The date-range picker's rewrite (docs/main-window.md): the same filter text with every <c>since:</c>,
     /// <c>until:</c> and <c>last:</c> token removed and the given bounds appended. Phrases and other tokens are untouched.
     /// </summary>
     public static string WithDateRange(string text, DateOnly? since, DateOnly? until)
@@ -210,7 +210,7 @@ public static class LineParser
     }
 
     /// <summary>
-    /// Text left over once tokens are taken out, with the origin of each character. DESIGN.md section 6 drops punctuation
+    /// Text left over once tokens are taken out, with the origin of each character. docs/grammar.md drops punctuation
     /// a token left behind when nothing but whitespace is around it: "done (#asked)" stores "done", not "done ()". An
     /// opener is the exception: it stays when its closing partner stays, and then attaches to the word after it, so
     /// "done (#asked and more)" stores "done (and more)".

@@ -33,7 +33,7 @@ public sealed class TimelineExportTests
     [Fact]
     public void ShowGapsAppendsDaysLaterFromTheSecondEntryOn()
     {
-        // Matches the DESIGN.md section 11 sample, with the real weekdays for those dates.
+        // Matches the docs/export.md sample, with the real weekdays for those dates.
         const string expected =
             "#staging-access — 3 entries, Oct 6 – Oct 20, 2026\n" +
             "\n" +

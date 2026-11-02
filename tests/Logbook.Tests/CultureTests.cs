@@ -8,7 +8,7 @@ using Xunit;
 namespace Logbook.Tests;
 
 /// <summary>
-/// DESIGN.md section 16: output is US-style regardless of machine locale, and the grammar reads the same everywhere.
+/// docs/development.md: output is US-style regardless of machine locale, and the grammar reads the same everywhere.
 /// Each test switches the thread to a locale with different month names, decimal rules and AM/PM designators.
 /// </summary>
 public sealed class CultureTests

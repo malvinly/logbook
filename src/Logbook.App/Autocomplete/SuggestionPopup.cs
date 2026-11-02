@@ -83,7 +83,7 @@ public sealed class SuggestionPopup
 
     // The token is the run around the caret up to whitespace, "," or ";", when it starts with # or @ at a word start
     // (or just after an opening paren or quote, or after a "," or ";" that ended another token). Its end leaves out
-    // trailing punctuation, which the grammar strips (DESIGN.md section 6), so "@j-d?" suggests for "j-d" and keeps the "?".
+    // trailing punctuation, which the grammar strips (docs/grammar.md), so "@j-d?" suggests for "j-d" and keeps the "?".
     // It suggests only while the caret is inside the name: after "asked @j-doe." the popup hides, because an Enter
     // typed there is meant to submit the line and must not accept a suggestion.
     private bool FindToken(out int start, out int end, out char sigil)

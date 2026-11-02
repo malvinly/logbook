@@ -4,7 +4,7 @@ using System.IO;
 namespace Logbook.App.Diagnostics;
 
 /// <summary>
-/// Rolling text log in %LOCALAPPDATA%\Logbook\logs, one file per day, two weeks kept (DESIGN.md section 16).
+/// Rolling text log in %LOCALAPPDATA%\Logbook\logs, one file per day, two weeks kept (docs/development.md).
 /// Never write an entry's contents here.
 /// </summary>
 public static class Diag

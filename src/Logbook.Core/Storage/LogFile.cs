@@ -6,7 +6,7 @@ using Logbook.Core.Crypto;
 namespace Logbook.Core.Storage;
 
 /// <summary>
-/// The one data file: a plaintext header line followed by one encrypted record per line (DESIGN.md section 8).
+/// The one data file: a plaintext header line followed by one encrypted record per line (docs/file-format.md).
 /// Opening reads and decrypts every line into memory; appending writes one new line. Nothing here ever
 /// truncates or reorders the file; the only bytes ever rewritten are line 1's, in place, on a passphrase change.
 /// </summary>
@@ -237,7 +237,7 @@ public sealed class LogFile
 
     /// <summary>
     /// Re-wraps the same data key under a new passphrase by rewriting line 1 in place; no record line changes
-    /// (DESIGN.md section 8). The salt is new; format, file id, creation time and iteration count are kept, and the new
+    /// (docs/file-format.md). The salt is new; format, file id, creation time and iteration count are kept, and the new
     /// header is built to the old one's exact byte length so it fits over it. Throws <see cref="ArgumentException"/> for an
     /// empty new passphrase, <see cref="InvalidOperationException"/> while captures are pending,
     /// <see cref="CryptographicException"/> for a wrong current passphrase, <see cref="InvalidDataException"/> when the
@@ -397,7 +397,7 @@ public sealed class LogFile
     }
 
     /// <summary>
-    /// Zeroes the data key and drops the decrypted entries, for Lock now and idle lock (DESIGN.md section 9). Afterwards
+    /// Zeroes the data key and drops the decrypted entries, for Lock now and idle lock (docs/locking.md). Afterwards
     /// <see cref="Live"/> and <see cref="Revisions"/> are empty and <see cref="Append"/>, <see cref="RetryPending"/> and
     /// <see cref="ChangePassphrase"/> throw <see cref="InvalidOperationException"/> rather than encrypt under a zeroed
     /// key. Anything still pending is dropped with the key, so the caller must refuse to lock while
@@ -472,7 +472,7 @@ public sealed class LogFile
 
     /// <summary>
     /// Reads only the header, without a passphrase, so several candidate files can be described before one is chosen
-    /// (DESIGN.md section 8). Throws <see cref="InvalidDataException"/> as <see cref="Open"/> does.
+    /// (docs/file-format.md). Throws <see cref="InvalidDataException"/> as <see cref="Open"/> does.
     /// </summary>
     public static FileHeader ReadHeader(string path)
     {

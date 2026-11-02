@@ -32,7 +32,7 @@ public sealed class FileCandidate
     public string Detail { get; }
 }
 
-/// <summary>Shown when several <c>logbook*.jsonl</c> files sit beside each other (DESIGN.md section 8).</summary>
+/// <summary>Shown when several <c>logbook*.jsonl</c> files sit beside each other (docs/file-format.md).</summary>
 public sealed partial class PickFileWindow : Window
 {
     /// <param name="paths">The candidates.</param>

@@ -4,7 +4,7 @@ namespace Logbook.Core.Crypto;
 
 /// <summary>
 /// The random 256-bit key that encrypts every record. It is generated once when the file is created and stored in the
-/// header wrapped under the key-encryption key, using the same framing as a record line (DESIGN.md section 8).
+/// header wrapped under the key-encryption key, using the same framing as a record line (docs/file-format.md).
 /// </summary>
 public static class DataKey
 {

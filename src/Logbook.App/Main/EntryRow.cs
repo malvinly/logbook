@@ -4,7 +4,7 @@ using Logbook.Core.Export;
 
 namespace Logbook.App.Main;
 
-/// <summary>One row of the results list: time, summary, chips, and the small markers (DESIGN.md section 10).</summary>
+/// <summary>One row of the results list: time, summary, chips, and the small markers (docs/main-window.md).</summary>
 public sealed class EntryRow
 {
     public EntryRow(Entry entry)

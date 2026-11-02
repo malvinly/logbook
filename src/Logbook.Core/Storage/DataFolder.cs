@@ -5,7 +5,7 @@ public static class DataFolder
 {
     /// <summary>
     /// A file the launch check must ask about: <c>logbook*.jsonl</c>, but not a decrypted export, whose name the
-    /// export dialog fixes as <c>logbook-export-YYYY-MM-DD.jsonl</c> (DESIGN.md sections 8 and 11).
+    /// export dialog fixes as <c>logbook-export-YYYY-MM-DD.jsonl</c> (docs/file-format.md and docs/export.md).
     /// </summary>
     public static bool IsLogFileName(string fileName)
     {

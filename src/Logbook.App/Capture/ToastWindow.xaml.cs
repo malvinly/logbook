@@ -6,7 +6,7 @@ using System.Windows.Threading;
 namespace Logbook.App.Capture;
 
 /// <summary>
-/// The "Logged — click to edit" toast (DESIGN.md sections 5 and 16): a non-activating topmost window at the bottom
+/// The "Logged — click to edit" toast (docs/grammar.md and docs/development.md): a non-activating topmost window at the bottom
 /// right of the work area that fades out after five seconds. The same window, with an error glyph, reports an unsaved capture.
 /// </summary>
 public sealed partial class ToastWindow : Window

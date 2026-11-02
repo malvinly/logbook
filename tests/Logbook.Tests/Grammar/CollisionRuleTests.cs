@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Logbook.Tests.Grammar;
 
-/// <summary>One test per collision rule in DESIGN.md section 6, so that text which looks like a token stays text.</summary>
+/// <summary>One test per collision rule in docs/grammar.md, so that text which looks like a token stays text.</summary>
 public sealed class CollisionRuleTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 14, 30, 0, TimeSpan.FromHours(-5));

@@ -9,7 +9,7 @@ public enum IdleDecision
 }
 
 /// <summary>
-/// The idle auto-lock decision (DESIGN.md section 9). "Idle" means no input to the Windows session at all, so working in
+/// The idle auto-lock decision (docs/locking.md). "Idle" means no input to the Windows session at all, so working in
 /// other apps keeps the log unlocked; the app reads the last input time from Windows and asks this whether to lock.
 /// </summary>
 public static class IdleLock
@@ -32,7 +32,7 @@ public static class IdleLock
     /// <summary>
     /// What the idle check does now. Not due: nothing. Due with none of the app's modal dialogs open: lock. Due with a
     /// dialog open: wait, so a half-made decision there is not closed under the user, but only until twice the idle
-    /// limit has passed without input; then lock anyway and close the dialog with it (DESIGN.md section 9).
+    /// limit has passed without input; then lock anyway and close the dialog with it (docs/locking.md).
     /// </summary>
     public static IdleDecision Decide(DateTimeOffset lastInput, DateTimeOffset now, int idleLockMinutes, bool dialogOpen)
     {

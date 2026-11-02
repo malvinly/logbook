@@ -3,7 +3,7 @@ using Logbook.Core.Grammar;
 
 namespace Logbook.Core.Query;
 
-/// <summary>Applies a parsed filter line to the live entries (DESIGN.md sections 6 and 10).</summary>
+/// <summary>Applies a parsed filter line to the live entries (docs/grammar.md and docs/main-window.md).</summary>
 public static class EntryQuery
 {
     /// <summary>Returns the entries that match every token of the query, newest first.</summary>
@@ -21,8 +21,8 @@ public static class EntryQuery
     }
 
     /// <summary>
-    /// The entries whose relatedTo names <paramref name="id"/>, oldest first with the id breaking ties (DESIGN.md
-    /// section 10, "Followed up by"). Pass the live entries: a deleted follow-up is hidden here as everywhere else.
+    /// The entries whose relatedTo names <paramref name="id"/>, oldest first with the id breaking ties (docs/main-window.md,
+    /// "Followed up by"). Pass the live entries: a deleted follow-up is hidden here as everywhere else.
     /// </summary>
     public static IReadOnlyList<Entry> FollowUpsOf(string id, IEnumerable<Entry> live)
     {

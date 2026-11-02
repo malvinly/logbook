@@ -4,7 +4,7 @@ namespace Logbook.Core.Crypto;
 
 /// <summary>
 /// Encrypts one line of the data file as <c>base64(nonce ‖ ciphertext ‖ tag)</c>: AES-256-GCM with a fresh random
-/// 96-bit nonce per line and a 128-bit tag, no additional authenticated data (DESIGN.md section 8).
+/// 96-bit nonce per line and a 128-bit tag, no additional authenticated data (docs/file-format.md).
 /// The same framing wraps the data key in the header.
 /// </summary>
 public static class LineCipher

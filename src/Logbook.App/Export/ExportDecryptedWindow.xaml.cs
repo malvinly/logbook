@@ -12,7 +12,7 @@ using Microsoft.Win32;
 namespace Logbook.App.Export;
 
 /// <summary>
-/// Tools → Export decrypted (DESIGN.md section 11): a plaintext JSONL file, latest revision per live id, or the
+/// Tools → Export decrypted (docs/export.md): a plaintext JSONL file, latest revision per live id, or the
 /// whole history. The save location defaults outside every synced folder and is remembered.
 /// </summary>
 public sealed partial class ExportDecryptedWindow : Window

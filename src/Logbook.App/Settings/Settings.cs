@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Logbook.App.Settings;
 
-/// <summary>The export toggles, remembered between uses (DESIGN.md section 11).</summary>
+/// <summary>The export toggles, remembered between uses (docs/export.md).</summary>
 public sealed class ExportSettings
 {
     public bool ShowGaps { get; set; }
@@ -14,7 +14,7 @@ public sealed class ExportSettings
     public bool TagsAndPeople { get; set; }
 }
 
-/// <summary>A filter string saved under a name, shown as a button above the results (DESIGN.md section 10).</summary>
+/// <summary>A filter string saved under a name, shown as a button above the results (docs/main-window.md).</summary>
 public sealed class SavedQuery
 {
     public string Name { get; set; } = "";
@@ -24,7 +24,7 @@ public sealed class SavedQuery
 }
 
 /// <summary>
-/// The plain JSON settings file beside the data file (DESIGN.md section 12). No secrets, no absolute user paths.
+/// The plain JSON settings file beside the data file (docs/settings.md). No secrets, no absolute user paths.
 /// Mutable because the settings window edits it in place and then saves.
 /// </summary>
 public sealed class Settings
@@ -46,7 +46,7 @@ public sealed class Settings
     public string AutocompleteRanking { get; set; } = "recent";
 
     /// <summary>
-    /// Lock after this many minutes without any input to Windows (DESIGN.md section 9); 0 never locks. A settings
+    /// Lock after this many minutes without any input to Windows (docs/locking.md); 0 never locks. A settings
     /// file written before this existed has no such property and gets the default.
     /// </summary>
     public int IdleLockMinutes { get; set; } = 60;

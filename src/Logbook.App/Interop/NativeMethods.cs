@@ -98,7 +98,7 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetLastInputInfo(ref LastInputInfo info);
 
-    // Workstation lock and sign-out lock the log (DESIGN.md section 9). Windows sends WM_WTSSESSION_CHANGE only to a
+    // Workstation lock and sign-out lock the log (docs/locking.md). Windows sends WM_WTSSESSION_CHANGE only to a
     // window that has asked for it, so the hidden message window registers for its own session.
     public const int WmWtsSessionChange = 0x02B1;
     public const int WtsSessionLogoff = 0x6;

@@ -16,7 +16,7 @@ using Logbook.Core.Storage;
 namespace Logbook.App.Main;
 
 /// <summary>
-/// Filter bar, grouped results, detail pane with revisions, and the export entry points (DESIGN.md section 10).
+/// Filter bar, grouped results, detail pane with revisions, and the export entry points (docs/main-window.md).
 /// The window reads the live set from the log on every refresh; the log is the only state.
 /// </summary>
 public sealed partial class MainWindow : Window
@@ -33,7 +33,7 @@ public sealed partial class MainWindow : Window
     private bool _closingForLock;
 
     // The saved-query button that last put its filter into the box, as it was when clicked. The export header takes
-    // its name while the box still holds exactly that filter (DESIGN.md section 11); see ExportTitle.
+    // its name while the box still holds exactly that filter (docs/export.md); see ExportTitle.
     private string? _clickedQueryName;
     private string? _clickedQueryFilter;
 
@@ -123,7 +123,7 @@ public sealed partial class MainWindow : Window
             ShowDetail(row);
         }
 
-        // "How many times" is a driving question, so the count is always in view (DESIGN.md section 10).
+        // "How many times" is a driving question, so the count is always in view (docs/main-window.md).
         string range = RangeText.Range(_filtered);
         Header.Text = range.Length == 0 ? RangeText.Count(_filtered.Count) : $"{RangeText.Count(_filtered.Count)} · {range}";
         ShowWarnings();

@@ -26,7 +26,7 @@ internal static class SampleEntries
     public static readonly Entry TokyoMidnight = Make("01K0000000000000000000000F", new DateTimeOffset(2026, 10, 1, 0, 30, 0, TimeSpan.FromHours(9)),
         "Late night note from the Tokyo trip", null, ["travel"], [], []);
 
-    // The three entries of the DESIGN.md section 11 sample.
+    // The three entries of the docs/export.md sample.
     public static readonly Entry SampleAsk = Make("01K0000000000000000000000G", new DateTimeOffset(2026, 10, 6, 10, 14, 0, Central),
         "Asked for access to the staging environment; told it would be looked into.", null, ["asked", "staging-access"], ["j-doe"], []);
 

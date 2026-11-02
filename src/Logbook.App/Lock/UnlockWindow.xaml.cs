@@ -8,7 +8,7 @@ using Logbook.Core.Storage;
 namespace Logbook.App.Lock;
 
 /// <summary>
-/// The passphrase prompt (DESIGN.md section 9). Key derivation takes a noticeable moment, so the file is opened
+/// The passphrase prompt (docs/locking.md). Key derivation takes a noticeable moment, so the file is opened
 /// on a worker and the window shows a busy state rather than freezing. A wrong passphrase keeps the window open.
 /// </summary>
 public sealed partial class UnlockWindow : Window

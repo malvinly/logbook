@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Logbook.Core.Grammar;
 
-/// <summary>Parses the values of the date keywords in DESIGN.md section 6, resolved against a supplied "now".</summary>
+/// <summary>Parses the values of the date keywords in docs/grammar.md, resolved against a supplied "now".</summary>
 internal static class DateValues
 {
     private const string IsoDate = "yyyy-MM-dd";

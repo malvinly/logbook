@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Logbook.App;
 
-/// <summary>The hand-written property-change base every bound object uses (DESIGN.md section 16).</summary>
+/// <summary>The hand-written property-change base every bound object uses (docs/development.md).</summary>
 public abstract class ObservableObject : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;

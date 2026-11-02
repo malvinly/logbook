@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Logbook.Core.Storage;
 
-// Source-generated so the app can later be published single-file without reflection warnings (DESIGN.md section 16).
+// Source-generated so the app can later be published single-file without reflection warnings (docs/development.md).
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(Entry))]
 [JsonSerializable(typeof(FileHeader))]

@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace Logbook.App.Main;
 
-/// <summary>Asks for the name a filter is saved under (DESIGN.md section 10, saved queries).</summary>
+/// <summary>Asks for the name a filter is saved under (docs/main-window.md, saved queries).</summary>
 public sealed partial class SaveQueryWindow : Window
 {
     public SaveQueryWindow(string filter)

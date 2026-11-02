@@ -13,14 +13,14 @@ namespace Logbook.App.Tray;
 
 /// <summary>
 /// The tray icon, drawn at runtime from the theme's colors so the repo carries no binary assets. A lock glyph shows
-/// while locked (DESIGN.md section 9) and a danger-colored badge while captures are unsaved. NotifyIcon is the one
+/// while locked (docs/locking.md) and a danger-colored badge while captures are unsaved. NotifyIcon is the one
 /// WinForms type in the app; the menu is a WPF ContextMenu.
 /// </summary>
 internal sealed class TrayIcon : IDisposable
 {
     private const int BalloonTimeoutMilliseconds = 10_000;
 
-    // The balloon queue's two waits for a close that may never be reported (DESIGN.md section 12): 15 seconds after a
+    // The balloon queue's two waits for a close that may never be reported (docs/settings.md): 15 seconds after a
     // balloon is put up, then 45 more, so the cap falls 60 seconds after it was put up.
     private static readonly TimeSpan BalloonFallback = TimeSpan.FromMilliseconds(BalloonTimeoutMilliseconds + 5_000);
     private static readonly TimeSpan BalloonCapRemainder = TimeSpan.FromSeconds(60) - BalloonFallback;
@@ -85,7 +85,7 @@ internal sealed class TrayIcon : IDisposable
     public event Action? ExitRequested;
 
     /// <summary>
-    /// Redraws the three icons in the theme's new colors (DESIGN.md section 12) and shows the one for the current state.
+    /// Redraws the three icons in the theme's new colors (docs/settings.md) and shows the one for the current state.
     /// The old icons are disposed only after the NotifyIcon has let go of them. The balloon queue is not touched.
     /// </summary>
     public void Recolor(Color accent, Color muted, Color danger)
@@ -102,7 +102,7 @@ internal sealed class TrayIcon : IDisposable
         oldPending.Dispose();
     }
 
-    /// <summary>The unlocked "L" badge alone, which every window carries as its icon (DESIGN.md section 16).</summary>
+    /// <summary>The unlocked "L" badge alone, which every window carries as its icon (docs/development.md).</summary>
     public static Icon DrawWindowIcon(Color accent) => DrawIcon(accent, Glyph.Letter, null);
 
     public void SetLocked(bool locked)
@@ -120,7 +120,7 @@ internal sealed class TrayIcon : IDisposable
 
     /// <summary>
     /// A balloon from the tray. Each caller decides what a click does; nothing when onClick is null. Balloons show one at
-    /// a time (DESIGN.md section 12): this one shows now, or once those before it have closed. A reminder balloon still
+    /// a time (docs/settings.md): this one shows now, or once those before it have closed. A reminder balloon still
     /// waiting its turn is dropped on lock (DropWaitingReminders).
     /// </summary>
     public void ShowBalloon(string title, string text, bool warning, Action? onClick = null, bool reminder = false)
@@ -132,7 +132,7 @@ internal sealed class TrayIcon : IDisposable
     }
 
     /// <summary>
-    /// Drops the reminder balloons still waiting their turn (DESIGN.md section 10): reminders show again after the next
+    /// Drops the reminder balloons still waiting their turn (docs/main-window.md): reminders show again after the next
     /// unlock, so one that came up after the lock would show twice. The balloon on screen and other kinds stay.
     /// </summary>
     public void DropWaitingReminders() => _balloons.RemoveWaiting(balloon => balloon.Reminder);
@@ -215,7 +215,7 @@ internal sealed class TrayIcon : IDisposable
         }
         else if (e.Button == MouseButtons.Left && e.Clicks == 1)
         {
-            // The tray icon opens the main window (DESIGN.md section 10); a double-click lands here too and is harmless.
+            // The tray icon opens the main window (docs/main-window.md); a double-click lands here too and is harmless.
             OpenRequested?.Invoke();
         }
     }

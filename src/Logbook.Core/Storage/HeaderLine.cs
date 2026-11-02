@@ -1,7 +1,7 @@
 namespace Logbook.Core.Storage;
 
 /// <summary>
-/// Reads and overwrites line 1 of the data file in place, for a passphrase change (DESIGN.md section 8).
+/// Reads and overwrites line 1 of the data file in place, for a passphrase change (docs/file-format.md).
 /// This is the one deliberate exception to the append-only rule, and it is fenced in: the new line must have exactly
 /// the byte length of the old one, so no byte after line 1 is touched; it is written only over the bytes the caller
 /// read; and it is read back afterwards, with the previous bytes written back if the read-back is wrong.

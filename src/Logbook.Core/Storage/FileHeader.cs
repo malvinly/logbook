@@ -4,7 +4,7 @@ namespace Logbook.Core.Storage;
 public sealed record KdfParameters(string Alg, string Salt, int Iterations);
 
 /// <summary>
-/// Line 1 of the data file, stored as plaintext JSON (DESIGN.md section 8). The salt and
+/// Line 1 of the data file, stored as plaintext JSON (docs/file-format.md). The salt and
 /// <paramref name="WrappedKey"/> are base64.
 /// </summary>
 public sealed record FileHeader(

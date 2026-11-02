@@ -1,6 +1,6 @@
 namespace Logbook.Core.Export;
 
-/// <summary>The four timeline toggles of DESIGN.md section 11, remembered between uses by the app.</summary>
+/// <summary>The four timeline toggles of docs/export.md, remembered between uses by the app.</summary>
 /// <param name="ShowGaps">Append <c>(N days later)</c> after the timestamp from the second entry on.</param>
 /// <param name="GroupByMonth">Insert a second header line with per-month counts.</param>
 /// <param name="Compact">Drop the weekday and the time of day.</param>

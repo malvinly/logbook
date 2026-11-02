@@ -138,7 +138,7 @@ public sealed class CsvExportTests
         Assert.DoesNotContain("\"", CsvExport.Render(SampleEntries.All), StringComparison.Ordinal);
     }
 
-    // Formula-looking text cells (Phase 7): spreadsheet apps run a cell starting with = + - @ as a formula.
+    // Formula-looking text cells: spreadsheet apps run a cell starting with = + - @ as a formula.
     [Theory]
     [InlineData("=SUM(1) in the sheet")]
     [InlineData("+1 for that")]
@@ -181,7 +181,7 @@ public sealed class CsvExportTests
         Assert.Contains(",'" + firstRef + "; INC0041233,", Rows([entry])[1], StringComparison.Ordinal);
     }
 
-    // Tags and people (Phase 8): the normaliser allows a leading - or +, so the joined cell can start with one.
+    // Tags and people: the normaliser allows a leading - or +, so the joined cell can start with one.
     [Theory]
     [InlineData("-urgent")]
     [InlineData("+1")]

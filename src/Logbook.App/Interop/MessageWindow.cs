@@ -5,7 +5,7 @@ namespace Logbook.App.Interop;
 /// <summary>
 /// A hidden window that exists only to receive WM_HOTKEY, the single-instance message and session changes. Hotkeys and
 /// session notifications need an HWND to be registered against, and a tray app has no visible window most of the time
-/// (DESIGN.md section 16).
+/// (docs/development.md).
 /// </summary>
 internal sealed class MessageWindow : IDisposable
 {

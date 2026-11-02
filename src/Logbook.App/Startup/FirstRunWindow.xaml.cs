@@ -8,7 +8,7 @@ using Microsoft.Win32;
 namespace Logbook.App.Startup;
 
 /// <summary>
-/// First-run step 1 (DESIGN.md section 12): pick the synced root and choose or create the data file.
+/// First-run step 1 (docs/settings.md): pick the synced root and choose or create the data file.
 /// The result is the root, the settings to save there, and whether the file still has to be created.
 /// </summary>
 public sealed partial class FirstRunWindow : Window

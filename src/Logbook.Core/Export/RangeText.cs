@@ -3,7 +3,7 @@ using System.Globalization;
 namespace Logbook.Core.Export;
 
 /// <summary>
-/// The count and date range shown above the results and in the export header (DESIGN.md sections 10 and 11):
+/// The count and date range shown above the results and in the export header (docs/main-window.md and docs/export.md):
 /// <c>12 entries</c> and <c>Jul 14 – Oct 28, 2026</c>. Fixed US-style, invariant culture.
 /// </summary>
 public static class RangeText

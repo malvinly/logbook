@@ -3,7 +3,7 @@ using System.Text;
 namespace Logbook.Core.Grammar;
 
 /// <summary>
-/// Splits a line into tokens using the rules of DESIGN.md section 6. The scanner knows nothing about dates;
+/// Splits a line into tokens using the rules of docs/grammar.md. The scanner knows nothing about dates;
 /// it only decides where a token starts and ends. <see cref="LineParser"/> gives the tokens meaning.
 /// </summary>
 internal static class Scanner

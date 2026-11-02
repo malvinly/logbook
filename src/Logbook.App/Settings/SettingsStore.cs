@@ -6,7 +6,7 @@ using Logbook.Core.Storage;
 namespace Logbook.App.Settings;
 
 /// <summary>
-/// Finds the synced root, and loads and saves the settings file inside it (DESIGN.md sections 12 and 16).
+/// Finds the synced root, and loads and saves the settings file inside it (docs/settings.md and docs/development.md).
 /// The settings file is found by trying the default variables, since it cannot name its own location; the
 /// <c>syncRootEnvVar</c> it holds then names the root the data file is relative to.
 /// </summary>

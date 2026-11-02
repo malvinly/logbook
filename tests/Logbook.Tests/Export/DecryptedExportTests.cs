@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Logbook.Tests.Export;
 
-/// <summary>Which records Export decrypted writes for each setting of its history checkbox (DESIGN.md section 11).</summary>
+/// <summary>Which records Export decrypted writes for each setting of its history checkbox (docs/export.md).</summary>
 public sealed class DecryptedExportTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 9, 0, 0, TimeSpan.FromHours(-5));

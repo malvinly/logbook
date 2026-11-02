@@ -54,7 +54,7 @@ public sealed record Hotkey(ModifierKeys Modifiers, Key Key)
     }
 
     // Enum.TryParse also takes numbers and comma lists: "1" would be (Key)1, which is Key.Cancel, and it registers
-    // fine and never fires; a silently dead hotkey is what DESIGN.md section 12 forbids. So a single digit means that
+    // fine and never fires; a silently dead hotkey is what docs/settings.md forbids. So a single digit means that
     // digit key, and anything else must be a name of a defined key: letters first, then letters or digits (F12, D1).
     private static bool TryParseKey(string part, out Key key)
     {

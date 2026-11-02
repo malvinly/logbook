@@ -7,7 +7,7 @@
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" WindowStartupLocation="Manual"
         Cursor="Hand" MouseLeftButtonUp="OnClick" MouseEnter="OnMouseEnter" MouseLeave="OnMouseLeave">
   <!-- Laid out as a Windows 11 notification: the app's badge and name, then a status glyph, a title and a line of detail.
-       The window stays per-pixel transparent (no acrylic) so the whole toast can fade out (DESIGN.md section 16). -->
+       The window stays per-pixel transparent (no acrylic) so the whole toast can fade out (docs/development.md). -->
   <WindowChrome.WindowChrome>
     <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
   </WindowChrome.WindowChrome>

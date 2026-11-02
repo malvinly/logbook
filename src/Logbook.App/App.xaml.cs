@@ -28,7 +28,7 @@ namespace Logbook.App;
 
 /// <summary>
 /// Startup and the tray lifetime: single instance, settings and first run, tray icon, hotkeys, lock state, and the
-/// 30-second retry of pending writes, the reminder check and idle auto-lock (DESIGN.md sections 8, 9, 10 and 12). Windows are created on demand and never own the process.
+/// 30-second retry of pending writes, the reminder check and idle auto-lock (docs/file-format.md, locking.md, main-window.md and settings.md). Windows are created on demand and never own the process.
 /// </summary>
 public sealed partial class App : Application, IDisposable
 {
@@ -201,7 +201,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Every window's XAML sets <c>Icon="{DynamicResource WindowIcon}"</c> (DESIGN.md section 16), so replacing this
+    /// Every window's XAML sets <c>Icon="{DynamicResource WindowIcon}"</c> (docs/development.md), so replacing this
     /// resource gives open windows the new icon at once, as a brush change repaints them. Drawn in the tray's unlocked
     /// color, which comes from the theme, so it is redrawn whenever the theme is applied.
     /// </summary>
@@ -320,7 +320,7 @@ public sealed partial class App : Application, IDisposable
             return RunFirstRun(settings);
         }
 
-        // Several logbook*.jsonl files beside each other: ask which is real, never guess (DESIGN.md section 8).
+        // Several logbook*.jsonl files beside each other: ask which is real, never guess (docs/file-format.md).
         IReadOnlyList<string> siblings = SyncFile.Siblings(_dataFilePath);
         if (siblings.Count > 1)
         {
@@ -339,7 +339,7 @@ public sealed partial class App : Application, IDisposable
         }
         else if (!File.Exists(_dataFilePath))
         {
-            // The configured file is gone: run the picker rather than create a new file silently (DESIGN.md section 16).
+            // The configured file is gone: run the picker rather than create a new file silently (docs/development.md).
             Diag.Log($"Configured data file is missing: {_dataFilePath}");
             AppDialog.Inform(
                 null,
@@ -358,7 +358,7 @@ public sealed partial class App : Application, IDisposable
         return true;
     }
 
-    // DESIGN.md section 12, first run steps 1 to 3. Cancelling a later step returns to the first.
+    // docs/settings.md, first run steps 1 to 3. Cancelling a later step returns to the first.
     // Existing settings (hotkeys, toggles) are kept; only the file location changes.
     private bool RunFirstRun(Settings.Settings? existing)
     {
@@ -415,7 +415,7 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    // Offered once per Windows profile; a login change wipes the shortcut and the marker together (DESIGN.md section 12).
+    // Offered once per Windows profile; a login change wipes the shortcut and the marker together (docs/settings.md).
     private void OfferStartupRegistration()
     {
         if (StartupShortcut.IsRegistered() || LocalMarker.Exists(StartupOfferMarker))
@@ -463,7 +463,7 @@ public sealed partial class App : Application, IDisposable
         RegisterHotkey(_settings.MainWindowHotkey, "main window", ShowMainWindow);
     }
 
-    // A silently dead hotkey means a week of nothing logged, so failure is surfaced at once (DESIGN.md section 12).
+    // A silently dead hotkey means a week of nothing logged, so failure is surfaced at once (docs/settings.md).
     private void RegisterHotkey(string text, string purpose, Action action)
     {
         if (!Hotkey.TryParse(text, out Hotkey hotkey))
@@ -503,7 +503,7 @@ public sealed partial class App : Application, IDisposable
                 Log = opened;
                 Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
 
-                // The key finished deriving after Windows locked the session (DESIGN.md section 9): locking now, before
+                // The key finished deriving after Windows locked the session (docs/locking.md): locking now, before
                 // any reminder or timer starts, keeps the log from sitting open behind the lock screen until the idle limit.
                 if (_sessionLocked)
                 {
@@ -528,7 +528,7 @@ public sealed partial class App : Application, IDisposable
         }
     }
 
-    // A silent failure here leaves the log open on an unattended machine (DESIGN.md section 9), so a registration that
+    // A silent failure here leaves the log open on an unattended machine (docs/locking.md), so a registration that
     // failed at startup is tried once more at the first unlock, and if Windows refuses again the user is told.
     private void RetrySessionNotifications()
     {
@@ -549,7 +549,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Tray → Lock now: back to the state the app starts in (DESIGN.md section 9). The open log, and with it the data
+    /// Tray → Lock now: back to the state the app starts in (docs/locking.md). The open log, and with it the data
     /// key and every decrypted entry, is dropped; the next hotkey prompts for the passphrase and opens the file afresh.
     /// Unsaved captures live only inside the open log, so locking is refused until they are on disk; it is refused too
     /// while a passphrase change result that leaves the passphrase uncertain is on screen (the "Passphrase changed" notice,
@@ -583,7 +583,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Idle auto-lock (DESIGN.md section 9), checked once a minute while unlocked. "Idle" is no input to the Windows
+    /// Idle auto-lock (docs/locking.md), checked once a minute while unlocked. "Idle" is no input to the Windows
     /// session at all, so typing in other apps keeps the log open and the hotkey stays one keystroke away. When due it
     /// takes the same path as Lock now. A tick never shows a dialog: while anything is unsaved it skips and tries again
     /// next minute (the tray icon already shows the pending count), as it does while the result of a passphrase change
@@ -624,7 +624,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Windows locked the session or is signing the user out (DESIGN.md section 9): lock the log as Lock now does, since
+    /// Windows locked the session or is signing the user out (docs/locking.md): lock the log as Lock now does, since
     /// walking away is usually what locking the workstation means. While an entry is not on disk yet, a write is in
     /// flight, a passphrase change is rewriting the header or its result is on screen, the lock is postponed and taken
     /// as soon as that is done. A sign-out with unsaved entries is refused separately (OnSessionEnding); a postponed
@@ -648,7 +648,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     // A postponed lock still waiting when the user is back protects nothing, and taking it would close their typed text
-    // (DESIGN.md section 9), so it is cancelled.
+    // (docs/locking.md), so it is cancelled.
     private void SessionUnlocked()
     {
         _sessionLocked = false;
@@ -739,7 +739,7 @@ public sealed partial class App : Application, IDisposable
 
     /// <summary>
     /// Why a lock must wait right now, for the diagnostics log; null when it may go ahead. A write in progress, or a
-    /// passphrase change result still on screen that leaves the passphrase uncertain (DESIGN.md section 9): the
+    /// passphrase change result still on screen that leaves the passphrase uncertain (docs/locking.md): the
     /// "Passphrase changed" notice or a failure during the write is the only place the user learns which passphrase
     /// the log now has. A change window with nothing attempted yet, or showing a refusal that changed nothing, may
     /// still be closed.

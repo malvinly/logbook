@@ -5,7 +5,7 @@ namespace Logbook.Core;
 /// <summary>
 /// Generates ULIDs: a 48-bit millisecond timestamp followed by 80 random bits, encoded as 26 Crockford base32 characters.
 /// Ids generated at later timestamps sort after earlier ones with an ordinal string comparison.
-/// There is no monotonic counter; two captures in the same millisecond is not a real case (DESIGN.md section 16).
+/// There is no monotonic counter; two captures in the same millisecond is not a real case (docs/development.md).
 /// </summary>
 public static class Ulid
 {

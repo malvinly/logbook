@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace Logbook.App.Help;
 
-/// <summary>The hotkeys and grammar on one page, shown once at first run and from Help (DESIGN.md section 12).</summary>
+/// <summary>The hotkeys and grammar on one page, shown once at first run and from Help (docs/settings.md).</summary>
 public sealed partial class CheatSheetWindow : Window
 {
     public CheatSheetWindow(string captureHotkey, string mainWindowHotkey)

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Logbook.Tests.Storage;
 
-/// <summary>The relatedTo field (DESIGN.md section 7): stored, loaded, folded and exported like every other field.</summary>
+/// <summary>The relatedTo field (docs/file-format.md): stored, loaded, folded and exported like every other field.</summary>
 public sealed class RelatedToTests : IDisposable
 {
     private const string Passphrase = "correct horse";

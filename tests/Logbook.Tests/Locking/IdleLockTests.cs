@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Logbook.Tests.Locking;
 
-/// <summary>Idle auto-lock decides from the last input to the Windows session (DESIGN.md section 9).</summary>
+/// <summary>Idle auto-lock decides from the last input to the Windows session (docs/locking.md).</summary>
 public sealed class IdleLockTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 15, 0, 0, TimeSpan.FromHours(-5));

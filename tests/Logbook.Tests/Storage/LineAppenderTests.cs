@@ -80,7 +80,7 @@ public sealed class LineAppenderTests : IDisposable
     [Fact]
     public void DefaultScheduleIsExactlyTheOneInTheDesign()
     {
-        // DESIGN.md section 8: 100, 200, 400, 800 ms, then 1 s, for ten attempts in all.
+        // docs/file-format.md: 100, 200, 400, 800 ms, then 1 s, for ten attempts in all.
         TimeSpan[] expected =
         [
             TimeSpan.FromMilliseconds(100),

@@ -4,7 +4,7 @@ using Logbook.Core.Storage;
 
 namespace Logbook.App.Startup;
 
-/// <summary>The sync-service checks of DESIGN.md section 8: placeholder hydration and sibling log files.</summary>
+/// <summary>The sync-service checks of docs/file-format.md: placeholder hydration and sibling log files.</summary>
 internal static class SyncFile
 {
     // FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: the cloud filter keeps only a placeholder until the file is read.

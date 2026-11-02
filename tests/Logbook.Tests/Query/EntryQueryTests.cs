@@ -119,7 +119,7 @@ public sealed class EntryQueryTests
         Assert.Equal([SampleEntries.SampleAsk.Id, SampleEntries.TokyoMidnight.Id, SampleEntries.SecondAsk.Id], Run("since:2026-09-01 until:2026-10-06"));
     }
 
-    // "Followed up by" (DESIGN.md section 10, Phase 7): the live entries whose relatedTo names an original.
+    // "Followed up by" (docs/main-window.md): the live entries whose relatedTo names an original.
     private static readonly Entry Original = SampleEntries.SampleAsk;
 
     private static Entry FollowUpOf(Entry original, string id, DateTimeOffset occurredAt)

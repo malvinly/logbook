@@ -13,7 +13,11 @@ Logbook is a personal Windows tray app for recording decisions and events as the
 
 ## Running it
 
-Windows 10 or 11. The release build is one self-contained `Logbook.exe`; drop it in a folder and run it. The first run asks where the data file should live, sets the passphrase (there is no recovery; write it down somewhere physical) and offers to start with Windows.
+Built and tested on Windows 11; Windows 10 should work but is untested. The release build is one self-contained `Logbook.exe`: download it from the [Releases](https://github.com/malvinly/logbook/releases) page, drop it in a folder and run it. The first run asks where the data file should live, sets the passphrase (there is no recovery; write it down somewhere physical) and offers to start with Windows.
+
+The exe is not code-signed, so Windows SmartScreen warns the first time you run a downloaded copy. Each release lists the SHA-256 of its exe; check it, then choose "More info" and "Run anyway". The version is shown at the foot of the Settings window.
+
+To build it yourself:
 
 ```
 dotnet build
@@ -23,8 +27,11 @@ dotnet publish src/Logbook.App -c Release -r win-x64 --self-contained -p:Publish
 
 ## Where things are
 
-- [DESIGN.md](DESIGN.md) is the source of truth: grammar, file format, key hierarchy, the main window, exports, settings, the phase list in section 14 and the implementation decisions in section 16.
+- [docs/](docs/) is the spec: [grammar](docs/grammar.md), [record schema and file format](docs/file-format.md), [locking](docs/locking.md), [main window](docs/main-window.md), [export](docs/export.md), [settings](docs/settings.md) and [development notes](docs/development.md) on layout, decisions, build and release.
+- [TODO.md](TODO.md) is the roadmap: what is left before 1.0, the backlog, and what is out of scope.
 - [CLAUDE.md](CLAUDE.md) holds the conventions for working in this repo.
 - `src/Logbook.Core` is the UI-free library (model, parser, crypto, file store, query, export); `src/Logbook.App` is the WPF tray app; `tests/Logbook.Tests` holds the Core tests.
 
-Status: Phases 1 to 8 of DESIGN.md are built; Phases 7 and 8 were the decisions from the reviews of the phases before them.
+## License
+
+MIT, see [LICENSE](LICENSE).
