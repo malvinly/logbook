@@ -550,7 +550,8 @@ public sealed partial class App : Application, IDisposable
     /// Tray → Lock now: back to the state the app starts in (DESIGN.md section 9). The open log, and with it the data
     /// key and every decrypted entry, is dropped; the next hotkey prompts for the passphrase and opens the file afresh.
     /// Unsaved captures live only inside the open log, so locking is refused until they are on disk; it is refused too
-    /// while the result of a passphrase change is on screen, the only place the user learns which passphrase now opens the log.
+    /// while a passphrase change result that leaves the passphrase uncertain is on screen (the "Passphrase changed" notice,
+    /// or a failure during the write), the only place the user learns which passphrase now opens the log.
     /// </summary>
     private void LockNow()
     {
@@ -735,9 +736,11 @@ public sealed partial class App : Application, IDisposable
     private bool WriteInProgress(LogFile log) => log.PendingCount > 0 || WriteInFlight();
 
     /// <summary>
-    /// Why a lock must wait right now, for the diagnostics log; null when it may go ahead. A write in progress, or the
-    /// result of a passphrase change still on screen (DESIGN.md section 9): that notice is the only place the user
-    /// learns which passphrase the log now has. A change window with nothing attempted yet may still be closed.
+    /// Why a lock must wait right now, for the diagnostics log; null when it may go ahead. A write in progress, or a
+    /// passphrase change result still on screen that leaves the passphrase uncertain (DESIGN.md section 9): the
+    /// "Passphrase changed" notice or a failure during the write is the only place the user learns which passphrase
+    /// the log now has. A change window with nothing attempted yet, or showing a refusal that changed nothing, may
+    /// still be closed.
     /// </summary>
     private string? LockWaitReason(LogFile log)
     {
@@ -755,7 +758,7 @@ public sealed partial class App : Application, IDisposable
     }
 
     private bool PassphraseResultOnScreen()
-        => _passphraseNoticeOpen || Windows.OfType<ChangePassphraseWindow>().Any(w => w.HasOutcome);
+        => _passphraseNoticeOpen || Windows.OfType<ChangePassphraseWindow>().Any(w => w.OutcomeUncertain);
 
     /// <summary>True while a capture, a detail-pane save or a passphrase change is being written right now.</summary>
     private bool WriteInFlight()

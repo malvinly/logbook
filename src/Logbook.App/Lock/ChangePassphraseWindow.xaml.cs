@@ -37,10 +37,11 @@ public sealed partial class ChangePassphraseWindow : Window
     public bool IsChanging { get; private set; }
 
     /// <summary>
-    /// True once an attempt has run and its outcome is on screen (success closes the window, so in practice a failure
-    /// such as a wrong current passphrase). Locking waits for it, so the user learns which passphrase the log now has.
+    /// True while the message on screen is a failure that may have followed a write to the header, so it is the only
+    /// place the user learns which passphrase the log now has. Locking waits for it (DESIGN.md section 9). A refusal
+    /// that changed nothing does not set it, and any later message clears it. Success closes the window.
     /// </summary>
-    public bool HasOutcome { get; private set; }
+    public bool OutcomeUncertain { get; private set; }
 
     private void OnChangeClick(object sender, RoutedEventArgs e) => _ = TryChangeAsync();
 
@@ -125,17 +126,18 @@ public sealed partial class ChangePassphraseWindow : Window
         {
             Diag.Log("Could not change the passphrase", ex);
             ShowProblem("Could not write the file: " + ex.Message);
+            OutcomeUncertain = true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // The task is not awaited by anyone else, so an unexpected failure must land here or vanish.
             Diag.Log("Unexpected failure while changing the passphrase", ex);
             ShowProblem("Unexpected error; see the diagnostics log. " + ex.Message);
+            OutcomeUncertain = true;
         }
         finally
         {
             SetBusy(false);
-            HasOutcome = true;
         }
 
         if (changed)
@@ -165,6 +167,7 @@ public sealed partial class ChangePassphraseWindow : Window
 
     private void ShowProblem(string message)
     {
+        OutcomeUncertain = false; // the caller sets it again after this when the new message is such a failure
         Problem.Foreground = (System.Windows.Media.Brush)FindResource("DangerBrush");
         Problem.Text = message;
     }
