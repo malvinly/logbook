@@ -119,15 +119,22 @@ internal sealed class TrayIcon : IDisposable
 
     /// <summary>
     /// A balloon from the tray. Each caller decides what a click does; nothing when onClick is null. Balloons show one at
-    /// a time (DESIGN.md section 12): this one shows now, or once those before it have closed.
+    /// a time (DESIGN.md section 12): this one shows now, or once those before it have closed. A reminder balloon still
+    /// waiting its turn is dropped on lock (DropWaitingReminders).
     /// </summary>
-    public void ShowBalloon(string title, string text, bool warning, Action? onClick = null)
+    public void ShowBalloon(string title, string text, bool warning, Action? onClick = null, bool reminder = false)
     {
-        if (_balloons.Enqueue(new Balloon(title, text, warning, onClick)) is { } now)
+        if (_balloons.Enqueue(new Balloon(title, text, warning, onClick, reminder)) is { } now)
         {
             Display(now);
         }
     }
+
+    /// <summary>
+    /// Drops the reminder balloons still waiting their turn (DESIGN.md section 10): reminders show again after the next
+    /// unlock, so one that came up after the lock would show twice. The balloon on screen and other kinds stay.
+    /// </summary>
+    public void DropWaitingReminders() => _balloons.RemoveWaiting(balloon => balloon.Reminder);
 
     private void Display(Balloon balloon)
     {
@@ -173,7 +180,7 @@ internal sealed class TrayIcon : IDisposable
         }
     }
 
-    private sealed record Balloon(string Title, string Text, bool Warning, Action? OnClick);
+    private sealed record Balloon(string Title, string Text, bool Warning, Action? OnClick, bool Reminder);
 
     private void Redraw()
     {

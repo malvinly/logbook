@@ -664,6 +664,7 @@ public sealed partial class App : Application, IDisposable
             _idleTimer.Stop();
             _postponedLockTimer.Stop();
             _remindersShown.Clear();
+            _tray?.DropWaitingReminders();
             _tray?.SetLocked(true);
             log?.Close(); // zeroes the data key and empties the entries; callers checked nothing is pending
             Diag.Log(reason);
@@ -947,7 +948,7 @@ public sealed partial class App : Application, IDisposable
         _remindersShown.Add(Reminders.Shown.Of(due));
         string id = due.Id;
         // Never the summary: Windows keeps balloon text in its notification history long after the app has locked.
-        _tray.ShowBalloon("Reminder", $"A reminder is due; it was due {Format.DateTime(due.RemindAt!.Value)}. Click to open its entry; clear the reminder there to stop it.", warning: false, () => ShowMainWindow(id));
+        _tray.ShowBalloon("Reminder", $"A reminder is due; it was due {Format.DateTime(due.RemindAt!.Value)}. Click to open its entry; clear the reminder there to stop it.", warning: false, () => ShowMainWindow(id), reminder: true);
         Diag.Log("Reminder balloon shown");
     }
 
