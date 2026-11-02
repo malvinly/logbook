@@ -13,33 +13,57 @@ internal static class LocalMarker
 {
     private static readonly string Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Logbook");
 
-    public static bool Exists(string name) => File.Exists(Path.Combine(Folder, name));
+    public static bool Exists(string name) => File.Exists(PathOf(name));
 
-    /// <summary>The stored text, or null when there is none.</summary>
+    /// <summary>The full path of the marker, for messages that tell the user which file failed.</summary>
+    public static string PathOf(string name) => Path.Combine(Folder, name);
+
+    /// <summary>The stored text, or null when there is none or it could not be read.</summary>
     public static string? Read(string name)
     {
+        TryRead(name, out string? content);
+        return content;
+    }
+
+    /// <summary>
+    /// The stored text, null when the marker does not exist. False (content null) when it exists but could not be
+    /// read, so a caller that must not mistake a read failure for "no marker" can tell the two apart.
+    /// </summary>
+    public static bool TryRead(string name, out string? content)
+    {
+        string path = PathOf(name);
         try
         {
-            string path = Path.Combine(Folder, name);
-            return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+            content = File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+            return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Diag.Log($"Could not read marker {name}", e);
-            return null;
+            content = null;
+            return false;
         }
     }
 
-    public static void Set(string name, string? content = null)
+    /// <summary>
+    /// Writes to a temporary file and then swaps it in, as the settings file is saved, so a crash mid-write cannot
+    /// leave half a marker. False when the write failed; the failure is logged.
+    /// </summary>
+    public static bool Set(string name, string? content = null)
     {
+        string path = PathOf(name);
+        string temporary = path + ".tmp";
         try
         {
             Directory.CreateDirectory(Folder);
-            File.WriteAllText(Path.Combine(Folder, name), content ?? DateTimeOffset.Now.ToString("O"));
+            File.WriteAllText(temporary, content ?? DateTimeOffset.Now.ToString("O"));
+            File.Move(temporary, path, overwrite: true);
+            return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Diag.Log($"Could not write marker {name}", e);
+            return false;
         }
     }
 }

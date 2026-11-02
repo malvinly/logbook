@@ -6,7 +6,7 @@ How the code is laid out, the decisions that shape it, and how a build and a rel
 
 - .NET 10, WPF, Windows only. No third-party installs on the target machine, so the app is a self-contained build you drop in a folder.
 - The data file should live in a folder managed by a file sync service, because that is the only backed-up location, but the app does not detect or enforce this: the user chooses the folder. Sync services sync files; they do not understand databases. The file format is designed to be sync-safe: append-only, one record per line, never rewritten in place (the single exception is line 1 on a passphrase change, written over itself at the same length; [file-format.md](file-format.md)).
-- The Windows user account may change. Nothing may depend on the user profile surviving: no DPAPI, no per-user registry secrets, no absolute paths into `C:\Users\<login>`.
+- The Windows user account may change. Nothing may depend on the user profile surviving: no DPAPI, no per-user registry secrets, no absolute paths into `C:\Users\<login>` in anything that must survive; the per-profile pointer and the export-folder marker hold such paths on purpose and are lost with the profile.
 - The author must be able to understand every line. Prefer the boring implementation. Keep the core free of UI dependencies so it can be ported (likely to TypeScript) later.
 
 ## Solution structure

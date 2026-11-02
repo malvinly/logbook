@@ -322,7 +322,22 @@ public sealed partial class App : Application, IDisposable
     /// </summary>
     private bool PrepareDataFile()
     {
-        string? pointer = DataFileLocation.Read();
+        if (!DataFileLocation.TryRead(out string? pointer))
+        {
+            // The pointer exists but could not be read: treating that as "no pointer" would look like a first run and
+            // invite a second log, so the user decides.
+            Diag.Log($"The data file pointer could not be read: {DataFileLocation.Path}");
+            bool chooseInstead = AppDialog.Confirm(
+                null,
+                "Could not read where the log is",
+                $"The file that records where your log is could not be read:\n{DataFileLocation.Path}\n\nQuit and try again, or choose the log file yourself.",
+                "Choose a file",
+                "Quit",
+                DialogTone.Warning,
+                confirmIsDefault: false);
+            return chooseInstead && RunFirstRun();
+        }
+
         if (pointer is null)
         {
             return RunFirstRun();
@@ -363,7 +378,7 @@ public sealed partial class App : Application, IDisposable
             if (!string.Equals(picker.ChosenPath, _dataFilePath, StringComparison.OrdinalIgnoreCase))
             {
                 _dataFilePath = picker.ChosenPath;
-                DataFileLocation.Write(_dataFilePath);
+                RememberDataFile(_dataFilePath);
             }
         }
 
@@ -425,10 +440,20 @@ public sealed partial class App : Application, IDisposable
             _dataFilePath = welcome.DataFilePath;
             Log = opened;
             _firstRun = true;
-            DataFileLocation.Write(_dataFilePath);
+            RememberDataFile(_dataFilePath);
             SaveSettings();
             Diag.Log("First run complete");
             return true;
+        }
+    }
+
+    // Writes the pointer at launch. A failure does not stop the app, since the log is open and fine, but the user is told,
+    // because the next start will ask for the file again.
+    private static void RememberDataFile(string path)
+    {
+        if (!DataFileLocation.Write(path))
+        {
+            AppDialog.Inform(null, "Location not remembered", $"Logbook could not record where the log is:\n{DataFileLocation.Path}\n\nThe log itself is fine, but Logbook will ask for the file again at the next start.", DialogTone.Warning);
         }
     }
 
@@ -1069,7 +1094,12 @@ public sealed partial class App : Application, IDisposable
             }
         }
 
-        DataFileLocation.Write(path);
+        if (!DataFileLocation.Write(path))
+        {
+            AppDialog.Inform(owner, "Could not switch", $"Logbook could not record where the log is:\n{DataFileLocation.Path}\n\nLogbook keeps using the current log.", DialogTone.Warning);
+            return null;
+        }
+
         Diag.Log($"Data file pointer changed to {path}");
 
         bool restart = AppDialog.Confirm(
