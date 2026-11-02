@@ -31,11 +31,6 @@ public sealed class Settings
 {
     public const string FileName = "logbook.settings.json";
 
-    /// <summary>Environment variable whose value is the synced root folder.</summary>
-    public string SyncRootEnvVar { get; set; } = "";
-
-    public string DataFileRelativePath { get; set; } = "logbook.jsonl";
-
     public string CaptureHotkey { get; set; } = "Ctrl+Alt+L";
 
     public string MainWindowHotkey { get; set; } = "Ctrl+Alt+Shift+L";

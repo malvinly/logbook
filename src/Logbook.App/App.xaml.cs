@@ -913,20 +913,8 @@ public sealed partial class App : Application, IDisposable
         window.ShowDialog();
     }
 
-    // Every synced folder on the machine, not only the configured one: a plaintext export must not land in any of them.
-    private List<string> SyncRoots()
-    {
-        List<string> roots = [_dataFolder];
-        foreach (string envVar in SettingsStore.KnownSyncEnvVars)
-        {
-            if (SettingsStore.ResolveRoot(envVar) is { } folder && !roots.Contains(folder, StringComparer.OrdinalIgnoreCase))
-            {
-                roots.Add(folder);
-            }
-        }
-
-        return roots;
-    }
+    // The log's own folder, which may be synced: a plaintext export must not default into it.
+    private List<string> SyncRoots() => [_dataFolder];
 
     // Only reachable from the main window, which exists only while unlocked.
     private void ShowChangePassphrase()
