@@ -54,8 +54,17 @@ public sealed class BalloonOrder<T>
     public T? Closed() => _onScreen ? Release() : null;
 
     /// <summary>
-    /// The caller gives up waiting for Windows to report a close (it may never report one for a balloon it did not
-    /// show) and takes the showing balloon as closed, shown or not. Returns the next one to show, or null.
+    /// The balloon's timeout plus a margin has passed with no close counted. Windows may never report a close for a
+    /// balloon it did not show (notifications off, do not disturb), so one never reported shown is taken as closed and
+    /// the next one returned, or null. One reported shown stays: some accessibility settings keep a balloon up well past
+    /// its timeout, and its close will still come. Null then too, with <see cref="Showing"/> unchanged, so the caller
+    /// keeps waiting until <see cref="Expired"/>.
+    /// </summary>
+    public T? ReleaseIfNeverShown() => Showing is null || _onScreen ? null : Release();
+
+    /// <summary>
+    /// The caller gives up waiting for Windows to report a close (the cap, for a balloon reported shown whose close never
+    /// came) and takes the showing balloon as closed, shown or not. Returns the next one to show, or null.
     /// </summary>
     public T? Expired() => Showing is null ? null : Release();
 

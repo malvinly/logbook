@@ -211,4 +211,100 @@ public sealed class BalloonOrderTests
         Assert.Null(queue.Closed());
         Assert.Same(HotkeyFailed, queue.Showing);
     }
+
+    [Fact]
+    public void ReleaseIfNeverShownReleasesTheNextWhenWindowsNeverReportedTheBalloonShown()
+    {
+        // Notifications off or do not disturb: the balloon was probably never on screen, so waiting longer helps nobody.
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+
+        Assert.Same(Reminder, queue.ReleaseIfNeverShown());
+        Assert.Same(Reminder, queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void ReleaseIfNeverShownKeepsABalloonWindowsReportedShown()
+    {
+        // Some accessibility settings keep a balloon up past its timeout; replacing it while still on screen is worse.
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+        queue.Shown();
+
+        Assert.Null(queue.ReleaseIfNeverShown());
+        Assert.Same(HotkeyFailed, queue.Showing);
+        Assert.Same(HotkeyFailed, queue.LastShown);
+    }
+
+    [Fact]
+    public void ReleaseIfNeverShownWithNothingWaitingLeavesNothingShowingButKeepsTheClickAction()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(Reminder);
+
+        Assert.Null(queue.ReleaseIfNeverShown());
+        Assert.Null(queue.Showing);
+        Assert.Same(Reminder, queue.LastShown);
+    }
+
+    [Fact]
+    public void ReleaseIfNeverShownWhileNothingIsShowingChangesNothing()
+    {
+        BalloonOrder<Balloon> queue = new();
+
+        Assert.Null(queue.ReleaseIfNeverShown());
+        Assert.Null(queue.Showing);
+        Assert.Null(queue.LastShown);
+    }
+
+    [Fact]
+    public void TheCapReleasesTheNextEvenWhenTheBalloonWasReportedShown()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Reminder);
+        queue.Shown();
+        queue.ReleaseIfNeverShown();
+
+        Assert.Same(Reminder, queue.Expired());
+        Assert.Same(Reminder, queue.Showing);
+    }
+
+    [Fact]
+    public void ACloseBetweenTheFallbackAndTheCapReleasesTheNextWhichStartsItsOwnWait()
+    {
+        // The next balloon starts unreported, so the cap meant for the one before cannot count it as shown, and its own
+        // fallback waits for its close once Windows reports it shown.
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Enqueue(Downloaded);
+        queue.Enqueue(Reminder);
+        queue.Shown();
+        queue.ReleaseIfNeverShown();
+
+        Assert.Same(Downloaded, queue.Closed());
+        Assert.Same(Downloaded, queue.Showing);
+
+        queue.Shown();
+        Assert.Null(queue.ReleaseIfNeverShown());
+        Assert.Same(Downloaded, queue.Showing);
+        Assert.Same(Reminder, queue.Closed());
+    }
+
+    [Fact]
+    public void ACloseBetweenTheFallbackAndTheCapWithNothingWaitingLeavesTheCapNothingToRelease()
+    {
+        BalloonOrder<Balloon> queue = new();
+        queue.Enqueue(HotkeyFailed);
+        queue.Shown();
+        queue.ReleaseIfNeverShown();
+        queue.Closed();
+
+        Assert.Null(queue.Expired());
+        Assert.Null(queue.Showing);
+        Assert.Same(Reminder, queue.Enqueue(Reminder));
+    }
 }
