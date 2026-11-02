@@ -43,7 +43,8 @@ public sealed partial class App : Application, IDisposable
     private readonly HashSet<Reminders.Shown> _remindersShown = []; // since the last unlock; dropped on lock with the log
     private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromMinutes(1) }; // runs only while unlocked
 
-    // Runs only while a workstation lock or sign-out found a reason to wait (LockWaitReason); takes that lock once none is left.
+    // Runs only while a workstation lock or sign-out found a reason to wait (LockWaitReason); takes that lock once none is
+    // left, or is cancelled if the session unlocks first.
     private readonly DispatcherTimer _postponedLockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private CaptureWindow? _capture;
     private MainWindow? _main;
@@ -59,6 +60,7 @@ public sealed partial class App : Application, IDisposable
     private bool _exiting;
     private int _writesInFlight; // captures handed to a worker and not yet back; UI thread only
     private bool _passphraseNoticeOpen; // the "Passphrase changed" notice is on screen; locking waits for it
+    private bool _sessionLocked; // Windows locked the session or is signing out and has not reported an unlock since
 
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
@@ -496,10 +498,19 @@ public sealed partial class App : Application, IDisposable
             if (_unlockPrompt.ShowDialog() == true && _unlockPrompt.Opened is { } opened)
             {
                 Log = opened;
+                Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
+
+                // The key finished deriving after Windows locked the session (DESIGN.md section 9): locking now, before
+                // any reminder or timer starts, keeps the log from sitting open behind the lock screen until the idle limit.
+                if (_sessionLocked)
+                {
+                    Lock("The log opened while Windows had the session locked; locked at once");
+                    return false;
+                }
+
                 _tray?.SetLocked(false);
                 StartReminders();
                 _idleTimer.Start();
-                Diag.Log($"Unlocked; {opened.Live.Count} live entries, {opened.UnreadableLineCount} unreadable lines, trailing truncated: {opened.TrailingLineTruncated}");
                 return true;
             }
 
@@ -607,6 +618,18 @@ public sealed partial class App : Application, IDisposable
         }
 
         Lock($"{what}; locked");
+    }
+
+    // A postponed lock still waiting when the user is back protects nothing, and taking it would close their typed text
+    // (DESIGN.md section 9), so it is cancelled.
+    private void SessionUnlocked()
+    {
+        _sessionLocked = false;
+        if (_postponedLockTimer.IsEnabled)
+        {
+            _postponedLockTimer.Stop();
+            Diag.Log("Windows unlocked the session before the postponed lock was taken; the lock was cancelled");
+        }
     }
 
     // Polled rather than hooked into every place a write can finish (a capture, a detail-pane save, the 30-second
@@ -1047,7 +1070,15 @@ public sealed partial class App : Application, IDisposable
             string what = wParam.ToInt32() == NativeMethods.WtsSessionLock ? "Windows locked the session" : "Windows is signing the user out";
 
             // Not inside the message hook: the lock closes windows.
-            Dispatcher.BeginInvoke(() => LockForSession(what));
+            Dispatcher.BeginInvoke(() =>
+            {
+                _sessionLocked = true;
+                LockForSession(what);
+            });
+        }
+        else if (msg == NativeMethods.WmWtsSessionChange && wParam.ToInt32() == NativeMethods.WtsSessionUnlock)
+        {
+            Dispatcher.BeginInvoke(SessionUnlocked);
         }
         else if (msg == NativeMethods.WmSettingChange && lParam != IntPtr.Zero && Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")
         {

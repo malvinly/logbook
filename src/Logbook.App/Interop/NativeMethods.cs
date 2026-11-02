@@ -103,6 +103,7 @@ internal static class NativeMethods
     public const int WmWtsSessionChange = 0x02B1;
     public const int WtsSessionLogoff = 0x6;
     public const int WtsSessionLock = 0x7;
+    public const int WtsSessionUnlock = 0x8;
     public const int NotifyForThisSession = 0;
 
     [DllImport("wtsapi32.dll", SetLastError = true, ExactSpelling = true)]
