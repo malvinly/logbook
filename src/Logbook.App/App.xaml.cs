@@ -64,10 +64,9 @@ public sealed partial class App : Application, IDisposable
     private bool _sessionLocked; // Windows locked the session and has not reported an unlock since
     private bool _retrySessionNotifications; // registering at startup failed; retried once at the first unlock
 
-    // Timing for benchmarking the build (docs/development.md, Files): when the capture hotkey was pressed, taken by the
-    // next capture box shown, and how many boxes the hotkey has opened since launch.
-    private long? _captureHotkeyPressedAt;
-    private int _captureHotkeyPresses;
+    // Capture boxes opened since launch. Only the first two a hotkey opens are timed for benchmarking the build, so the
+    // one-time cost and the steady state are both in the log without it recording every capture (docs/development.md, Files).
+    private int _captureBoxesOpened;
 
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
@@ -117,15 +116,6 @@ public sealed partial class App : Application, IDisposable
 
         _hotkeys = new HotkeyManager(_messageWindow);
         _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
-
-        // Benchmark timing (docs/development.md, Files). The time since process start includes the runtime host's own
-        // startup, which happens before OnStartup.
-        using (System.Diagnostics.Process self = System.Diagnostics.Process.GetCurrentProcess())
-        {
-            long sinceProcessStart = (long)(DateTime.Now - self.StartTime).TotalMilliseconds;
-            Diag.Log($"Tray icon ready {sinceProcessStart} ms after process start, {startup.ElapsedMilliseconds} ms after startup began");
-        }
-
         _tray.OpenRequested += ShowMainWindow;
         _tray.CaptureRequested += ShowCapture;
         _tray.SettingsRequested += ShowSettings;
@@ -137,6 +127,16 @@ public sealed partial class App : Application, IDisposable
         _reminderTimer.Tick += (_, _) => ShowDueReminder();
         _idleTimer.Tick += (_, _) => LockIfIdle();
         _postponedLockTimer.Tick += (_, _) => TakePostponedLock();
+
+        // Benchmark timing (docs/development.md, Files). Taken once the icon, its menu and the hotkeys all exist, so
+        // "ready" means usable, and a throw here cannot leave an icon wired to nothing. The time since process start
+        // includes the runtime host's own startup, which happens before OnStartup; it is taken in UTC so a daylight
+        // saving change during startup cannot skew it.
+        using (System.Diagnostics.Process self = System.Diagnostics.Process.GetCurrentProcess())
+        {
+            long sinceProcessStart = (long)(DateTime.UtcNow - self.StartTime.ToUniversalTime()).TotalMilliseconds;
+            Diag.Log($"Tray icon ready {sinceProcessStart} ms after process start, {startup.ElapsedMilliseconds} ms after startup began");
+        }
 
         if (_placeholderSeen)
         {
@@ -848,22 +848,24 @@ public sealed partial class App : Application, IDisposable
             || _main is { IsSaving: true }
             || Windows.OfType<ChangePassphraseWindow>().Any(w => w.IsChanging);
 
-    private void ShowCapture() => ShowCapture(null);
+    private void ShowCapture() => ShowCapture(null, null);
 
-    // Runs inside the WM_HOTKEY dispatch, so the timestamp is taken as the message arrives.
-    private void ShowCaptureFromHotkey()
-    {
-        _captureHotkeyPressedAt = System.Diagnostics.Stopwatch.GetTimestamp();
-        ShowCapture(null);
-    }
+    // Runs inside the WM_HOTKEY dispatch, so the timestamp is taken when the message is dispatched, after any wait in
+    // the message queue, not at the key press itself.
+    private void ShowCaptureFromHotkey() => ShowCapture(null, System.Diagnostics.Stopwatch.GetTimestamp());
 
     /// <param name="followUpOf">The entry the main window's Follow up button was pressed on; null for a plain capture.</param>
-    private void ShowCapture(Entry? followUpOf)
+    private void ShowCapture(Entry? followUpOf) => ShowCapture(followUpOf, null);
+
+    /// <param name="followUpOf">The entry the main window's Follow up button was pressed on; null for a plain capture.</param>
+    /// <param name="hotkeyPressedAt">The Stopwatch timestamp of the capture hotkey, for benchmark timing; null otherwise.</param>
+    private void ShowCapture(Entry? followUpOf, long? hotkeyPressedAt)
     {
-        // Taken and cleared here, so a tray or Follow up capture never reports a stale hotkey time; dropped while locked,
-        // because the delta would include typing the passphrase.
-        long? hotkeyPressedAt = IsLocked ? null : _captureHotkeyPressedAt;
-        _captureHotkeyPressedAt = null;
+        // Dropped while locked, because the delta would include typing the passphrase.
+        if (IsLocked)
+        {
+            hotkeyPressedAt = null;
+        }
 
         if (!EnsureUnlocked())
         {
@@ -880,10 +882,10 @@ public sealed partial class App : Application, IDisposable
         CaptureWindow capture = new(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions, followUpOf);
         capture.Captured += entry => _ = SaveCapturedAsync(entry, capture.WorkArea);
         capture.Closed += (_, _) => _capture = null;
-        if (hotkeyPressedAt is { } pressedAt)
+        int box = ++_captureBoxesOpened;
+        if (hotkeyPressedAt is { } pressedAt && box <= 2)
         {
-            int press = ++_captureHotkeyPresses;
-            capture.ContentRendered += (_, _) => Diag.Log($"Capture box rendered {(long)System.Diagnostics.Stopwatch.GetElapsedTime(pressedAt).TotalMilliseconds} ms after the hotkey (press {press})");
+            capture.ContentRendered += (_, _) => Diag.Log($"Capture box rendered {(long)System.Diagnostics.Stopwatch.GetElapsedTime(pressedAt).TotalMilliseconds} ms after the hotkey (box {box} of this launch)");
         }
 
         _capture = capture;

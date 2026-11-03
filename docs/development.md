@@ -61,7 +61,7 @@ WPF rules for this project: plain code-behind plus a hand-written `INotifyProper
 
 - Data file: `logbook.jsonl`, wherever the user put it. Settings file: `logbook.settings.json`, beside it.
 - The data file is found through the per-profile pointer `%LOCALAPPDATA%\Logbook\data-file` ([settings.md](settings.md)). If the file it names is missing at launch, the app asks rather than creating a new file silently.
-- Diagnostics (not entries, never entry contents) go to a rolling text log in `%LOCALAPPDATA%\Logbook\logs\`, one file per day, two weeks kept. Losing it on a profile change is fine. It also carries the startup and hotkey timing lines ("Tray icon ready …", "Capture box rendered …") used to benchmark builds.
+- Diagnostics (not entries, never entry contents) go to a rolling text log in `%LOCALAPPDATA%\Logbook\logs\`, one file per day, two weeks kept. Losing it on a profile change is fine. It also carries the timing lines used to benchmark builds (TODO.md, Build tuning): "Tray icon ready …" once per launch, and "Capture box rendered …" for the first two capture boxes a hotkey opens in a launch, so the log notes when a launch's first two captures began and nothing about later ones.
 - Plaintext exports default to `%LOCALAPPDATA%\Logbook\exports\`, created on demand, because the profile's local app data is not a folder sync services back up ([export.md](export.md)).
 
 ## Build, test and release
