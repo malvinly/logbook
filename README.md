@@ -2,9 +2,9 @@
 
 Logbook is a personal Windows tray app for writing down decisions and events as they happen. Press a hotkey, type one line, press Enter. Later, ask it "when did that happen, how many times, and did I tell anyone" and paste the answer as a dated timeline.
 
-Everything lives in one encrypted, append-only file in a folder you choose.
+Your entries live in one encrypted, append-only file in a folder you choose. It is free and open source, and nothing leaves your machine: no account, no network, no telemetry.
 
-![The main window: entries matching #staging-access grouped by day, with the detail pane open on the first one and its follow-ups listed](docs/images/main-window.png)
+![The main window: entries matching #staging-access grouped by day, with the detail pane open on the oldest one and its follow-ups listed](docs/images/main-window.png)
 
 ## How it works
 
@@ -16,7 +16,7 @@ Press `Ctrl+Alt+L` anywhere. A launcher-style box appears. Type one line and pre
 
 `#tags`, `@people` and `at:` are picked out as you type and shown as chips, so you see what will be stored before you commit it. The rest of the line is the summary. `Ctrl+Enter` opens a "more" section for a reason, extra tags and people, and refs such as ticket numbers.
 
-A toast confirms the write. Click it to open the entry and fix a typo; there is no separate undo.
+A toast shows the saved summary for five seconds, so mind who can see your screen. Click it to open the entry and fix a typo; there is no separate undo. It is not a Windows notification, so nothing stays in Notification Center.
 
 ![The toast: Logged, click to edit](docs/images/toast.png)
 
@@ -24,11 +24,11 @@ A toast confirms the write. Click it to open the entry and fix a typo; there is 
 
 Open the main window from the tray icon, from the toast, or with `Ctrl+Alt+Shift+L`. The filter box uses the same grammar as capture, so `#asked @j-doe last:30d "release freeze"` works the way you would expect. Results are grouped by day, newest first, and the header always shows the count and the date range. A filter you keep typing can be saved as a button.
 
-Selecting an entry opens it for editing. Every save is a new revision, and the pane shows the full history with changed fields highlighted. "Follow up" starts a new entry linked to the selected one, and the original lists its follow-ups. A reminder on an entry shows as a tray balloon when it is due.
+Selecting an entry opens it for editing. Every save is a new revision, and the pane lists every earlier revision and highlights which fields the latest save changed. "Follow up" starts a new entry linked to the selected one, and the original lists its follow-ups. A reminder, set in the detail pane, shows as a tray balloon when it is due; balloons never contain entry text.
 
 ### 3. Share
 
-"Copy as timeline" turns the filtered set into a plain-text timeline, oldest first, with optional gaps between entries and month counts. It goes on the clipboard as text and as HTML, so it pastes cleanly into mail and chat.
+"Copy as timeline" turns the filtered set into a plain-text timeline, oldest first, with optional gaps between entries and month counts. It goes on the clipboard as text and as HTML, so it pastes cleanly into mail and chat. The copy is excluded from clipboard history and cloud clipboard sync.
 
 ![The export panel with Show gaps on and a four-entry timeline in the preview](docs/images/export.png)
 
@@ -70,20 +70,23 @@ A `#` or `@` starts a token only at the start of a word and before a letter, so 
 
 ## Get it
 
-- Download `Logbook.exe` from the [Releases](https://github.com/malvinly/logbook/releases) page, drop it in a folder and run it. It is one self-contained file; nothing is installed.
+- Download `Logbook.exe` from the [Releases](https://github.com/malvinly/logbook/releases) page, drop it in a folder and run it. It is one self-contained file; there is no installer.
 - Windows SmartScreen warns the first time you run a downloaded copy, because the exe is not code-signed. Each release lists the SHA-256 of its exe; check it, then choose "More info" and "Run anyway".
-- The first run asks where the data file should live, sets a passphrase and offers to start with Windows.
+- The first run asks where the data file should live, asks you to choose a passphrase and offers to start with Windows.
 - There is no passphrase recovery. Write it down somewhere physical.
+- Releases are 0.9.x pre-releases until 1.0; [TODO.md](TODO.md) says what is left.
 - Built and tested on Windows 11. Windows 10 should work but is untested.
+- To remove it, turn off "Start with Windows" in Settings, exit from the tray menu and delete the exe. Your log, the settings file beside it and the `%LOCALAPPDATA%\Logbook` folder stay until you delete them.
 
 ## How it keeps your data
 
-- One file, `logbook.jsonl`, in a folder you choose. Put it somewhere a sync service backs up; the format is built to survive living in a sync folder.
-- Each entry is a line encrypted with AES-256-GCM under a data key that your passphrase unwraps. Changing the passphrase rewrites only the header.
-- The file is only ever appended to. Edits and deletes are new lines, so the history is complete.
-- The app starts locked. It locks again after an hour without input, when Windows locks or signs out, or on "Lock now" in the tray menu.
+- One file, `logbook.jsonl`, in a folder you choose. Put it somewhere a sync service backs up; the format is built to survive living in a sync folder. Beside it is a small plaintext `logbook.settings.json` holding hotkeys, theme, export toggles and your saved filter buttons as typed, so do not save a filter you would not want read.
+- Each entry is a line encrypted with AES-256-GCM under a data key that your passphrase unwraps. Keys come from PBKDF2-HMAC-SHA256 at 600,000 iterations; a long passphrase is the only defence against someone guessing offline with a copy of the file. Changing the passphrase re-wraps the same data key and rewrites only the header, so a copy made before the change, such as a sync service's version history, still opens with the old passphrase.
+- Apart from that header, the file is only ever appended to. Edits and deletes are new lines, so nothing is erased: a deleted entry stays readable in its revision view and in a decrypted export with history. Append-only is the app's discipline, not something the file can prove; there is no tamper evidence.
+- The app starts locked. It locks again after an hour with no keyboard or mouse activity on the machine (the default; Settings allows 0 to 1440 minutes, 0 never locks), when Windows locks or signs out, or on "Lock now" in the tray menu. While unlocked, anyone at your desk can open the main window and read everything.
+- A diagnostics log under `%LOCALAPPDATA%\Logbook\logs` keeps errors and counts for two weeks, never entry text.
 - Timestamps keep the UTC offset they were captured with. Nothing is converted to UTC or to the current machine zone.
-- Plaintext exports default to a private folder under your Windows profile, outside the log's folder.
+- Plaintext exports default to a private folder under your Windows profile, outside the log's folder. The app cannot tell which folders are synced and never deletes an export, so delete it when you are done.
 - The look is Windows 11 Fluent, following the Windows light or dark mode or forced from Settings. The screenshots above are the dark theme.
 
 ## Build it
