@@ -46,10 +46,6 @@ Exit paths:
 - Exit, and the restart from Settings → "Choose another…", checks pending entries and writes in flight but not an open capture box, so typed, unsubmitted text is closed without a prompt. The capture code's own rule is that nothing typed is ever thrown away.
 - The 30-second retry runs on a timer thread that the in-flight write counter does not see, so an exit or session end can stop the process during a queued write. The loss is one retry attempt, since each append is a single write-through call, but the exit check is meant to wait for every write.
 
-Main window:
-
-- The detail pane footer (Save, Follow up, Delete) needs about 400 px, but the pane gets two fifths of the width with a 340 px minimum, so below roughly 1050 px of window width the Delete button is clipped unless the splitter is dragged. The window allows 860 px.
-
 Tests:
 
 - Two leftover-punctuation cases now take the separator path and their names are stale.

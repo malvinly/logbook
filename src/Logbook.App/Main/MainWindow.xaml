@@ -105,7 +105,7 @@
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="3*" MinWidth="360" />
         <ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="2*" MinWidth="340" />
+        <ColumnDefinition Width="2*" MinWidth="400" />
       </Grid.ColumnDefinitions>
 
       <Border Style="{StaticResource Card}">
