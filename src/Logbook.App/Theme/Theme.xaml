@@ -35,6 +35,8 @@
     <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource BodySize}" />
     <Setter Property="UseLayoutRounding" Value="True" />
+    <!-- Display mode snaps glyphs to whole pixels; the default Ideal mode places them fractionally and reads soft at 14 px on an unscaled monitor. -->
+    <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
   </Style>
 
   <!-- A context menu has no window above it to inherit fonts from (the tray menu, a text box's menu). -->
