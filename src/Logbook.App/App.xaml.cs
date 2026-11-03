@@ -64,6 +64,11 @@ public sealed partial class App : Application, IDisposable
     private bool _sessionLocked; // Windows locked the session and has not reported an unlock since
     private bool _retrySessionNotifications; // registering at startup failed; retried once at the first unlock
 
+    // Timing for benchmarking the build (docs/development.md, Files): when the capture hotkey was pressed, taken by the
+    // next capture box shown, and how many boxes the hotkey has opened since launch.
+    private long? _captureHotkeyPressedAt;
+    private int _captureHotkeyPresses;
+
     /// <summary>Null while locked. The data key lives inside until Lock now, the idle lock or exit.</summary>
     public LogFile? Log { get; private set; }
 
@@ -71,6 +76,7 @@ public sealed partial class App : Application, IDisposable
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        System.Diagnostics.Stopwatch startup = System.Diagnostics.Stopwatch.StartNew(); // benchmark timing (docs/development.md, Files)
         base.OnStartup(e);
         AppTheme.ReloadTokens(this);
         UpdateWindowIcon(); // before any window, the first-run ones included
@@ -111,6 +117,15 @@ public sealed partial class App : Application, IDisposable
 
         _hotkeys = new HotkeyManager(_messageWindow);
         _tray = new TrayIcon(_messageWindow.Handle, ThemeColor("AccentBrush"), ThemeColor("TrayLockedBrush"), ThemeColor("TrayPendingBrush"));
+
+        // Benchmark timing (docs/development.md, Files). The time since process start includes the runtime host's own
+        // startup, which happens before OnStartup.
+        using (System.Diagnostics.Process self = System.Diagnostics.Process.GetCurrentProcess())
+        {
+            long sinceProcessStart = (long)(DateTime.Now - self.StartTime).TotalMilliseconds;
+            Diag.Log($"Tray icon ready {sinceProcessStart} ms after process start, {startup.ElapsedMilliseconds} ms after startup began");
+        }
+
         _tray.OpenRequested += ShowMainWindow;
         _tray.CaptureRequested += ShowCapture;
         _tray.SettingsRequested += ShowSettings;
@@ -524,7 +539,7 @@ public sealed partial class App : Application, IDisposable
 
     private void RegisterHotkeys()
     {
-        RegisterHotkey(_settings.CaptureHotkey, "capture", ShowCapture);
+        RegisterHotkey(_settings.CaptureHotkey, "capture", ShowCaptureFromHotkey);
         RegisterHotkey(_settings.MainWindowHotkey, "main window", ShowMainWindow);
     }
 
@@ -835,9 +850,21 @@ public sealed partial class App : Application, IDisposable
 
     private void ShowCapture() => ShowCapture(null);
 
+    // Runs inside the WM_HOTKEY dispatch, so the timestamp is taken as the message arrives.
+    private void ShowCaptureFromHotkey()
+    {
+        _captureHotkeyPressedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+        ShowCapture(null);
+    }
+
     /// <param name="followUpOf">The entry the main window's Follow up button was pressed on; null for a plain capture.</param>
     private void ShowCapture(Entry? followUpOf)
     {
+        // Taken and cleared here, so a tray or Follow up capture never reports a stale hotkey time; dropped while locked,
+        // because the delta would include typing the passphrase.
+        long? hotkeyPressedAt = IsLocked ? null : _captureHotkeyPressedAt;
+        _captureHotkeyPressedAt = null;
+
         if (!EnsureUnlocked())
         {
             return;
@@ -853,6 +880,12 @@ public sealed partial class App : Application, IDisposable
         CaptureWindow capture = new(Monitors.WorkAreaAtCursor(_messageWindow!.TransformFromDevice), BuildSuggestions, followUpOf);
         capture.Captured += entry => _ = SaveCapturedAsync(entry, capture.WorkArea);
         capture.Closed += (_, _) => _capture = null;
+        if (hotkeyPressedAt is { } pressedAt)
+        {
+            int press = ++_captureHotkeyPresses;
+            capture.ContentRendered += (_, _) => Diag.Log($"Capture box rendered {(long)System.Diagnostics.Stopwatch.GetElapsedTime(pressedAt).TotalMilliseconds} ms after the hotkey (press {press})");
+        }
+
         _capture = capture;
         capture.Show();
         capture.Activate();
