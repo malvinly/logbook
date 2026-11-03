@@ -55,12 +55,13 @@ Build:
 
 - Windows 10 is untested; the Mica and rounded-corner fallback has only been reasoned about.
 
-Build tuning (Windows):
+Build tuning (Windows), all three measured on 2026-11-02 and none landed:
 
-- Non-concurrent GC and `System.GC.ConserveMemory` in the runtime config.
-- One throwaway `CaptureWindow` constructed at startup and closed without being shown, so the first hotkey press does not pay the XAML parse and JIT.
-- ReadyToRun on the published exe, weighed against the larger download.
-- Each change is measured alone on the published single-file exe (cold start to tray icon, first and second hotkey press to the capture box rendered, idle working set and private bytes, memory with the main window open, exe size), as the median of at least five runs. It is kept only if it is a net gain beyond run-to-run noise; otherwise it is reverted and its numbers are recorded here.
+- Each change is measured alone on the published single-file exe (cold start to tray icon, first and second hotkey press to the capture box rendered, idle working set and private bytes, memory with the main window open, exe size), as the median of at least five runs. It is kept only if it is a net gain beyond run-to-run noise; otherwise it is reverted and its numbers are recorded here. The diagnostics log carries the timing lines ([docs/development.md](docs/development.md), Files).
+- Baseline at e384886: tray icon ready 484 ms after process start (247 ms after `OnStartup` began), first hotkey press to capture box rendered 107 ms, second press 45 ms, idle 135 MB working set and 80 MB private bytes, main window open 175 MB and 122 MB, exe 173.1 MB. Run-to-run noise was about 7 ms on cold start, 8 ms on the presses and 1 to 3 MB on memory.
+- Non-concurrent GC and `System.GC.ConserveMemory` at 5 in the runtime config: every metric within noise of the baseline (idle 135.0 MB and 80.6 MB), so there is nothing to gain; the heap is small and the working set is native and WPF memory.
+- One throwaway `CaptureWindow` constructed at startup and closed without being shown: first press 107 to 77 ms, but 59 ms more startup work before the unlock prompt and idle memory up 5 to 6 MB (141 MB and 85 MB) for the life of the process. The remaining first-press cost is the first `Show`, the window handle, the DWM calls and the first render, which a construction cannot warm.
+- ReadyToRun on the published exe: cold start 484 to 451 ms, but first press within noise (99 ms), every memory figure 3.5 to 4.3 MB worse, and the exe 18.5 MB larger (191.6 MB).
 
 ## After 1.0: macOS port
 
