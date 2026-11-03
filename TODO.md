@@ -55,6 +55,13 @@ Build:
 
 - Windows 10 is untested; the Mica and rounded-corner fallback has only been reasoned about.
 
+Build tuning (Windows):
+
+- Non-concurrent GC and `System.GC.ConserveMemory` in the runtime config.
+- One throwaway `CaptureWindow` constructed at startup and closed without being shown, so the first hotkey press does not pay the XAML parse and JIT.
+- ReadyToRun on the published exe, weighed against the larger download.
+- Each change is measured alone on the published single-file exe (cold start to tray icon, first and second hotkey press to the capture box rendered, idle working set and private bytes, memory with the main window open, exe size), as the median of at least five runs. It is kept only if it is a net gain beyond run-to-run noise; otherwise it is reverted and its numbers are recorded here.
+
 ## After 1.0: macOS port
 
 A larger item, not started, approved in outline on 2026-11-02. It is one piece of work with its own phases, done after `v1.0.0` ships and the Windows app has settled.
