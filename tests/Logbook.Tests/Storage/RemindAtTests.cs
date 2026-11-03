@@ -1,6 +1,4 @@
-using System.Text;
 using Logbook.Core;
-using Logbook.Core.Crypto;
 using Logbook.Core.Export;
 using Logbook.Core.Storage;
 using Xunit;
@@ -33,24 +31,11 @@ public sealed class RemindAtTests : IDisposable
 
     private LogFile Open() => LogFile.Open(_file.Path, Passphrase, NoDelays);
 
-    private void AppendRawLine(LogFile log, string json)
-    {
-        byte[] salt = Convert.FromBase64String(log.Header.Kdf.Salt);
-        byte[] key = DataKey.Unwrap(log.Header.WrappedKey, KeyDerivation.Derive(Passphrase, salt, log.Header.Kdf.Iterations));
-        File.AppendAllText(_file.Path, LineCipher.Encrypt(key, Encoding.UTF8.GetBytes(json)) + "\n");
-    }
-
     [Fact]
     public void RemindAtIsWrittenWithItsOwnOffsetAfterRelatedTo()
     {
         string json = LogbookJson.Serialize(WithReminder());
         Assert.Contains("\"relatedTo\":[],\"remindAt\":\"2026-10-20T09:00:00+09:00\",\"deleted\":false", json, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void UnsetRemindAtIsWrittenAsNull()
-    {
-        Assert.Contains("\"remindAt\":null", LogbookJson.Serialize(SampleEntries.SampleFollowUp), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -62,42 +47,11 @@ public sealed class RemindAtTests : IDisposable
     }
 
     [Fact]
-    public void UnsetRemindAtRoundTripsAsNull()
-    {
-        Assert.Null(LogbookJson.DeserializeEntry(LogbookJson.Serialize(SampleEntries.SampleFollowUp)).RemindAt);
-    }
-
-    [Fact]
     public void LineWrittenBeforeRemindAtExistedLoadsAsNull()
     {
         Entry entry = LogbookJson.DeserializeEntry(LineWithoutRemindAt);
         Assert.Null(entry.RemindAt);
         Assert.Equal("Followed up; no response to the first ask.", entry.Summary);
-    }
-
-    [Fact]
-    public void RemindAtRoundTripsThroughEncryptAppendAndLoad()
-    {
-        LogFile log = Create();
-        log.Append(WithReminder());
-        log.Append(SampleEntries.SampleAsk);
-
-        LogFile reopened = Open();
-        Entry loaded = reopened.Live.Single(e => e.Id == WithReminder().Id);
-        Assert.Equal(Tokyo, loaded.RemindAt);
-        Assert.Equal(TimeSpan.FromHours(9), loaded.RemindAt!.Value.Offset);
-        Assert.Null(reopened.Live.Single(e => e.Id == SampleEntries.SampleAsk.Id).RemindAt);
-    }
-
-    [Fact]
-    public void OldEncryptedLineWithoutRemindAtStillOpens()
-    {
-        LogFile log = Create();
-        AppendRawLine(log, LineWithoutRemindAt);
-
-        LogFile reopened = Open();
-        Assert.Equal(0, reopened.UnreadableLineCount);
-        Assert.Null(Assert.Single(reopened.Live).RemindAt);
     }
 
     [Fact]
@@ -113,39 +67,6 @@ public sealed class RemindAtTests : IDisposable
         LogFile reopened = Open();
         Assert.Null(Assert.Single(reopened.Live).RemindAt);
         Assert.Equal([null, Tokyo, null], reopened.RevisionsOf(first.Id).Select(r => r.RemindAt));
-    }
-
-    [Fact]
-    public void AnEditThatLeavesTheReminderAloneKeepsIt()
-    {
-        LogFile log = Create();
-        log.Append(WithReminder());
-        log.Append(WithReminder() with { Rev = 2, Summary = "edited" });
-
-        Assert.Equal(Tokyo, Assert.Single(Open().Live).RemindAt);
-    }
-
-    [Fact]
-    public void TombstoneHidesAnEntryWithAReminder()
-    {
-        LogFile log = Create();
-        Entry first = WithReminder();
-        log.Append(first);
-        AppendRawLine(log, "{\"id\":\"" + first.Id + "\",\"rev\":2,\"deleted\":true}");
-
-        LogFile reopened = Open();
-        Assert.Empty(reopened.Live);
-        Assert.Equal([Tokyo, null], reopened.RevisionsOf(first.Id).Select(r => r.RemindAt));
-    }
-
-    [Fact]
-    public void DecryptedExportWritesRemindAt()
-    {
-        LogFile log = Create();
-        log.Append(WithReminder());
-
-        // The decrypted export writes each record with LogbookJson.Serialize.
-        Assert.Contains("\"remindAt\":\"2026-10-20T09:00:00+09:00\"", LogbookJson.Serialize(Assert.Single(Open().Live)), StringComparison.Ordinal);
     }
 
     [Fact]

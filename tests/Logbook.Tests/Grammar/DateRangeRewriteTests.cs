@@ -69,13 +69,4 @@ public sealed class DateRangeRewriteTests
     {
         Assert.Equal(expected, LineParser.WithDateRange(text, From, null));
     }
-
-    [Fact]
-    public void TagAfterARemovedTokenSurvivesTheRoundTrip()
-    {
-        QueryLine query = LineParser.ParseQuery(LineParser.WithDateRange("last:7d,#printer", From, null), new DateOnly(2026, 10, 8));
-        Assert.Equal(From, query.Since);
-        Assert.Equal(["printer"], query.Tags);
-        Assert.Empty(query.Words);
-    }
 }

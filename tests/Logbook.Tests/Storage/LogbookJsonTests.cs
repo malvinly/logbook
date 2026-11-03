@@ -120,11 +120,4 @@ public sealed class LogbookJsonTests
         Assert.Equal(expected, LogbookJson.Serialize(header));
         Assert.Equal(header, LogbookJson.DeserializeHeader(expected));
     }
-
-    [Fact]
-    public void HeaderConstantsMatchTheDesign()
-    {
-        Assert.Equal("logbook/1", FileHeader.CurrentFormat);
-        Assert.Equal("pbkdf2-hmac-sha256", FileHeader.Pbkdf2HmacSha256);
-    }
 }

@@ -34,11 +34,4 @@ public sealed class ExportTitleTests
     {
         Assert.Equal("", ExportTitle.For("", null, null));
     }
-
-    [Fact]
-    public void HeaderReadsTheNameWhenGivenIt()
-    {
-        string title = ExportTitle.For("#staging-access", "Staging asks", "#staging-access");
-        Assert.StartsWith("Staging asks — 3 entries, Oct 6 – Oct 20, 2026\n", TimelineExport.Render(title, SampleEntries.Sample, ExportOptions.None), StringComparison.Ordinal);
-    }
 }

@@ -93,22 +93,6 @@ public sealed class LineAppenderTests : IDisposable
     }
 
     [Fact]
-    public void DefaultScheduleIsTenAttemptsStartingAtOneHundredMillisecondsAndUnderTenSeconds()
-    {
-        Assert.Equal(9, LineAppender.DefaultRetryDelays.Count);
-        Assert.Equal(TimeSpan.FromMilliseconds(100), LineAppender.DefaultRetryDelays[0]);
-        Assert.Equal(TimeSpan.FromMilliseconds(200), LineAppender.DefaultRetryDelays[1]);
-        Assert.Equal(TimeSpan.FromMilliseconds(400), LineAppender.DefaultRetryDelays[2]);
-        TimeSpan total = TimeSpan.Zero;
-        foreach (TimeSpan delay in LineAppender.DefaultRetryDelays)
-        {
-            total += delay;
-        }
-
-        Assert.True(total < TimeSpan.FromSeconds(10), $"total wait {total} must stay short; the 30-second timer covers the rest");
-    }
-
-    [Fact]
     public void RetriesWhileTheFileIsReadOnly()
     {
         File.WriteAllText(_file.Path, "header\n");

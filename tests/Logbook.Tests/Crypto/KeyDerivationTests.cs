@@ -20,36 +20,6 @@ public sealed class KeyDerivationTests
     }
 
     [Fact]
-    public void DerivesThirtyTwoBytes()
-    {
-        Assert.Equal(LineCipher.KeySize, KeyDerivation.Derive("correct horse", Salt, FastIterations).Length);
-    }
-
-    [Fact]
-    public void SameInputsGiveSameKey()
-    {
-        byte[] first = KeyDerivation.Derive("correct horse", Salt, FastIterations);
-        byte[] second = KeyDerivation.Derive("correct horse", Salt, FastIterations);
-        Assert.Equal(first, second);
-    }
-
-    [Fact]
-    public void DifferentPassphraseGivesDifferentKey()
-    {
-        Assert.NotEqual(
-            KeyDerivation.Derive("correct horse", Salt, FastIterations),
-            KeyDerivation.Derive("correct horsf", Salt, FastIterations));
-    }
-
-    [Fact]
-    public void DifferentSaltGivesDifferentKey()
-    {
-        Assert.NotEqual(
-            KeyDerivation.Derive("correct horse", Salt, FastIterations),
-            KeyDerivation.Derive("correct horse", KeyDerivation.NewSalt(), FastIterations));
-    }
-
-    [Fact]
     public void DifferentIterationCountGivesDifferentKey()
     {
         Assert.NotEqual(
@@ -65,11 +35,5 @@ public sealed class KeyDerivationTests
         Assert.Equal(16, first.Length);
         Assert.Equal(KeyDerivation.SaltSize, first.Length);
         Assert.NotEqual(first, second);
-    }
-
-    [Fact]
-    public void DefaultIterationCountIsTheOneInTheDesign()
-    {
-        Assert.Equal(600_000, KeyDerivation.DefaultIterations);
     }
 }

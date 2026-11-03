@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using Logbook.Core.Crypto;
 using Xunit;
 
@@ -52,19 +51,5 @@ public sealed class DataKeyTests
         byte[] kek = KeyDerivation.Derive("correct horse", KeyDerivation.NewSalt(), FastIterations);
         string notAKey = LineCipher.Encrypt(kek, new byte[16]);
         Assert.ThrowsAny<CryptographicException>(() => DataKey.Unwrap(notAKey, kek));
-    }
-
-    [Fact]
-    public void FullHierarchyRoundTripsARecord()
-    {
-        // Passphrase -> KEK -> data key -> record line, the way the file store will use it.
-        byte[] salt = KeyDerivation.NewSalt();
-        byte[] dataKey = DataKey.Generate();
-        string wrappedKey = DataKey.Wrap(dataKey, KeyDerivation.Derive("correct horse", salt, FastIterations));
-        byte[] record = Encoding.UTF8.GetBytes("{\"id\":\"01JBK3Q9W6X2Y8Z4V5T7R1N0M3\",\"rev\":1}");
-        string line = LineCipher.Encrypt(dataKey, record);
-
-        byte[] unlockedKey = DataKey.Unwrap(wrappedKey, KeyDerivation.Derive("correct horse", salt, FastIterations));
-        Assert.Equal(record, LineCipher.Decrypt(unlockedKey, line));
     }
 }

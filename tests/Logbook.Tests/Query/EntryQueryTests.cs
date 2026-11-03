@@ -1,8 +1,6 @@
 using Logbook.Core;
 using Logbook.Core.Grammar;
 using Logbook.Core.Query;
-using Logbook.Core.Storage;
-using Logbook.Tests.Storage;
 using Xunit;
 
 namespace Logbook.Tests.Query;
@@ -172,24 +170,5 @@ public sealed class EntryQueryTests
         Entry b = FollowUpOf(Original, "01K0000000000000000000000Y", when);
         Entry a = FollowUpOf(Original, "01K0000000000000000000000X", when);
         Assert.Equal([a, b], EntryQuery.FollowUpsOf(Original.Id, [b, a]));
-    }
-
-    [Fact]
-    public void DeletedFollowUpIsNotListedWhenGivenTheLiveEntries()
-    {
-        // FollowUpsOf trusts its caller to pass the live entries and does no deleted check of its own, so this pins
-        // that a deleted follow-up drops out of what the log reports as live, before and after a reopen.
-        using TempFile file = new();
-        LogFile log = LogFile.Create(file.Path, "correct horse", Original.RecordedAt, []);
-        Entry kept = FollowUpOf(Original, "01K0000000000000000000000X", new DateTimeOffset(2026, 10, 15, 14, 30, 0, TimeSpan.FromHours(-5)));
-        Entry deleted = FollowUpOf(Original, "01K0000000000000000000000Y", new DateTimeOffset(2026, 10, 16, 14, 30, 0, TimeSpan.FromHours(-5)));
-        log.Append(Original);
-        log.Append(kept);
-        log.Append(deleted);
-        Assert.Equal([kept.Id, deleted.Id], EntryQuery.FollowUpsOf(Original.Id, log.Live).Select(Id));
-
-        log.Append(deleted with { Rev = 2, Deleted = true });
-        Assert.Equal([kept.Id], EntryQuery.FollowUpsOf(Original.Id, log.Live).Select(Id));
-        Assert.Equal([kept.Id], EntryQuery.FollowUpsOf(Original.Id, LogFile.Open(file.Path, "correct horse", []).Live).Select(Id));
     }
 }

@@ -36,23 +36,13 @@ public sealed class CultureTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("fr-FR")]
-    [InlineData("ja-JP")]
-    [InlineData("ar-SA")]
-    public void TimelineIsUsStyleUnderAnyCulture(string culture)
-    {
-        string text = Under(culture, () => TimelineExport.Render("#staging-access", SampleEntries.Sample, new ExportOptions(true, true, false, false)));
-        Assert.Contains("#staging-access — 3 entries, Oct 6 – Oct 20, 2026", text, StringComparison.Ordinal);
-        Assert.Contains("Oct (3)", text, StringComparison.Ordinal);
-        Assert.Contains("• Thu Oct 15, 2026 2:30 PM (9 days later) — ", text, StringComparison.Ordinal);
-    }
-
-    [Theory]
     [InlineData("ar-SA")]
     [InlineData("ja-JP")]
     public void EveryExportIsByteForByteTheInvariantOutputUnderAnyCulture(string culture)
     {
-        // ar-SA defaults to the Um al-Qura calendar and ja-JP has its own AM/PM designators, so any format call that
-        // follows the thread culture would change the bytes. Reminders and related ids exercise every CSV column.
+        // de-DE and fr-FR have other month names, ar-SA defaults to the Um al-Qura calendar and ja-JP has its own AM/PM
+        // designators, so any format call that follows the thread culture would change the bytes. The timeline header
+        // carries the range and count text. Reminders and related ids exercise every CSV column.
         Entry withEverything = SampleEntries.ToldAboutOutages with
         {
             RemindAt = new DateTimeOffset(2026, 8, 21, 8, 15, 30, 250, TimeSpan.FromHours(2)),
@@ -78,15 +68,6 @@ public sealed class CultureTests
         {
             Assert.Equal(Encoding.UTF8.GetBytes(invariant[i]), Encoding.UTF8.GetBytes(local[i]));
         }
-    }
-
-    [Theory]
-    [InlineData("de-DE")]
-    [InlineData("ja-JP")]
-    public void RangeAndCountAreUsStyleUnderAnyCulture(string culture)
-    {
-        Assert.Equal("Jul 14 – Oct 20, 2026", Under(culture, () => RangeText.Range(SampleEntries.All)));
-        Assert.Equal("12 entries", Under(culture, () => RangeText.Count(12)));
     }
 
     [Theory]

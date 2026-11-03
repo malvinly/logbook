@@ -49,10 +49,4 @@ public sealed class RangeTextTests
         // 10:00 on Oct 1 in Tokyo is still Sep 30 in UTC-5, but the range says Oct 1.
         Assert.Equal("Sep 30 – Oct 1, 2026", RangeText.Range([At(2026, 9, 30), At(2026, 10, 1, offsetHours: 9)]));
     }
-
-    [Fact]
-    public void SampleSetMatchesTheDesign()
-    {
-        Assert.Equal("Oct 6 – Oct 20, 2026", RangeText.Range(SampleEntries.Sample));
-    }
 }

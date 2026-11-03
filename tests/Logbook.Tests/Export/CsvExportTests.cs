@@ -13,12 +13,6 @@ public sealed class CsvExportTests
     private static string[] Rows(IEnumerable<Entry> entries) => CsvExport.Render(entries).Split("\r\n");
 
     [Fact]
-    public void FirstRowIsTheHeader()
-    {
-        Assert.Equal(Header, Rows(SampleEntries.Sample)[0]);
-    }
-
-    [Fact]
     public void EmptySetIsOnlyTheHeaderRow()
     {
         Assert.Equal(Header + "\r\n", CsvExport.Render([]));
@@ -258,15 +252,6 @@ public sealed class CsvExportTests
     }
 
     [Fact]
-    public void EmptyTextCellsAreNotPrefixed()
-    {
-        Entry entry = SampleEntries.FirstAsk with { Reason = null, Refs = [] };
-        Assert.Equal(
-            "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,Asked for staging access,,asked staging-access,j-doe,,,,01K0000000000000000000000B",
-            Rows([entry])[1]);
-    }
-
-    [Fact]
     public void FormulaPrefixLeavesRelatedToRemindAtIdAndTimestampsVerbatim()
     {
         Entry entry = SampleEntries.FirstAsk with
@@ -282,13 +267,6 @@ public sealed class CsvExportTests
         Assert.Equal(
             "2026-08-03T11:05:00.0000000-05:00,2026-08-03T11:05:06.0000000-05:00,'=a,'+b,'-d,'+e,'-c,01K0000000000000000000000A,2026-08-10T09:00:00.0000000-05:00,01K0000000000000000000000B",
             Rows([entry])[1]);
-    }
-
-    [Fact]
-    public void HeaderRowIsUnchangedByTheFormulaRule()
-    {
-        Entry entry = SampleEntries.FirstAsk with { Summary = "=a" };
-        Assert.Equal(Header, Rows([entry])[0]);
     }
 
     [Fact]

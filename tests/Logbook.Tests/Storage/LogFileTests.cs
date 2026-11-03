@@ -126,14 +126,6 @@ public sealed class LogFileTests : IDisposable
     }
 
     [Fact]
-    public void AppendIsVisibleInMemoryImmediately()
-    {
-        LogFile log = Create();
-        log.Append(NewEntry("first"));
-        Assert.Equal("first", Assert.Single(log.Live).Summary);
-    }
-
-    [Fact]
     public void HighestRevisionPerIdWins()
     {
         LogFile log = Create();

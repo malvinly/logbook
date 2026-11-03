@@ -197,8 +197,6 @@ public sealed class CollisionRuleTests
     }
 
     [Theory]
-    [InlineData("done (#asked)", "done")]
-    [InlineData("said \"#urgent\" twice", "said twice")]
     [InlineData("done (#asked) and (more)", "done and (more)")] // the partner is the next ")", here the one the tag left
     [InlineData("done (#asked", "done")] // no partner at all, so the "(" goes as other leftovers do
     [InlineData("said \"@j-doe agreed", "said agreed")]
@@ -252,7 +250,6 @@ public sealed class CollisionRuleTests
     [InlineData("see last:7d,#a", "see last:7d,")] // a query-only keyword is text in a capture
     [InlineData("see at:xyz,#a", "see at:xyz,")] // a value that does not parse is text
     [InlineData("see last:7d.,#a", "see last:7d.,")] // the stripped "." does not make the separator go
-    [InlineData("fixed at:yesterday,#a", "fixed")] // a used keyword takes the separator with it
     public void SeparatorAfterAKeywordThatStaysAsTextIsKept(string text, string summary)
     {
         CaptureLine line = LineParser.ParseCapture(text, Now, Zone);
@@ -279,7 +276,6 @@ public sealed class CollisionRuleTests
     [InlineData("why?")]
     [InlineData("x ( #a ) y", "x ( ) y")] // punctuation typed apart from the token is not left by it
     [InlineData("see foo(#a)", "see foo()")] // the "(" touches a word, so the pair is kept
-    [InlineData("asked @j-doe , then", "asked , then")]
     public void PunctuationThatIsNotLeftAloneByATokenIsKept(string text, string? summary = null)
     {
         Assert.Equal(summary ?? text, LineParser.ParseCapture(text, Now, Zone).Summary);

@@ -97,40 +97,48 @@ public sealed class AtTokenTests
     private static DateTimeOffset? AtInCentral(string token, DateTimeOffset now)
         => LineParser.ParseCapture($"thing {token}", now, TestZones.Central).OccurredAt;
 
+    // DateTimeOffset equality compares instants only: 14:00 -06:00 equals 15:00 -05:00. The offset is checked on its
+    // own, or a time stored in the wrong offset would pass.
+    private static void AssertSameTimeAndOffset(DateTimeOffset expected, DateTimeOffset? actual)
+    {
+        Assert.Equal(expected, actual);
+        Assert.Equal(expected.Offset, actual!.Value.Offset);
+    }
+
     [Fact]
     public void YesterdayTypedTheDayAfterFallingBackCarriesYesterdaysOffset()
     {
         DateTimeOffset now = new(2026, 11, 1, 10, 0, 0, Standard); // Sunday morning, clocks went back at 02:00
-        Assert.Equal(new DateTimeOffset(2026, 10, 31, 15, 0, 0, Daylight), AtInCentral("at:yesterday,3pm", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 10, 31, 15, 0, 0, Daylight), AtInCentral("at:yesterday,3pm", now));
     }
 
     [Fact]
     public void ADateAfterSpringingForwardTypedBeforeItCarriesThePostChangeOffset()
     {
         DateTimeOffset now = new(2026, 3, 6, 10, 0, 0, Standard); // Friday before the change
-        Assert.Equal(new DateTimeOffset(2026, 3, 10, 15, 0, 0, Daylight), AtInCentral("at:2026-03-10,15:00", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 3, 10, 15, 0, 0, Daylight), AtInCentral("at:2026-03-10,15:00", now));
     }
 
     [Fact]
     public void ADateWithoutATimeStoresNoonInThatDatesOffset()
     {
         DateTimeOffset now = new(2026, 3, 6, 10, 0, 0, Standard);
-        Assert.Equal(new DateTimeOffset(2026, 3, 10, 12, 0, 0, Daylight), AtInCentral("at:2026-03-10", now));
-        Assert.Equal(new DateTimeOffset(2026, 10, 30, 12, 0, 0, Daylight), AtInCentral("at:2026-10-30", new DateTimeOffset(2026, 11, 2, 9, 0, 0, Standard)));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 3, 10, 12, 0, 0, Daylight), AtInCentral("at:2026-03-10", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 10, 30, 12, 0, 0, Daylight), AtInCentral("at:2026-10-30", new DateTimeOffset(2026, 11, 2, 9, 0, 0, Standard)));
     }
 
     [Fact]
     public void ATimeTodayTakesTheOffsetAtThatTimeNotNow()
     {
         DateTimeOffset now = new(2026, 11, 1, 1, 0, 0, Daylight); // Sunday 01:00, an hour before clocks go back
-        Assert.Equal(new DateTimeOffset(2026, 11, 1, 15, 0, 0, Standard), AtInCentral("at:15:00", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 11, 1, 15, 0, 0, Standard), AtInCentral("at:15:00", now));
     }
 
     [Fact]
     public void AWeekdayTakesTheOffsetOfThatDate()
     {
         DateTimeOffset now = new(2026, 11, 2, 9, 0, 0, Standard); // Monday after the change; at:mon is the Monday before
-        Assert.Equal(new DateTimeOffset(2026, 10, 26, 12, 0, 0, Daylight), AtInCentral("at:mon", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 10, 26, 12, 0, 0, Daylight), AtInCentral("at:mon", now));
     }
 
     [Fact]
@@ -138,7 +146,7 @@ public sealed class AtTokenTests
     {
         // 02:30 on 8 March does not exist on the wall clock; the rule is TimeZoneInfo.GetUtcOffset's: standard time.
         DateTimeOffset now = new(2026, 3, 9, 9, 0, 0, Daylight);
-        Assert.Equal(new DateTimeOffset(2026, 3, 8, 2, 30, 0, Standard), AtInCentral("at:2026-03-08,2:30", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 3, 8, 2, 30, 0, Standard), AtInCentral("at:2026-03-08,2:30", now));
     }
 
     [Fact]
@@ -146,15 +154,15 @@ public sealed class AtTokenTests
     {
         // 01:30 on 1 November happens twice; the rule is TimeZoneInfo.GetUtcOffset's: the second, standard-time one.
         DateTimeOffset now = new(2026, 11, 2, 9, 0, 0, Standard);
-        Assert.Equal(new DateTimeOffset(2026, 11, 1, 1, 30, 0, Standard), AtInCentral("at:2026-11-01,1:30", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 11, 1, 1, 30, 0, Standard), AtInCentral("at:2026-11-01,1:30", now));
     }
 
     [Fact]
     public void WithNoClockChangeBetweenThemTheOffsetIsNows()
     {
         DateTimeOffset now = new(2026, 11, 4, 9, 0, 0, Standard);
-        Assert.Equal(new DateTimeOffset(2026, 11, 3, 15, 0, 0, Standard), AtInCentral("at:yesterday,3pm", now));
-        Assert.Equal(new DateTimeOffset(2026, 11, 4, 15, 0, 0, Standard), AtInCentral("at:15:00", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 11, 3, 15, 0, 0, Standard), AtInCentral("at:yesterday,3pm", now));
+        AssertSameTimeAndOffset(new DateTimeOffset(2026, 11, 4, 15, 0, 0, Standard), AtInCentral("at:15:00", now));
     }
 
     [Theory]

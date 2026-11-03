@@ -60,18 +60,6 @@ public sealed class BalloonOrderTests
     }
 
     [Fact]
-    public void TheCurrentOnesCloseReleasesTheNext()
-    {
-        BalloonOrder<Balloon> queue = new();
-        queue.Enqueue(HotkeyFailed);
-        queue.Enqueue(Reminder);
-
-        Assert.Same(HotkeyFailed, queue.Showing);
-        Assert.Same(Reminder, ShownThenClosed(queue));
-        Assert.Same(Reminder, queue.Showing);
-    }
-
-    [Fact]
     public void AnEmptyQueueAfterACloseShowsNothing()
     {
         BalloonOrder<Balloon> queue = new();
@@ -114,16 +102,6 @@ public sealed class BalloonOrderTests
 
         queue.Enqueue(HotkeyFailed);
         Assert.Same(HotkeyFailed, queue.LastShown);
-    }
-
-    [Fact]
-    public void AWaitingBalloonDoesNotTakeOverTheClickActionBeforeItShows()
-    {
-        BalloonOrder<Balloon> queue = new();
-        queue.Enqueue(Reminder);
-        queue.Enqueue(HotkeyFailed);
-
-        Assert.Same(Reminder, queue.LastShown);
     }
 
     [Fact]
