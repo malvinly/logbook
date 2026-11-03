@@ -6,6 +6,8 @@ Your entries live in one encrypted, append-only file in a folder you choose. It 
 
 ![The main window: entries matching #staging-access grouped by day, with the detail pane open on the oldest one and its follow-ups listed](docs/images/main-window.png)
 
+The look follows Windows light or dark mode, or is forced from Settings. The screenshots are the dark theme.
+
 ## How it works
 
 ### 1. Capture
@@ -14,7 +16,7 @@ Press `Ctrl+Alt+L` anywhere. A launcher-style box appears. Type one line and pre
 
 ![The capture box with "Asked for staging access again #asked @j-doe at:3pm" typed, and its tag, person and date chips underneath](docs/images/capture.png)
 
-`#tags`, `@people` and `at:` are picked out as you type and shown as chips, so you see what will be stored before you commit it. The rest of the line is the summary. `Ctrl+Enter` opens a "more" section for a reason, extra tags and people, and refs such as ticket numbers.
+`#tags`, `@people` and `at:` are picked out as you type and shown as chips, so you see what will be stored before you press Enter. The rest of the line is the summary. `Ctrl+Enter` opens a "more" section for a reason, extra tags and people, and refs (ticket numbers, links). Put the verb in a tag (`#asked`, `#told`, `#decided`) and "did I tell anyone about X" later becomes the search `#told X`.
 
 A toast shows the saved summary for five seconds, so mind who can see your screen. Click it to open the entry and fix a typo; there is no separate undo. It is not a Windows notification, so nothing stays in Notification Center.
 
@@ -22,13 +24,13 @@ A toast shows the saved summary for five seconds, so mind who can see your scree
 
 ### 2. Find
 
-Open the main window from the tray icon, from the toast, or with `Ctrl+Alt+Shift+L`. The filter box uses the same grammar as capture, so `#asked @j-doe last:30d "release freeze"` works the way you would expect. Results are grouped by day, newest first, and the header always shows the count and the date range. A filter you keep typing can be saved as a button.
+Open the main window from the tray icon, from the toast, or with `Ctrl+Alt+Shift+L`. The filter box uses the same grammar as capture, so `#asked @j-doe last:30d "release freeze"` works the way you would expect. Results are grouped by day, newest first, and the header always shows the count and the date range. A filter you use often can be saved as a button.
 
 Selecting an entry opens it for editing. Every save is a new revision, and the pane lists every earlier revision and highlights which fields the latest save changed. "Follow up" starts a new entry linked to the selected one, and the original lists its follow-ups. A reminder, set in the detail pane, shows as a tray balloon when it is due; balloons never contain entry text.
 
 ### 3. Share
 
-"Copy as timeline" turns the filtered set into a plain-text timeline, oldest first, with optional gaps between entries and month counts. It goes on the clipboard as text and as HTML, so it pastes cleanly into mail and chat. The copy is excluded from clipboard history and cloud clipboard sync.
+"Copy as timeline" turns the filtered set into a plain-text timeline, oldest first, with optional gaps between entries, like the "(15 days later)" below, and per-month counts. It goes on the clipboard as text and as HTML, so it pastes cleanly into mail and chat. The copy is excluded from clipboard history and cloud clipboard sync.
 
 ![The export panel with Show gaps on and a four-entry timeline in the preview](docs/images/export.png)
 
@@ -42,7 +44,7 @@ Selecting an entry opens it for editing. Every save is a new revision, and the p
 • Wed Oct 28, 2026 3:00 PM (56 days later) — Staging access granted
 ```
 
-The same set can be saved as CSV for a spreadsheet, and Tools → Export decrypted writes the whole log as plaintext JSONL.
+The same set can be saved as CSV for a spreadsheet, and Tools → Export decrypted writes the whole log as plaintext JSONL, the log's own format without the encryption.
 
 ## The grammar
 
@@ -52,31 +54,31 @@ One grammar serves both capture and search.
 |---|---|---|---|
 | `#tag` | `#asked` | attaches the tag | entries with that tag |
 | `@person` | `@j-doe` | attaches the person | entries involving that person |
-| `at:` | `at:yesterday,3pm`, `at:2026-10-06`, `at:mon` | sets when it happened | |
-| `since:` / `until:` | `since:2026-10-01` | | inclusive date bounds |
-| `last:` | `last:30d`, `last:12w`, `last:6m` | | the last N days, weeks or months |
-| `"phrase"` | `"release freeze"` | | exact phrase in the summary or reason |
-| anything else | `told the team` | the summary | words that must all appear |
+| `at:` | `at:yesterday,3pm`, `at:2026-10-06`, `at:mon` | sets when it happened | capture only |
+| `since:` / `until:` | `since:2026-10-01` | search only | inclusive date bounds |
+| `last:` | `last:30d`, `last:12w`, `last:6m` | search only | the last N days, weeks or months, today included |
+| `"phrase"` | `"release freeze"` | search only | case-insensitive phrase anywhere in the summary or reason |
+| anything else | `told the team` | the summary | words that must all appear, any case, as substrings |
 
 Some lines and what they store:
 
 | You type | Summary | Tags | People | When |
 |---|---|---|---|---|
 | `Told the team the migration moves to the 16th #told @j-doe @r-lee` | Told the team the migration moves to the 16th | told | j-doe, r-lee | now |
-| `Printer outage reported to facilities #reported #printer at:yesterday` | Printer outage reported to facilities | reported, printer | | yesterday at noon |
-| `Decided to keep the nightly job as is #decided at:mon` | Decided to keep the nightly job as is | decided | | last Monday at noon |
+| `Asked @j-doe,@r-lee about ticket #12345 at:yesterday,3pm` | Asked about ticket #12345 | | j-doe, r-lee | yesterday at 3:00 PM |
+| `Decided to keep the nightly job as is #decided at:mon` | Decided to keep the nightly job as is | decided | | the most recent Monday before today, at noon |
 
-A `#` or `@` starts a token only at the start of a word and before a letter, so `ticket #12345`, `C#` and `name@example.com` stay plain text. Put the verb in a tag (`#asked`, `#told`, `#decided`) and "did I tell anyone about X" becomes the search `#told X`. The full rules are in [docs/grammar.md](docs/grammar.md), and Help → Grammar cheat sheet shows them in the app.
+A `#` or `@` starts a token only at the start of a word, or right after `(`, `"` or a `,` that ended another token, and only before a letter, so `ticket #12345`, `C#` and `name@example.com` stay plain text. The full rules are in [docs/grammar.md](docs/grammar.md), and Help → Grammar cheat sheet shows them in the app.
 
 ## Get it
 
 - Download `Logbook.exe` from the [Releases](https://github.com/malvinly/logbook/releases) page, drop it in a folder and run it. It is one self-contained file; there is no installer.
-- Windows SmartScreen warns the first time you run a downloaded copy, because the exe is not code-signed. Each release lists the SHA-256 of its exe; check it, then choose "More info" and "Run anyway".
+- Windows SmartScreen warns the first time you run a downloaded copy, because the exe is not code-signed. Choose "More info", then "Run anyway". To check the download first, compare the SHA-256 on the release with what `Get-FileHash Logbook.exe` prints in PowerShell. The version is shown at the foot of the Settings window.
 - The first run asks where the data file should live, asks you to choose a passphrase and offers to start with Windows.
 - There is no passphrase recovery. Write it down somewhere physical.
 - Releases are 0.9.x pre-releases until 1.0; [TODO.md](TODO.md) says what is left.
 - Built and tested on Windows 11. Windows 10 should work but is untested.
-- To remove it, turn off "Start with Windows" in Settings, exit from the tray menu and delete the exe. Your log, the settings file beside it and the `%LOCALAPPDATA%\Logbook` folder stay until you delete them.
+- To remove it, untick "Start Logbook when I sign in" in Settings, exit from the tray menu and delete the exe. Your log, the settings file beside it and the `%LOCALAPPDATA%\Logbook` folder stay until you delete them.
 
 ## How it keeps your data
 
@@ -87,9 +89,10 @@ A `#` or `@` starts a token only at the start of a word and before a letter, so 
 - A diagnostics log under `%LOCALAPPDATA%\Logbook\logs` keeps errors and counts for two weeks, never entry text.
 - Timestamps keep the UTC offset they were captured with. Nothing is converted to UTC or to the current machine zone.
 - Plaintext exports default to a private folder under your Windows profile, outside the log's folder. The app cannot tell which folders are synced and never deletes an export, so delete it when you are done.
-- The look is Windows 11 Fluent, following the Windows light or dark mode or forced from Settings. The screenshots above are the dark theme.
 
 ## Build it
+
+Requires the .NET 10 SDK on Windows; `global.json` pins it. Warnings are build errors, and CI runs the build and the Core tests on every push and pull request.
 
 ```
 dotnet build
@@ -97,13 +100,11 @@ dotnet test
 dotnet publish src/Logbook.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=false
 ```
 
-The version is shown at the foot of the Settings window.
-
 ## Where things are
 
 - [docs/](docs/) is the spec: [grammar](docs/grammar.md), [record schema and file format](docs/file-format.md), [locking](docs/locking.md), [main window](docs/main-window.md), [export](docs/export.md), [settings](docs/settings.md) and [development notes](docs/development.md) on layout, decisions, build and release.
 - [TODO.md](TODO.md) is the roadmap: what is left before 1.0, the backlog, and what is out of scope.
-- [CLAUDE.md](CLAUDE.md) holds the conventions for working in this repo.
+- [CLAUDE.md](CLAUDE.md) holds the working rules: one TODO.md item at a time, nothing built that is not on it, no new NuGet packages, Core before the UI, tests first. Read [docs/development.md](docs/development.md) first, then the file for the area you are touching.
 - `src/Logbook.Core` is the UI-free library (model, parser, crypto, file store, query, export); `src/Logbook.App` is the WPF tray app; `tests/Logbook.Tests` holds the Core tests.
 
 ## License
