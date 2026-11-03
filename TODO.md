@@ -56,6 +56,24 @@ Build:
 - `PublishTrimmed` once the source-generated JSON context is proven to cover every serialised type.
 - Windows 10 is untested; the Mica and rounded-corner fallback has only been reasoned about.
 
+## After 1.0: macOS port
+
+A larger item, not started, approved in outline on 2026-11-02. It is one piece of work with its own phases, done after `v1.0.0` ships and the Windows app has settled.
+
+The shape:
+
+- `Logbook.Core` stays as it is. It targets plain `net10.0` and uses only the BCL, so it already runs on macOS; the parser, file format, crypto, query and export rules and their tests are reused, not ported. Two details to confirm on a real Mac: `AesGcm` there is backed by CryptoKit and supports only 128-bit tags, which is what [docs/file-format.md](docs/file-format.md) specifies; and `ClipboardHtml` produces the Windows CF_HTML framing, which the Mac clipboard path does not use.
+- `Logbook.App` is rewritten once in Avalonia and replaces the WPF app on Windows too, so there is one UI codebase. It is a rewrite, not a port: Avalonia's styling and window chrome differ enough that the XAML is re-authored. The rules stay: plain code-behind, the hand-written `INotifyPropertyChanged` base, no MVVM framework, theme values only in the `Theme` dictionaries. Avalonia's built-in `TrayIcon` replaces `NotifyIcon`, so `UseWindowsForms` goes.
+- The behaviours that call the OS directly get a Windows and a macOS implementation each, chosen once at startup by an `OperatingSystem` check: global hotkey (Carbon `RegisterEventHotKey` on the Mac, which needs no accessibility permission), single instance, idle time for the auto-lock, screen lock and sign-out notifications, start at login (a LaunchAgent or `SMAppService`), light or dark detection, clipboard HTML, the per-profile folder (`LocalApplicationData` resolves to a Unix-style dotfolder on macOS, so the pointer location is chosen per OS explicitly), and opening a folder in the shell. The hotkey model and the Settings picker stop being built on Windows virtual-key codes. Mica, rounded corners and the dark title bar have no Mac counterpart and go.
+- Footprint and responsiveness, in this order: publish with NativeAOT (Avalonia 11 supports it on both OSes), which needs the `DllImport` declarations to become `LibraryImport` and the `IShellLink` COM import replaced, since COM imports are not supported under NativeAOT; trimming, already listed under Build above, comes with it. ReadyToRun is the fallback if AOT proves too strict. Non-concurrent GC and `GCConserveMemory` in the runtimeconfig. The capture window is created once at startup and kept hidden, rendered once so its first real show has paid for layout and glyph shaping; the hotkey path shows it and returns, everything else runs after it is visible. The main window is created lazily and disposed on close. Compiled bindings only, no runtime XAML loading. Target: idle in the tray in the 30 to 50 MB range, and hotkey to popup indistinguishable from instant.
+- The macOS build is a self-contained `.app` bundle made by a script in the release workflow, unsigned and not notarized at first, so Gatekeeper warns the way SmartScreen does today; the README says so and points at the hash.
+
+What changes in the docs when this starts, in the same commits as the code: the "WPF, Windows only" constraint and the Avalonia rejection in [docs/development.md](docs/development.md), the no-packages rule for the App in `CLAUDE.md` (Avalonia becomes the one allowed package in the App), the Startup shortcut and `%LOCALAPPDATA%` paths in [docs/settings.md](docs/settings.md) and [docs/export.md](docs/export.md), and a note in [docs/file-format.md](docs/file-format.md) that iCloud Drive can evict a file to the cloud and bring it back on access, which the append-only design copes with.
+
+The cheap first step, with no app changes: run the Core tests on a Mac with `dotnet test tests/Logbook.Tests` (the root solution does not build there because the App targets `net10.0-windows`) and add a macOS job for them to `ci.yml`.
+
+Rejected for this: keeping WPF on Windows and writing a native Swift app for the Mac, because Swift cannot use Core and the grammar and file format would need a second implementation kept in lockstep; Electron, because it rewrites Core in TypeScript and keeps a resident browser for a tray app; Tauri, because the append-only storage layer would have to move to Rust.
+
 ## Out of scope
 
 - AI auto-tagging. Sending names and incidents to a third-party API is a policy problem, and recency-ranked autocomplete over a small tag set solves the real need.
